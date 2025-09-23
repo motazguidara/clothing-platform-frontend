@@ -1,26 +1,84 @@
 @import "tailwindcss";
 
+@import "@fontsource-variable/inter";
+
 :root {
+  /* Core tokens */
   --background: #ffffff;
-  --foreground: #171717;
+  --foreground: #111111; /* high-contrast */
+  --muted: #6b7280;
+  --accent: #111111;
+  --accent-contrast: #ffffff;
+
+  /* Brand */
+  --primary: #111111;
+  --primary-foreground: #ffffff;
+  --secondary: #f3f4f6;
+  --secondary-foreground: #111111;
+  --destructive: #dc2626;
+  --destructive-foreground: #ffffff;
+
+  /* UI */
+  --border: #e5e7eb;
+  --input: #ffffff;
+  --ring: rgba(17,24,17,0.5);
+  --subtle: #f8fafc;
+  --success: #059669;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+/* Fallback utility aliases for common tokens (in case Tailwind isn't picking them up) */
+.text-muted { color: var(--muted); }
+.bg-subtle { background-color: var(--subtle); }
+.border-border { border-color: var(--border); }
+
+/* Base styles */
+html, body { height: 100%; }
+body {
+  font-family: InterVariable, Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue";
+  background-color: var(--background);
+  color: var(--foreground);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+/* Respect users who prefer reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* Utilities for high-contrast focus */
+:focus { outline: 2px solid transparent; outline-offset: 2px; }
+:focus-visible { box-shadow: 0 0 0 4px rgba(17,24,39,0.08); }
+
+/* Minor helper to ensure the header shrinks smoothly */
+.header-shrink { transition: height 200ms ease, padding 200ms ease; }
+
+
+/* Modern horizontal scrollbar styling for rails (Firefox + WebKit) */
+.scrollbar-thin-horizontal {
+  scrollbar-width: thin; /* Firefox */
+  scrollbar-color: rgba(17,17,17,0.25) transparent; /* thumb track */
+}
+.scrollbar-thin-horizontal:hover {
+  scrollbar-color: rgba(17,17,17,0.35) transparent;
+}
+.scrollbar-thin-horizontal::-webkit-scrollbar {
+  height: 8px; /* only horizontal bar visible */
+}
+.scrollbar-thin-horizontal::-webkit-scrollbar-track {
+  background: transparent;
+}
+.scrollbar-thin-horizontal::-webkit-scrollbar-thumb {
+  background: rgba(17,17,17,0.25);
+  border-radius: 9999px;
+  border: 2px solid transparent; /* creates padding look */
+  background-clip: padding-box;
+}
+.scrollbar-thin-horizontal:hover::-webkit-scrollbar-thumb {
+  background: rgba(17,17,17,0.35);
 }
