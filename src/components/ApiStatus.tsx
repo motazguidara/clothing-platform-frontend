@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import api from "@/lib/api";
+import { apiClient } from "@/lib/api/client";
 
 export default function ApiStatus() {
   const [status, setStatus] = useState<"idle" | "ok" | "error">("idle");
@@ -11,19 +11,20 @@ export default function ApiStatus() {
     let isMounted = true;
     (async () => {
       try {
-        const res = await api.get("/ping/");
+        const res = await apiClient.get<{ status: string }>("/ping/");
         if (!isMounted) return;
-        if (res.data?.status === "ok") {
+        if (res && typeof (res as { status?: string }).status === "string" && res.status === "ok") {
           setStatus("ok");
           setMessage("API connected");
         } else {
           setStatus("error");
           setMessage("Unexpected response");
         }
-      } catch (e: any) {
+      } catch (e: unknown) {
         if (!isMounted) return;
         setStatus("error");
-        setMessage(e?.message || "Request failed");
+        const message = e instanceof Error ? e.message : "Request failed";
+        setMessage(message);
       }
     })();
     return () => {
@@ -41,8 +42,8 @@ export default function ApiStatus() {
         {status === "ok" && message}
         {status === "error" && `API error: ${message}`}
       </span>
-      {process.env.NEXT_PUBLIC_API_URL ? (
-        <span className="ml-2 opacity-70">{process.env.NEXT_PUBLIC_API_URL}</span>
+      {process.env["NEXT_PUBLIC_API_URL"] ? (
+        <span className="ml-2 opacity-70">{process.env["NEXT_PUBLIC_API_URL"]}</span>
       ) : (
         <span className="ml-2 opacity-70">No API URL configured</span>
       )}

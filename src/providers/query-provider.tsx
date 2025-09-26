@@ -11,7 +11,7 @@ type Props = {
 // Create a singleton QueryClient per browser session
 let browserQueryClient: QueryClient | null = null;
 function getQueryClient(): QueryClient {
-  if (!browserQueryClient) {
+  if (browserQueryClient == null) {
     browserQueryClient = new QueryClient({
       defaultOptions: {
         queries: {

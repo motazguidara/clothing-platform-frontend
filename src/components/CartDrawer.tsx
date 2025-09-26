@@ -18,15 +18,15 @@ export function CartDrawer() {
   const wish = useWishlist();
   const { show } = useToast();
   const updateQty = useUpdateCartItem();
-  const items = data?.items ?? [];
+  const items = React.useMemo(() => data?.items ?? [], [data?.items]);
   const [qtyMap, setQtyMap] = React.useState<Record<number, number>>({});
   React.useEffect(() => {
     const init: Record<number, number> = {};
     for (const it of items) init[it.id] = it.quantity ?? 1;
     setQtyMap(init);
-  }, [items.length]);
+  }, [items]);
   const getQty = (id: number, fallback: number = 1) => qtyMap[id] ?? fallback;
-  const subtotal = items.reduce((sum: number, it: any) => sum + (it.price || 0) * getQty(it.id, it.quantity || 1), 0);
+  const subtotal = items.reduce((sum: number, it: { price?: number; id: number; quantity?: number }) => sum + (Number(it.price ?? 0)) * getQty(it.id, it.quantity ?? 1), 0);
   const total = subtotal;
   return (
     <Sheet open={isOpen} onOpenChange={(v) => (v ? null : close())}>

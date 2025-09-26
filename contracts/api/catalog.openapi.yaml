@@ -1,0 +1,577 @@
+openapi: 3.0.3
+info:
+  title: Clothing Platform - Catalog API
+  description: API for managing products, categories, brands, and wishlist
+  version: 1.0.0
+  contact:
+    name: API Support
+    email: api-support@clothingplatform.com
+
+servers:
+  - url: http://127.0.0.1:8000/api/catalog
+    description: Development server
+  - url: https://api.clothingplatform.com/catalog
+    description: Production server
+
+paths:
+  /products/:
+    get:
+      summary: List products
+      operationId: listProducts
+      tags: [Products]
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: page_size
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 12
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: category
+          in: query
+          schema:
+            type: string
+        - name: brand
+          in: query
+          schema:
+            type: string
+        - name: gender
+          in: query
+          schema:
+            type: string
+            enum: [men, women, kids, unisex]
+        - name: min_price
+          in: query
+          schema:
+            type: number
+            format: decimal
+        - name: max_price
+          in: query
+          schema:
+            type: number
+            format: decimal
+        - name: featured
+          in: query
+          schema:
+            type: boolean
+        - name: on_sale
+          in: query
+          schema:
+            type: boolean
+        - name: ordering
+          in: query
+          schema:
+            type: string
+            enum: [created_at, -created_at, price, -price, name, -name, sold, -sold]
+      responses:
+        '200':
+          description: List of products
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedProductList'
+
+  /products/{id}/:
+    get:
+      summary: Get product details
+      operationId: getProduct
+      tags: [Products]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Product details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+        '404':
+          description: Product not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /categories/:
+    get:
+      summary: List categories
+      operationId: listCategories
+      tags: [Categories]
+      responses:
+        '200':
+          description: List of categories
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Category'
+
+  /brands/:
+    get:
+      summary: List brands
+      operationId: listBrands
+      tags: [Brands]
+      responses:
+        '200':
+          description: List of brands
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Brand'
+
+  /wishlist/:
+    get:
+      summary: Get user wishlist
+      operationId: getWishlist
+      tags: [Wishlist]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: User wishlist
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/WishlistItem'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    post:
+      summary: Add product to wishlist
+      operationId: addToWishlist
+      tags: [Wishlist]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                product_id:
+                  type: integer
+              required: [product_id]
+      responses:
+        '201':
+          description: Product added to wishlist
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WishlistItem'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /wishlist/{id}/:
+    delete:
+      summary: Remove product from wishlist
+      operationId: removeFromWishlist
+      tags: [Wishlist]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Product removed from wishlist
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Wishlist item not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /wishlist/ids/:
+    get:
+      summary: Get wishlist product IDs
+      operationId: getWishlistIds
+      tags: [Wishlist]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List of product IDs in wishlist
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  product_ids:
+                    type: array
+                    items:
+                      type: integer
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /home/:
+    get:
+      summary: Get homepage data
+      operationId: getHomeData
+      tags: [Home]
+      responses:
+        '200':
+          description: Homepage data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HomeData'
+
+  /coupons/{code}/:
+    get:
+      summary: Get coupon details
+      operationId: getCoupon
+      tags: [Coupons]
+      parameters:
+        - name: code
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Coupon details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Coupon'
+        '404':
+          description: Coupon not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    Product:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        slug:
+          type: string
+        description:
+          type: string
+        price:
+          type: number
+          format: decimal
+        sale_price:
+          type: number
+          format: decimal
+          nullable: true
+        sku:
+          type: string
+        stock_quantity:
+          type: integer
+        is_featured:
+          type: boolean
+        is_active:
+          type: boolean
+        gender:
+          type: string
+          enum: [men, women, kids, unisex]
+        category:
+          $ref: '#/components/schemas/Category'
+        brand:
+          $ref: '#/components/schemas/Brand'
+        images:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProductImage'
+        sizes:
+          type: array
+          items:
+            type: string
+        colors:
+          type: array
+          items:
+            type: string
+        tags:
+          type: array
+          items:
+            type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+      required:
+        - id
+        - name
+        - slug
+        - price
+        - sku
+        - stock_quantity
+        - is_featured
+        - is_active
+        - gender
+
+    ProductImage:
+      type: object
+      properties:
+        id:
+          type: integer
+        image:
+          type: string
+          format: uri
+        alt_text:
+          type: string
+        is_primary:
+          type: boolean
+      required:
+        - id
+        - image
+        - is_primary
+
+    Category:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        slug:
+          type: string
+        description:
+          type: string
+        image:
+          type: string
+          format: uri
+          nullable: true
+        parent:
+          type: integer
+          nullable: true
+        is_active:
+          type: boolean
+      required:
+        - id
+        - name
+        - slug
+        - is_active
+
+    Brand:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        slug:
+          type: string
+        description:
+          type: string
+        logo:
+          type: string
+          format: uri
+          nullable: true
+        website:
+          type: string
+          format: uri
+          nullable: true
+        is_active:
+          type: boolean
+      required:
+        - id
+        - name
+        - slug
+        - is_active
+
+    WishlistItem:
+      type: object
+      properties:
+        id:
+          type: integer
+        product:
+          $ref: '#/components/schemas/Product'
+        added_at:
+          type: string
+          format: date-time
+      required:
+        - id
+        - product
+        - added_at
+
+    HomeData:
+      type: object
+      properties:
+        featured_products:
+          type: array
+          items:
+            $ref: '#/components/schemas/Product'
+        categories:
+          type: array
+          items:
+            $ref: '#/components/schemas/Category'
+        brands:
+          type: array
+          items:
+            $ref: '#/components/schemas/Brand'
+        banners:
+          type: array
+          items:
+            $ref: '#/components/schemas/Banner'
+      required:
+        - featured_products
+        - categories
+        - brands
+
+    Banner:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        subtitle:
+          type: string
+        image:
+          type: string
+          format: uri
+        link:
+          type: string
+          format: uri
+          nullable: true
+        is_active:
+          type: boolean
+      required:
+        - id
+        - title
+        - image
+        - is_active
+
+    Coupon:
+      type: object
+      properties:
+        id:
+          type: integer
+        code:
+          type: string
+        discount_type:
+          type: string
+          enum: [percentage, fixed_amount]
+        discount_value:
+          type: number
+          format: decimal
+        minimum_amount:
+          type: number
+          format: decimal
+          nullable: true
+        maximum_discount:
+          type: number
+          format: decimal
+          nullable: true
+        valid_from:
+          type: string
+          format: date-time
+        valid_until:
+          type: string
+          format: date-time
+        is_active:
+          type: boolean
+        usage_limit:
+          type: integer
+          nullable: true
+        used_count:
+          type: integer
+      required:
+        - id
+        - code
+        - discount_type
+        - discount_value
+        - valid_from
+        - valid_until
+        - is_active
+        - used_count
+
+    PaginatedProductList:
+      type: object
+      properties:
+        count:
+          type: integer
+        next:
+          type: string
+          format: uri
+          nullable: true
+        previous:
+          type: string
+          format: uri
+          nullable: true
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Product'
+      required:
+        - count
+        - results
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+        code:
+          type: string
+        details:
+          type: object
+          additionalProperties: true
+      required:
+        - error
+        - message

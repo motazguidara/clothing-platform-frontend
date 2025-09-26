@@ -8,7 +8,7 @@ export default function Home() {
       <ApiStatus />
       <Hero />
       <CollectionRail title="Featured Collections" params={{ featured: true, ordering: "-created_at" }} href="/catalog?featured=true" />
-      <CollectionRail title="Best Sellers" params={{ ordering: "-sold" }} href="/catalog?ordering=-sold" />
+      <CollectionRail title="Best Sellers" params={{ ordering: "-bestseller" }} href="/catalog?ordering=-bestseller" />
       <CollectionRail title="New Arrivals" params={{ ordering: "-created_at" }} href="/catalog?ordering=-created_at" />
     </div>
   );

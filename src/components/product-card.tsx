@@ -1,22 +1,25 @@
-"use client";
-
 import React from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { useWishlistIds, useToggleWishlist } from "@/hooks/useWishlist";
 import { formatPrice } from "@/lib/utils";
 import { useToast } from "@/providers/toast-provider";
+import { useWishlistIds, useToggleWishlist } from "@/hooks/useWishlist";
+import type { Product } from "@/types";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { ProductImagePlaceholder } from "@/components/product-image-placeholder";
 
-type Props = { product: { id: number; slug?: string; title: string; price: number; basePrice?: number; is_on_sale?: boolean; sale_price?: number | null; images?: string[] } };
+interface Props {
+  product: Product;
+}
 
 export default function ProductCard({ product }: Props) {
+  const displayTitle = product.name || "Product";
   const { data: wishlist } = useWishlistIds();
-  const toggle = useToggleWishlist();
   const isWished = !!wishlist?.ids?.includes(product.id);
   const { show } = useToast();
+  const toggle = useToggleWishlist();
   const [open, setOpen] = React.useState(false);
   const variants = (product as any)?.variants || [];
   const [selectedColor, setSelectedColor] = React.useState<string | undefined>();
@@ -33,17 +36,22 @@ export default function ProductCard({ product }: Props) {
   return (
     <article className="w-64 p-2 select-none">
       <div className="relative h-80 rounded-md overflow-hidden group">
-        <Link href={`/product/${product.slug ?? product.id}`} className="absolute inset-0 block" aria-label={`View ${product.title}`} />
+        <Link href={`/products/${product.slug ?? product.id}`} className="absolute inset-0 block" aria-label={`View ${displayTitle}`} />
         <motion.div initial={{ scale: 1 }} whileHover={{ scale: 1.03 }} transition={{ duration: 0.2, ease: "easeOut" }} className="absolute inset-0 pointer-events-none">
-          {product?.images?.[0] ? (
-            <Image src={product.images[0]} alt={product.title} fill sizes="(max-width: 768px) 100vw, 33vw" className="object-cover" />
+          {product?.images?.[0] && product.images[0].length > 0 ? (
+            <Image src={product.images[0]} alt={displayTitle} fill sizes="(max-width: 768px) 100vw, 33vw" className="object-cover" />
           ) : (
-            <div className="flex items-center justify-center h-full text-muted bg-subtle">No image</div>
+            <ProductImagePlaceholder
+              className="flex h-full w-full items-center justify-center text-muted bg-subtle"
+              productName={displayTitle}
+            />
           )}
         </motion.div>
         <button
           aria-label={isWished ? "Remove from wishlist" : "Add to wishlist"}
-          onClick={() => {
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
             toggle.mutate({ product_id: product.id }, {
               onSuccess: (r) => {
                 show({ title: r.added ? "Added to wishlist" : "Removed from wishlist", variant: r.added ? "success" : "default" });
@@ -61,12 +69,12 @@ export default function ProductCard({ product }: Props) {
           <Button className="w-full bg-black text-white hover:bg-black/90" onClick={(e) => { e.stopPropagation(); e.preventDefault(); setOpen(true); }}>Quick View</Button>
         </div>
       </div>
-      <h3 className="mt-3 text-sm font-semibold tracking-tight uppercase line-clamp-1">{product.title}</h3>
+      <h3 className="mt-3 text-sm font-semibold tracking-tight uppercase line-clamp-1">{displayTitle}</h3>
       <div className="mt-1 text-sm flex items-center gap-2">
         <span className="font-semibold">{formatPrice(product.price)}</span>
-        {product.is_on_sale && product.basePrice != null && product.basePrice > (product.sale_price ?? product.price) && (
+        {product.is_on_sale && product.base_price != null && product.base_price > (product.sale_price ?? product.price) && (
           <>
-            <span className="line-through text-muted">{formatPrice(product.basePrice)}</span>
+            <span className="line-through text-muted">{formatPrice(product.base_price)}</span>
             <span className="inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-bold bg-red-600 text-white">SALE</span>
           </>
         )}
@@ -75,13 +83,18 @@ export default function ProductCard({ product }: Props) {
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="sm:max-w-[700px] bg-white text-foreground">
           <DialogHeader>
-            <DialogTitle className="uppercase tracking-tight">{product.title}</DialogTitle>
+            <DialogTitle className="uppercase tracking-tight">{displayTitle}</DialogTitle>
           </DialogHeader>
           <div className="grid md:grid-cols-2 gap-4">
             <div className="relative aspect-square rounded-md overflow-hidden bg-subtle">
-              {product?.images?.[0] ? (
-                <Image src={product.images[0]} alt={product.title} fill sizes="(max-width: 768px) 100vw, 50vw" className="object-cover" />
-              ) : null}
+              {product?.images?.[0] && product.images[0].length > 0 ? (
+                <Image src={product.images[0]} alt={displayTitle} fill sizes="(max-width: 768px) 100vw, 50vw" className="object-cover" />
+              ) : (
+                <ProductImagePlaceholder
+                  className="flex h-full w-full items-center justify-center text-muted bg-subtle"
+                  productName={displayTitle}
+                />
+              )}
             </div>
             <div className="flex flex-col justify-between">
               <div>
@@ -137,7 +150,7 @@ export default function ProductCard({ product }: Props) {
                 )}
               </div>
               <div className="mt-4 flex items-center gap-2">
-                <Link href={`/product/${product.slug ?? product.id}${selectedColor || selectedSize ? `?${selectedColor ? `color=${encodeURIComponent(selectedColor)}` : ''}${selectedColor && selectedSize ? '&' : ''}${selectedSize ? `size=${encodeURIComponent(selectedSize)}` : ''}` : ''}`} className="flex-1">
+                <Link href={`/products/${product.slug ?? product.id}${selectedColor || selectedSize ? `?${selectedColor ? `color=${encodeURIComponent(selectedColor)}` : ''}${selectedColor && selectedSize ? '&' : ''}${selectedSize ? `size=${encodeURIComponent(selectedSize)}` : ''}` : ''}`} className="flex-1">
                   <Button className="w-full">View Product</Button>
                 </Link>
               </div>

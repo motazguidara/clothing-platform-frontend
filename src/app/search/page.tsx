@@ -27,10 +27,10 @@ export default function SearchPage() {
   const { data, isLoading, isError } = useProducts(params);
 
   // Mock suggestions - in a real app, this would be an API call
-  const mockSuggestions = [
+  const mockSuggestions = React.useMemo(() => [
     "t-shirt", "dress", "jeans", "hoodie", "sneakers", "jacket", 
     "polo shirt", "sweater", "shorts", "skirt", "boots", "sandals"
-  ];
+  ], []);
 
   // Handle search input changes with debounced suggestions
   React.useEffect(() => {
@@ -44,7 +44,7 @@ export default function SearchPage() {
       setSuggestions([]);
       setShowSuggestions(false);
     }
-  }, [searchQuery]);
+  }, [searchQuery, mockSuggestions]);
 
   const handleSearch = (query: string) => {
     const url = new URL(window.location.href);
@@ -151,7 +151,7 @@ export default function SearchPage() {
             </div>
           ) : (
             <div>
-              <h2 className="text-xl font-semibold">All Products</h2>
+              <h2 className="text-xl font-semibold">Products</h2>
               <p className="text-sm text-gray-600 mt-1">
                 {resultCount} {resultCount === 1 ? "product" : "products"}
               </p>
@@ -167,7 +167,7 @@ export default function SearchPage() {
           </button>
           <select 
             className="px-3 py-2 border rounded-md text-sm" 
-            defaultValue={params.ordering || "-created_at"}
+            defaultValue={params["ordering"] || "-created_at"}
             onChange={(e) => {
               const v = e.target.value;
               const url = new URL(window.location.href);
@@ -197,7 +197,7 @@ export default function SearchPage() {
             router.push(url.toString());
           }}
           className={`px-3 py-1 rounded-full text-sm border transition-colors ${
-            params.sale ? "bg-black text-white" : "hover:bg-gray-100"
+            params['sale'] ? "bg-black text-white" : "hover:bg-gray-100"
           }`}
         >
           On Sale
@@ -210,7 +210,7 @@ export default function SearchPage() {
             router.push(url.toString());
           }}
           className={`px-3 py-1 rounded-full text-sm border transition-colors ${
-            params.in_stock ? "bg-black text-white" : "hover:bg-gray-100"
+            params['in_stock'] ? "bg-black text-white" : "hover:bg-gray-100"
           }`}
         >
           In Stock
@@ -223,7 +223,7 @@ export default function SearchPage() {
             router.push(url.toString());
           }}
           className={`px-3 py-1 rounded-full text-sm border transition-colors ${
-            params.gender === "women" ? "bg-black text-white" : "hover:bg-gray-100"
+            params['gender'] === "women" ? "bg-black text-white" : "hover:bg-gray-100"
           }`}
         >
           Women
@@ -236,7 +236,7 @@ export default function SearchPage() {
             router.push(url.toString());
           }}
           className={`px-3 py-1 rounded-full text-sm border transition-colors ${
-            params.gender === "men" ? "bg-black text-white" : "hover:bg-gray-100"
+            params['gender'] === "men" ? "bg-black text-white" : "hover:bg-gray-100"
           }`}
         >
           Men
@@ -249,7 +249,7 @@ export default function SearchPage() {
             router.push(url.toString());
           }}
           className={`px-3 py-1 rounded-full text-sm border transition-colors ${
-            params.gender === "kids" ? "bg-black text-white" : "hover:bg-gray-100"
+            params["gender"] === "kids" ? "bg-black text-white" : "hover:bg-gray-100"
           }`}
         >
           Kids
@@ -368,9 +368,9 @@ export default function SearchPage() {
         <div className="mt-10 flex items-center justify-center gap-2">
           {(() => {
             const total = Math.max(1, Math.ceil((data.count || 0) / 20));
-            const current = Number(params.page || 1);
+            const current = Number(params["page"] || 1);
             const makeHref = (page: number) => {
-              const url = new URL(window.location.href);
+              const url = new URL(window.location.href || 'http://localhost:3000');
               url.searchParams.set("page", String(page));
               return url.toString();
             };

@@ -1,12 +1,12 @@
 "use client";
 
 import React from "react";
-import api from "@/lib/api";
-import { setAccessToken } from "@/lib/api";
+import { apiClient } from "@/lib/api/client";
+import { authService } from "@/lib/api/services/auth";
 import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
-import { getRefreshToken, setTokens, clearTokens, hydrateFromStorage } from "./tokenStore";
+import { setTokens, clearTokens, hydrateFromStorage, getRefreshToken } from "./tokenStore";
 
 const UserSchema = z.object({
   id: z.number(),
@@ -29,15 +29,15 @@ const AuthContext = React.createContext<AuthContextValue | undefined>(undefined)
 
 async function fetchMe(): Promise<User | null> {
   try {
-    const res = await api.get("/auth/me/");
-    return UserSchema.parse(res.data);
+    // Avoid calling the endpoint if we clearly have no auth context
+    if (!getRefreshToken()) {
+      return null;
+    }
+    const res = await apiClient.get("/accounts/auth/me/");
+    return UserSchema.parse(res as unknown as any);
   } catch {
     return null;
   }
-}
-
-function persistAccess(access: string | null) {
-  setAccessToken(access || null);
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -58,10 +58,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const login = React.useCallback(async ({ email, password }: { email: string; password: string }) => {
     setLoading(true);
     try {
-      const res = await api.post("/auth/login/", { email, password });
-      const { access, refresh } = res.data || {};
-      persistAccess(access || null);
-      setTokens(access || null, refresh || null, true);
+      const res = await authService.login({ email, password });
+      const { access, refresh } = res;
+      setTokens(access ?? null, refresh ?? null, true);
       const u = await fetchMe();
       setUser(u);
     } finally {
@@ -69,10 +68,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  const register = React.useCallback(async (p: { email: string; password: string; first_name?: string; last_name?: string }) => {
+  const register = React.useCallback(async (p: { email: string; password: string; first_name?: string; last_name?: string; terms_consent?: boolean }) => {
     setLoading(true);
     try {
-      await api.post("/auth/register/", p);
+      await authService.register({ 
+        ...p, 
+        password_confirm: p.password, 
+        marketing_consent: false,
+        terms_consent: p.terms_consent ?? true 
+      });
       await login({ email: p.email, password: p.password });
     } finally {
       setLoading(false);
@@ -80,8 +84,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [login]);
 
   const logout = React.useCallback(() => {
+    authService.logout().catch(() => {});
     clearTokens();
-    persistAccess(null);
     setUser(null);
     qc.invalidateQueries({ queryKey: ["profile"] });
     router.replace("/login");

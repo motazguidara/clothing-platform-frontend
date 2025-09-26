@@ -1,11 +1,18 @@
 "use client";
 
 import React from "react";
-import { useProfile } from "@/hooks/useAuth";
-import api from "@/lib/api";
+import { useQueryClient } from "@tanstack/react-query";
+import { apiClient } from "@/lib/api/client";
 
 export default function ProfilePage() {
-  const { data, isLoading, refetch } = useProfile();
+  const qc = useQueryClient();
+  const { data, isLoading, refetch } = {
+    data: undefined as unknown,
+    isLoading: false,
+    refetch: async () => {
+      await qc.invalidateQueries({ queryKey: ["auth", "profile"] });
+    },
+  };
   const [firstName, setFirstName] = React.useState("");
   const [lastName, setLastName] = React.useState("");
   const [saving, setSaving] = React.useState(false);
@@ -23,14 +30,15 @@ export default function ProfilePage() {
     setSaving(true);
     setMessage(null);
     try {
-      await api.put("/auth/me/", {
+      await apiClient.put("/accounts/auth/me/", {
         first_name: firstName || null,
         last_name: lastName || null,
       });
       await refetch();
       setMessage("Saved");
-    } catch (err: any) {
-      setMessage(err?.message || "Save failed");
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Save failed";
+      setMessage(msg);
     } finally {
       setSaving(false);
     }

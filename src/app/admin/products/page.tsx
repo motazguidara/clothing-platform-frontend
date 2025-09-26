@@ -4,6 +4,7 @@ import React from "react";
 import Link from "next/link";
 import { useProducts } from "@/hooks/useCatalog";
 import { useSearchParams } from "next/navigation";
+import type { Product } from "@/types";
 
 export default function AdminProductsPage() {
   const searchParams = useSearchParams();
@@ -199,8 +200,8 @@ export default function AdminProductsPage() {
                         </div>
                       </td>
                       <td className="px-6 py-4">
-                        <div className="text-sm text-gray-900">{product.gender}</div>
-                        <div className="text-sm text-gray-500">{product.category?.name}</div>
+                        <div className="text-sm text-gray-900">{(product as any).gender || 'N/A'}</div>
+                        <div className="text-sm text-gray-500">{product.category || 'Uncategorized'}</div>
                       </td>
                       <td className="px-6 py-4">
                         <div className="text-sm text-gray-900">${product.price}</div>

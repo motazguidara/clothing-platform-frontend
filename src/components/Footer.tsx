@@ -1,5 +1,6 @@
 import React from "react";
 import Link from "next/link";
+import { ClientOnly } from "./ClientOnly";
 
 export default function Footer() {
   return (

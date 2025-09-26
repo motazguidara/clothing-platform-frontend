@@ -1,131 +1,142 @@
 import { useQuery } from "@tanstack/react-query";
-import api from "@/lib/api";
-import { z } from "zod";
+import { catalogService } from "@/lib/api/services/catalog";
+import { apiClient } from "@/lib/api/client";
+import type { Product, ProductList, Category } from "@/types";
 
-export const CategorySchema = z.object({ id: z.number(), name: z.string(), slug: z.string().nullable() });
-export const VariantSchema = z.object({
-  id: z.number(),
-  color: z.string().optional(),
-  size: z.string().optional(),
-  stock: z.number().optional(),
-});
-export const ProductSchema = z.object({
-  id: z.number(),
-  slug: z.string().optional(),
-  name: z.string(),
-  price: z.number(), // current price
-  compare_at_price: z.number().optional(),
-  is_on_sale: z.boolean().optional(),
-  sale_price: z.number().nullable().optional(),
-  is_featured: z.boolean().optional(),
-  gender: z.string().optional(),
-  short_description: z.string().optional(),
-  description: z.string().optional(),
-  material: z.string().optional(),
-  care_instructions: z.string().optional(),
-  avg_rating: z.number().optional(),
-  review_count: z.number().optional(),
-  images: z.array(z.string()).optional(),
-  variants: z.array(z.object({
-    id: z.number(),
-    sku: z.string(),
-    size: z.string().optional(),
-    color: z.string().optional(),
-    price_adjustment: z.number(),
-    is_active: z.boolean(),
-    inventory: z.object({
-      quantity: z.number(),
-      status: z.string(),
-      is_in_stock: z.boolean(),
-      is_low_stock: z.boolean(),
-    }).optional(),
-  })).optional(),
-  reviews: z.array(z.object({
-    id: z.number(),
-    rating: z.number(),
-    title: z.string(),
-    comment: z.string(),
-    user_name: z.string(),
-    created_at: z.string(),
-  })).optional(),
-  available_sizes: z.array(z.string()).optional(),
-  available_colors: z.array(z.string()).optional(),
-});
-
-export type Category = z.infer<typeof CategorySchema>;
-export type Product = z.infer<typeof ProductSchema>;
-export type Variant = z.infer<typeof VariantSchema>;
-export type ProductList = { results: Product[]; count: number };
-export const CouponSchema = z.object({ code: z.string(), discount: z.number(), valid_until: z.string().optional() });
-export type Coupon = z.infer<typeof CouponSchema>;
+export interface Coupon {
+  code: string;
+  discount: number;
+  valid_until?: string;
+}
 
 export function useCategories() {
   return useQuery({
     queryKey: ["categories"],
     queryFn: async (): Promise<Category[]> => {
-      const res = await api.get("/catalog/categories/");
-      return z.array(CategorySchema).parse(res.data);
+      const apiCategories = await catalogService.getCategories();
+      // Transform API categories to legacy format
+      return apiCategories.map((cat: { id: number; name: string; slug: string | null }) => ({
+        id: cat.id,
+        name: cat.name,
+        slug: cat.slug,
+        is_active: true, // Default to active since API doesn't provide this
+      }));
     },
   });
 }
 
-export function useProducts(params?: Record<string, any>) {
+export function useProducts(params?: Record<string, unknown>) {
   return useQuery({
-    queryKey: ["products", params || {}],
+    queryKey: ["products", params ?? {}],
     queryFn: async (): Promise<ProductList> => {
       // Translate UI params to DRF params
-      const p: Record<string, any> = { ...(params || {}) };
-      if (p.limit != null) {
-        p.page_size = p.limit;
-        delete p.limit;
+      const p: Record<string, unknown> = { ...(params ?? {}) };
+      if ((p as any)["limit"] != null) {
+        (p as any)["page_size"] = (p as any)["limit"];
+        delete (p as any)["limit"];
       }
-      const res = await api.get("/catalog/products/", { params: p });
-      const data = res.data as any;
-      const items = Array.isArray(data.results) ? data.results : [];
+
+      const data: any = await catalogService.getProducts(p as any);
+      const items = Array.isArray(data)
+        ? data
+        : Array.isArray(data?.results)
+        ? data.results
+        : [];
       // Map Django ProductListSerializer -> UI Product shape
-      const mapped: Product[] = items.map((it: any) => ({
-        id: Number(it.id),
-        slug: typeof it.slug === "string" ? it.slug : undefined,
-        name: String(it.name ?? ""),
-        price: typeof it.current_price === "number" ? it.current_price : Number(it.price ?? 0),
-        compare_at_price: it.compare_at_price ? Number(it.compare_at_price) : undefined,
-        is_on_sale: !!it.is_on_sale,
-        sale_price: it.sale_price != null ? Number(it.sale_price) : null,
-        is_featured: !!it.is_featured,
-        gender: it.gender,
-        short_description: it.short_description,
-        description: it.description,
-        material: it.material,
-        care_instructions: it.care_instructions,
-        avg_rating: it.avg_rating ? Number(it.avg_rating) : undefined,
-        review_count: it.review_count ? Number(it.review_count) : undefined,
-        images: Array.isArray(it.images) ? it.images.map((im: any) => im?.image).filter(Boolean) : [],
-        variants: Array.isArray(it.variants) ? it.variants.map((v: any) => ({
-          id: Number(v.id),
-          sku: v.sku,
-          size: v.size,
-          color: v.color,
-          price_adjustment: Number(v.price_adjustment || 0),
-          is_active: !!v.is_active,
-          inventory: v.inventory ? {
-            quantity: Number(v.inventory.quantity || 0),
-            status: v.inventory.status,
-            is_in_stock: !!v.inventory.is_in_stock,
-            is_low_stock: !!v.inventory.is_low_stock,
-          } : undefined,
-        })) : [],
-        available_sizes: Array.isArray(it.available_sizes) ? it.available_sizes : [],
-        available_colors: Array.isArray(it.available_colors) ? it.available_colors : [],
-        reviews: Array.isArray(it.reviews) ? it.reviews.map((r: any) => ({
-          id: Number(r.id),
-          rating: Number(r.rating),
-          title: r.title,
-          comment: r.comment,
-          user_name: r.user_name,
-          created_at: r.created_at,
-        })) : [],
-      }));
-      return { results: z.array(ProductSchema).parse(mapped), count: Number(data.count ?? mapped.length) };
+      const mapped: Product[] = items.map((it: any) => {
+        const product: Product = {
+          id: Number(it.id),
+          name: String(it.name ?? ""),
+          slug: typeof it.slug === "string" ? it.slug : undefined,
+          price: typeof it.current_price === "number" ? it.current_price : Number(it.price ?? 0),
+          is_on_sale: !!it.is_on_sale,
+          is_featured: !!it.is_featured,
+          in_stock: it.in_stock !== undefined ? !!it.in_stock : true,
+          category: it.category?.name ?? it.category,
+          sku: it.sku,
+          brand: it.brand,
+          description: it.description,
+          material: it.material,
+          care_instructions: it.care_instructions,
+          images: Array.isArray(it.images) ? it.images.map((im: any) => im?.image).filter(Boolean) : [],
+          image: it.image,
+          available_sizes: Array.isArray(it.available_sizes) ? it.available_sizes : [],
+          available_colors: Array.isArray(it.available_colors) ? it.available_colors : [],
+          tags: Array.isArray(it.tags) ? it.tags : [],
+          seo_title: it.seo_title,
+          seo_description: it.seo_description,
+          created_at: it.created_at,
+          updated_at: it.updated_at,
+        };
+
+        // Only add optional properties if they have valid values
+        if (it.compare_at_price != null) {
+          product.compare_at_price = Number(it.compare_at_price);
+        }
+        if (it.sale_price != null) {
+          product.sale_price = it.sale_price;
+        }
+        if (it.stock_quantity != null) {
+          product.stock_quantity = Number(it.stock_quantity);
+        }
+        if (it.category?.id != null) {
+          product.category_id = Number(it.category.id);
+        }
+        if (it.gender) {
+          product.gender = it.gender;
+        }
+        if (it.short_description) {
+          product.short_description = it.short_description;
+        }
+        if (it.avg_rating != null) {
+          product.avg_rating = Number(it.avg_rating);
+        }
+        if (it.review_count != null) {
+          product.review_count = Number(it.review_count);
+        }
+        if (it.base_price != null) {
+          product.base_price = it.base_price;
+        }
+        if (Array.isArray(it.variants) && it.variants.length > 0) {
+          product.variants = it.variants.map((v: any) => ({
+            id: Number(v.id),
+            sku: v.sku,
+            size: v.size,
+            color: v.color,
+            price_adjustment: Number(v.price_adjustment ?? 0),
+            is_active: !!v.is_active,
+            inventory: v.inventory ? {
+              quantity: Number(v.inventory.quantity ?? 0),
+              status: v.inventory.status,
+              is_in_stock: !!v.inventory.is_in_stock,
+              is_low_stock: !!v.inventory.is_low_stock,
+            } : undefined,
+          }));
+        }
+        if (Array.isArray(it.reviews) && it.reviews.length > 0) {
+          product.reviews = it.reviews.map((r: any) => ({
+            id: Number(r.id),
+            rating: Number(r.rating),
+            title: r.title,
+            comment: r.comment,
+            user_name: r.user_name,
+            created_at: r.created_at,
+          }));
+        }
+        if (it.weight != null) {
+          product.weight = it.weight;
+        }
+        if (it.dimensions) {
+          product.dimensions = it.dimensions;
+        }
+        if (it.rating != null) {
+          product.rating = it.rating;
+        }
+
+        return product;
+      });
+      const count = typeof data?.count === 'number' ? data.count : mapped.length;
+      return { results: mapped, count };
     },
   });
 }
@@ -135,51 +146,97 @@ export function useProduct(slug?: string) {
     queryKey: ["product", slug],
     queryFn: async (): Promise<Product> => {
       if (!slug) throw new Error("Missing slug");
-      const res = await api.get(`/catalog/products/${slug}/`);
-      const it: any = res.data;
+      const it: any = await apiClient.get(`/catalog/products/${slug}/`);
       const mapped: Product = {
         id: Number(it.id),
-        slug: typeof it.slug === "string" ? it.slug : undefined,
         name: String(it.name ?? ""),
+        slug: typeof it.slug === "string" ? it.slug : undefined,
         price: typeof it.current_price === "number" ? it.current_price : Number(it.price ?? 0),
-        compare_at_price: it.compare_at_price ? Number(it.compare_at_price) : undefined,
         is_on_sale: !!it.is_on_sale,
-        sale_price: it.sale_price != null ? Number(it.sale_price) : null,
         is_featured: !!it.is_featured,
-        gender: it.gender,
-        short_description: it.short_description,
+        in_stock: it.in_stock !== undefined ? !!it.in_stock : true,
+        category: it.category?.name ?? it.category,
+        sku: it.sku,
+        brand: it.brand,
         description: it.description,
         material: it.material,
         care_instructions: it.care_instructions,
-        avg_rating: it.avg_rating ? Number(it.avg_rating) : undefined,
-        review_count: it.review_count ? Number(it.review_count) : undefined,
         images: Array.isArray(it.images) ? it.images.map((im: any) => im?.image).filter(Boolean) : [],
-        variants: Array.isArray(it.variants) ? it.variants.map((v: any) => ({
+        image: it.image,
+        available_sizes: Array.isArray(it.available_sizes) ? it.available_sizes : [],
+        available_colors: Array.isArray(it.available_colors) ? it.available_colors : [],
+        tags: Array.isArray(it.tags) ? it.tags : [],
+        seo_title: it.seo_title,
+        seo_description: it.seo_description,
+        created_at: it.created_at,
+        updated_at: it.updated_at,
+      };
+
+      // Only add optional properties if they have valid values
+      if (it.compare_at_price != null) {
+        mapped.compare_at_price = Number(it.compare_at_price);
+      }
+      if (it.sale_price != null) {
+        mapped.sale_price = it.sale_price;
+      }
+      if (it.stock_quantity != null) {
+        mapped.stock_quantity = Number(it.stock_quantity);
+      }
+      if (it.category?.id != null) {
+        mapped.category_id = Number(it.category.id);
+      }
+      if (it.gender) {
+        mapped.gender = it.gender;
+      }
+      if (it.short_description) {
+        mapped.short_description = it.short_description;
+      }
+      if (it.avg_rating != null) {
+        mapped.avg_rating = Number(it.avg_rating);
+      }
+      if (it.review_count != null) {
+        mapped.review_count = Number(it.review_count);
+      }
+      if (it.base_price != null) {
+        mapped.base_price = it.base_price;
+      }
+      if (Array.isArray(it.variants) && it.variants.length > 0) {
+        mapped.variants = it.variants.map((v: any) => ({
           id: Number(v.id),
           sku: v.sku,
           size: v.size,
           color: v.color,
-          price_adjustment: Number(v.price_adjustment || 0),
+          price_adjustment: Number(v.price_adjustment ?? 0),
           is_active: !!v.is_active,
           inventory: v.inventory ? {
-            quantity: Number(v.inventory.quantity || 0),
+            quantity: Number(v.inventory.quantity ?? 0),
             status: v.inventory.status,
             is_in_stock: !!v.inventory.is_in_stock,
             is_low_stock: !!v.inventory.is_low_stock,
           } : undefined,
-        })) : [],
-        available_sizes: Array.isArray(it.available_sizes) ? it.available_sizes : [],
-        available_colors: Array.isArray(it.available_colors) ? it.available_colors : [],
-        reviews: Array.isArray(it.reviews) ? it.reviews.map((r: any) => ({
+        }));
+      }
+      if (Array.isArray(it.reviews) && it.reviews.length > 0) {
+        mapped.reviews = it.reviews.map((r: any) => ({
           id: Number(r.id),
           rating: Number(r.rating),
           title: r.title,
           comment: r.comment,
           user_name: r.user_name,
           created_at: r.created_at,
-        })) : [],
-      };
-      return ProductSchema.parse(mapped);
+        }));
+      }
+      if (it.weight != null) {
+        mapped.weight = it.weight;
+      }
+      if (it.dimensions) {
+        mapped.dimensions = it.dimensions;
+      }
+      if (it.rating != null) {
+        mapped.rating = it.rating;
+      }
+
+      return mapped;
     },
     enabled: !!slug,
   });
@@ -191,8 +248,13 @@ export function useCoupon(code?: string) {
     enabled: !!code,
     queryFn: async () => {
       if (!code) throw new Error("Missing code");
-      const res = await api.get(`/catalog/coupons/${code}/`);
-      return CouponSchema.parse(res.data);
+      const c: any = await catalogService.getCoupon(code);
+      const coupon: Coupon = {
+        code: String(c.code),
+        discount: Number(c.discount_value ?? c.discount ?? 0),
+        valid_until: c.valid_until ?? undefined,
+      };
+      return coupon;
     },
   });
 }

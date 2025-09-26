@@ -254,7 +254,7 @@ export default function AdminOrdersPage() {
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <div className="text-sm font-medium text-gray-900">${order.total.toFixed(2)}</div>
+                      <div className="text-sm font-medium text-gray-900">${Number(order.total || 0).toFixed(2)}</div>
                     </td>
                     <td className="px-6 py-4">
                       <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(order.status)}`}>
@@ -376,7 +376,7 @@ export default function AdminOrdersPage() {
               <div className="ml-4">
                 <div className="text-sm font-medium text-gray-500">Total Revenue</div>
                 <div className="text-2xl font-bold text-gray-900">
-                  ${orders.reduce((sum, order) => sum + order.total, 0).toFixed(2)}
+                  ${Number(orders.reduce((sum, order) => sum + order.total, 0) || 0).toFixed(2)}
                 </div>
               </div>
             </div>
