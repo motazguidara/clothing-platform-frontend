@@ -3,11 +3,10 @@
 import React from "react";
 import { useProducts } from "@/hooks/useCatalog";
 import ProductCard from "@/components/product-card";
-import { useUIStore } from "@/store/ui";
 import { useSearchParams } from "next/navigation";
+import { FilterSidebar, SortSelect } from "@/components/filters/filter-sidebar";
 
 export default function KidsPage() {
-  const openFilter = useUIStore((s) => s.openFilter);
   const searchParams = useSearchParams();
   
   // Build params with gender filter
@@ -27,88 +26,45 @@ export default function KidsPage() {
           <h1 className="text-3xl font-semibold tracking-tight uppercase">Kids</h1>
           <p className="text-muted mt-2">Discover our kids' collection.</p>
         </div>
-        <div className="flex items-center gap-2">
-          <button onClick={openFilter} className="px-3 py-2 border rounded-md text-sm">
-            Filters
-          </button>
-          <select 
-            className="px-3 py-2 border rounded-md text-sm" 
-            defaultValue={params.ordering || "-created_at"}
-            onChange={(e) => {
-              const v = e.target.value;
-              const url = new URL(window.location.href);
-              if (v) url.searchParams.set("ordering", v); 
-              else url.searchParams.delete("ordering");
-              url.searchParams.delete("page");
-              window.location.href = url.toString();
-            }}
-          >
-            <option value="-created_at">Newest</option>
-            <option value="-bestseller">Best Sellers</option>
-            <option value="price">Price: Low to High</option>
-            <option value="-price">Price: High to Low</option>
-            <option value="-rating">Highest Rated</option>
-          </select>
-        </div>
+        <SortSelect />
       </div>
 
-      {/* Quick filters */}
-      <div className="mt-6 flex flex-wrap gap-2">
-        <a 
-          href="/kids?sale=1" 
-          className="px-3 py-1 rounded-full border text-sm hover:bg-gray-100"
-        >
-          Sale
-        </a>
-        <a 
-          href="/kids?category=tops" 
-          className="px-3 py-1 rounded-full border text-sm hover:bg-gray-100"
-        >
-          Tops
-        </a>
-        <a 
-          href="/kids?category=bottoms" 
-          className="px-3 py-1 rounded-full border text-sm hover:bg-gray-100"
-        >
-          Bottoms
-        </a>
-        <a 
-          href="/kids?category=shoes" 
-          className="px-3 py-1 rounded-full border text-sm hover:bg-gray-100"
-        >
-          Shoes
-        </a>
-      </div>
-
-      <div className="mt-8">
-        {isError && <p className="text-sm text-red-600">Failed to load products.</p>}
-        {isLoading && (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6">
-            {Array.from({ length: 8 }).map((_, i) => (
-              <div key={i} className="h-80 rounded-md bg-gray-200 animate-pulse" />
-            ))}
+      <div className="mt-8 grid grid-cols-1 lg:grid-cols-12 gap-8">
+        <div className="lg:col-span-3 lg:sticky lg:top-24 lg:self-start max-lg:order-2">
+          <div className="lg:max-h-[calc(100vh-7rem)] lg:overflow-y-auto pr-1">
+            <FilterSidebar />
           </div>
-        )}
-        {!isLoading && data && (
-          <>
-            <div className="mb-4 text-sm text-gray-600">
-              {data.count} products found
-            </div>
+        </div>
+        <div className="lg:col-span-9 min-h-[50vh]">
+          {isError && <p className="text-sm text-red-600">Failed to load products.</p>}
+          {isLoading && (
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6">
-              {data.results.map((p) => (
-                <ProductCard key={p.id} product={p} />
+              {Array.from({ length: 8 }).map((_, i) => (
+                <div key={i} className="h-80 rounded-md bg-gray-200 animate-pulse" />
               ))}
             </div>
-          </>
-        )}
-        {!isLoading && data && data.results.length === 0 && (
-          <div className="text-center py-12">
-            <p className="text-gray-500">No products found matching your criteria.</p>
-            <a href="/kids" className="mt-2 inline-block text-blue-600 hover:underline">
-              Clear filters
-            </a>
-          </div>
-        )}
+          )}
+          {!isLoading && data && (
+            <>
+              <div className="mb-4 text-sm text-gray-600">
+                {data.count} products found
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6">
+                {data.results.map((p: any) => (
+                  <ProductCard key={p.id} product={p} />
+                ))}
+              </div>
+            </>
+          )}
+          {!isLoading && data && data.results.length === 0 && (
+            <div className="text-center py-12">
+              <p className="text-gray-500">No products found matching your criteria.</p>
+              <a href="/kids" className="mt-2 inline-block text-blue-600 hover:underline">
+                Clear filters
+              </a>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Pagination */}
@@ -116,7 +72,7 @@ export default function KidsPage() {
         <div className="mt-10 flex items-center justify-center gap-2">
           {(() => {
             const total = Math.max(1, Math.ceil((data.count || 0) / 20));
-            const current = Number(params.page || 1);
+            const current = Number(params["page"] || 1);
             const makeHref = (page: number) => {
               const url = new URL(window.location.href);
               url.searchParams.set("page", String(page));

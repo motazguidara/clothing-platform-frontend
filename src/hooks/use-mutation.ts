@@ -1,6 +1,20 @@
 // src/hooks/use-mutation.ts
-import { UseMutationOptions, useMutation as useBaseMutation } from '@tanstack/react-query';
+import type { UseMutationOptions } from '@tanstack/react-query';
+import { useMutation as useBaseMutation } from '@tanstack/react-query';
 import { useToast } from './use-toast';
+
+type MutationOptions<TData, TError, TVariables, TContext> = Omit<
+  UseMutationOptions<TData, TError, TVariables, TContext>,
+  'mutationFn'
+> & {
+  mutationFn: (variables: TVariables) => Promise<TData>;
+  successMessage?: string;
+  errorMessage?: string | ((error: TError) => string);
+  showSuccessToast?: boolean;
+  showErrorToast?: boolean;
+  onSuccess?: (data: TData, variables: TVariables, context: TContext | undefined) => void | Promise<void>;
+  onError?: (error: TError, variables: TVariables, context: TContext | undefined) => void | Promise<void>;
+};
 
 export function useMutation<
   TData = unknown,
@@ -8,18 +22,7 @@ export function useMutation<
   TVariables = void,
   TContext = unknown
 >(
-  options: Omit<
-    UseMutationOptions<TData, TError, TVariables, TContext>,
-    'mutationFn'
-  > & {
-    mutationFn: (variables: TVariables) => Promise<TData>;
-    successMessage?: string;
-    errorMessage?: string;
-    showSuccessToast?: boolean;
-    showErrorToast?: boolean;
-    onSuccess?: (data: TData, variables: TVariables, context: TContext | undefined) => void;
-    onError?: (error: TError, variables: TVariables, context: TContext | undefined) => void;
-  }
+  options: MutationOptions<TData, TError, TVariables, TContext>
 ) {
   const { toast } = useToast();
   const showSuccessToast = options.showSuccessToast ?? true;
@@ -38,9 +41,15 @@ export function useMutation<
     },
     onError: (error, variables, context) => {
       if (showErrorToast) {
+        const defaultMessage = 'An error occurred';
+        const errorMessage = options.errorMessage || defaultMessage;
+        const message = typeof errorMessage === 'function' 
+          ? errorMessage(error)
+          : errorMessage;
+          
         toast({
-          title: options.errorMessage || 'An error occurred',
-          description: error.message,
+          title: 'Error',
+          description: message,
           variant: 'destructive',
         });
       }

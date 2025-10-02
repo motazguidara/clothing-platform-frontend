@@ -5,9 +5,10 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-export function formatPrice(value?: number, currency: string = "USD") {
-  if (typeof value !== "number") return "$0.00";
-  return new Intl.NumberFormat("en-US", { style: "currency", currency }).format(value);
+export function formatPrice(value?: number | string, currency: string = "USD") {
+  const n = typeof value === "string" ? Number(value) : value;
+  if (typeof n !== "number" || Number.isNaN(n)) return "$0.00";
+  return new Intl.NumberFormat("en-US", { style: "currency", currency }).format(n);
 }
 
 // Simple loyalty points estimator: 1 point per $5, rounded down
@@ -184,8 +185,8 @@ export const storage = {
 // URL helpers
 export function getBaseUrl(): string {
   if (typeof window !== 'undefined') return window.location.origin;
-  if (process.env.NEXT_PUBLIC_SITE_URL) return process.env.NEXT_PUBLIC_SITE_URL;
-  if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
+  if (process.env['NEXT_PUBLIC_SITE_URL']) return process.env['NEXT_PUBLIC_SITE_URL'] as string;
+  if (process.env['VERCEL_URL']) return `https://${process.env['VERCEL_URL']}`;
   return 'http://localhost:3000';
 }
 

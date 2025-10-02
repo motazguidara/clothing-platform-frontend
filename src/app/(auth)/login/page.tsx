@@ -2,35 +2,84 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useAuth } from "@/auth/useAuth";
+import { useAuth } from "@/hooks/useAuth";
 import Link from "next/link";
+import { toast } from "sonner";
+
+// This is a client component that handles the login form
+// It uses the useAuth hook to manage authentication state
 
 export default function LoginPage() {
   const router = useRouter();
   const sp = useSearchParams();
-  const redirectTo = sp.get("redirectTo") || "/";
-  const { login, loading, isAuthenticated } = useAuth();
+  const redirectTo = sp.get("next") || sp.get("redirectTo") || "/";
+  const auth = useAuth();
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const emailRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => { emailRef.current?.focus(); }, []);
-  useEffect(() => { if (isAuthenticated) router.replace(redirectTo); }, [isAuthenticated, router, redirectTo]);
+  useEffect(() => {
+    // Check if we need to redirect
+    if (auth.isAuthenticated) {
+      router.replace(redirectTo);
+    } else {
+      setIsLoading(false);
+    }
+    
+    // Focus the email input on mount
+    emailRef.current?.focus();
+  }, [auth.isAuthenticated, router, redirectTo]);
+  
+  // Show loading state while checking auth
+  if (isLoading || auth.isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+    
+    // Basic validation
     if (!email || !password) {
       setError("Please enter your email and password.");
       emailRef.current?.focus();
       return;
     }
+    
     try {
-      await login({ email, password });
+      setIsLoggingIn(true);
+
+      // Call the login mutation and redirect here
+      await auth.loginAsync({ email, password });
+
+      // Show success message
+      toast.success("Successfully logged in!");
+
+      // Redirect to target
       router.replace(redirectTo);
     } catch (err: any) {
-      setError("Invalid email or password.");
+      console.error("Login error:", err);
+      
+      // Handle different types of errors
+      let errorMessage = "Failed to log in. Please check your credentials and try again.";
+      
+      if (err?.response?.data?.detail) {
+        errorMessage = err.response.data.detail;
+      } else if (err?.message) {
+        errorMessage = err.message;
+      }
+      
+      setError(errorMessage);
+      toast.error(errorMessage);
+    } finally {
+      setIsLoggingIn(false);
     }
   }
 
@@ -66,10 +115,10 @@ export default function LoginPage() {
         {error && <p className="text-sm text-red-600" role="alert" aria-live="assertive">{error}</p>}
         <button
           type="submit"
-          disabled={loading}
+          disabled={isLoggingIn || auth.isLoading}
           className="w-full inline-flex items-center justify-center rounded-md bg-primary text-primary-foreground px-6 py-3 text-sm font-semibold hover:opacity-90 transition disabled:opacity-50"
         >
-          {loading ? "Signing in…" : "Sign in"}
+          {isLoggingIn ? "Signing in…" : "Sign in"}
         </button>
       </form>
       <div className="mt-3 text-sm">

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import { formatPrice } from "@/lib/utils";
 import { useToast } from "@/providers/toast-provider";
-import { useWishlistIds, useToggleWishlist } from "@/hooks/useWishlist";
+import { useWishlist } from "@/lib/wishlist";
 import type { Product } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -16,11 +16,15 @@ interface Props {
 
 export default function ProductCard({ product }: Props) {
   const displayTitle = product.name || "Product";
-  const { data: wishlist } = useWishlistIds();
-  const isWished = !!wishlist?.ids?.includes(product.id);
+  const { hasItem, toggleItem } = useWishlist();
+  const [mounted, setMounted] = React.useState(false);
+  const isWished = mounted ? hasItem(product.id) : false;
   const { show } = useToast();
-  const toggle = useToggleWishlist();
   const [open, setOpen] = React.useState(false);
+
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
   const variants = (product as any)?.variants || [];
   const [selectedColor, setSelectedColor] = React.useState<string | undefined>();
   const [selectedSize, setSelectedSize] = React.useState<string | undefined>();
@@ -52,14 +56,14 @@ export default function ProductCard({ product }: Props) {
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
-            toggle.mutate({ product_id: product.id }, {
-              onSuccess: (r) => {
-                show({ title: r.added ? "Added to wishlist" : "Removed from wishlist", variant: r.added ? "success" : "default" });
-              },
-              onError: (e: any) => {
+            toggleItem(product.id)
+              .then(() => {
+                const nowWished = !isWished;
+                show({ title: nowWished ? "Added to wishlist" : "Removed from wishlist", variant: nowWished ? "success" : "default" });
+              })
+              .catch((e: any) => {
                 show({ title: e?.message || "Wishlist update failed", variant: "error" });
-              }
-            });
+              });
           }}
           className={`absolute top-2 right-2 rounded-full px-2 py-1 text-xs font-semibold ${isWished ? "bg-foreground text-white border-2 border-white" : "bg-white/90"}`}
         >
@@ -71,13 +75,22 @@ export default function ProductCard({ product }: Props) {
       </div>
       <h3 className="mt-3 text-sm font-semibold tracking-tight uppercase line-clamp-1">{displayTitle}</h3>
       <div className="mt-1 text-sm flex items-center gap-2">
-        <span className="font-semibold">{formatPrice(product.price)}</span>
-        {product.is_on_sale && product.base_price != null && product.base_price > (product.sale_price ?? product.price) && (
-          <>
-            <span className="line-through text-muted">{formatPrice(product.base_price)}</span>
-            <span className="inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-bold bg-red-600 text-white">SALE</span>
-          </>
-        )}
+        {(() => {
+          const display = (product as any)?.sale_price ?? (product as any)?.price ?? (product as any)?.base_price ?? 0;
+          const base = (product as any)?.base_price;
+          const onSale = Boolean((product as any)?.is_on_sale) && base != null && Number(base) > Number(display);
+          return (
+            <>
+              <span className="font-semibold">{formatPrice(display)}</span>
+              {onSale && (
+                <>
+                  <span className="line-through text-muted">{formatPrice(base)}</span>
+                  <span className="inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-bold bg-red-600 text-white">SALE</span>
+                </>
+              )}
+            </>
+          );
+        })()}
       </div>
 
       <Dialog open={open} onOpenChange={setOpen}>

@@ -20,9 +20,13 @@ export class CatalogService {
     
     if (params) {
       Object.entries(params).forEach(([key, value]) => {
-        if (value !== undefined && value !== null) {
-          searchParams.append(key, String(value));
-        }
+        if (value === undefined || value === null) return;
+        // Map friendly flags to backend fields
+        const mappedKey =
+          key === 'featured' ? 'is_featured' :
+          key === 'on_sale' ? 'is_on_sale' :
+          key;
+        searchParams.append(mappedKey, String(value));
       });
     }
 

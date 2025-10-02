@@ -1,24 +1,26 @@
 'use client';
 
-import React from 'react';
+import * as React from 'react';
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
 
-interface LazyImageProps {
+const defaultBlurDataURL = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxIiBoZWlnaHQ9IjEiPjwvc3ZnPg==';
+
+type LazyImageProps = {
   src: string;
   alt: string;
-  width?: number;
-  height?: number;
+  width?: number | `${number}`;
+  height?: number | `${number}`;
   className?: string;
   priority?: boolean;
-  sizes?: string;
-  fill?: boolean;
   quality?: number;
-  placeholder?: 'blur' | 'empty';
+  placeholder?: 'blur' | 'empty' | `data:image/${string}`;
   blurDataURL?: string;
   onLoad?: () => void;
   onError?: () => void;
-}
+  fill?: boolean;
+  sizes?: string;
+};
 
 export function LazyImage({
   src,
@@ -34,95 +36,76 @@ export function LazyImage({
   blurDataURL,
   onLoad,
   onError,
+  ...props
 }: LazyImageProps) {
   const [isLoading, setIsLoading] = React.useState(true);
   const [hasError, setHasError] = React.useState(false);
 
-  const handleLoad = () => {
+  const handleLoad = React.useCallback(() => {
     setIsLoading(false);
     onLoad?.();
-  };
+  }, [onLoad]);
 
-  const handleError = () => {
-    setIsLoading(false);
+  const handleError = React.useCallback(() => {
     setHasError(true);
     onError?.();
-  };
-
-  // Generate blur placeholder if not provided
-  const generateBlurDataURL = (w: number, h: number) => {
-    return `data:image/svg+xml;base64,${Buffer.from(
-      `<svg width="${w}" height="${h}" xmlns="http://www.w3.org/2000/svg">
-        <rect width="100%" height="100%" fill="#f3f4f6"/>
-        <rect x="20%" y="20%" width="60%" height="60%" fill="#e5e7eb" rx="4"/>
-      </svg>`
-    ).toString('base64')}`;
-  };
-
-  const defaultBlurDataURL = width && height 
-    ? generateBlurDataURL(width, height)
-    : generateBlurDataURL(400, 300);
+  }, [onError]);
 
   if (hasError) {
     return (
-      <div
-        className={cn(
-          'flex items-center justify-center bg-gray-100 text-gray-400',
-          fill ? 'absolute inset-0' : '',
-          className
-        )}
-        style={!fill ? { width, height } : undefined}
-      >
-        <svg
-          className="h-8 w-8"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-          aria-hidden="true"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={1.5}
-            d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-          />
-        </svg>
+      <div className={cn('bg-gray-100 flex items-center justify-center', className)}>
         <span className="sr-only">Image failed to load</span>
       </div>
     );
   }
 
+  // Handle placeholder
+  let placeholderProp: 'blur' | 'empty' | `data:image/${string}` = 'empty';
+  let blurDataURLProp = blurDataURL;
+  
+  if (placeholder === 'blur') {
+    placeholderProp = 'blur';
+    blurDataURLProp = blurDataURL || defaultBlurDataURL;
+  } else if (placeholder && placeholder !== 'empty') {
+    placeholderProp = placeholder;
+  }
+
+  // Create separate props for fill and non-fill cases
+  const commonProps = {
+    src,
+    alt,
+    sizes,
+    priority,
+    quality,
+    placeholder: placeholderProp as 'blur' | 'empty',
+    // Provide a default empty string if blurDataURL is undefined
+    blurDataURL: blurDataURLProp || '',
+    onLoadingComplete: handleLoad,
+    onError: handleError,
+    className: cn(
+      'transition-opacity duration-300',
+      isLoading ? 'opacity-0' : 'opacity-100',
+      className
+    ),
+  };
+
+  const fillProps = fill
+    ? { fill: true as const }
+    : {
+        width: width ? Number(width) : 0,
+        height: height ? Number(height) : 0,
+      };
+
   return (
     <div className={cn('relative overflow-hidden', !fill && 'inline-block')}>
-      <Image
-        src={src}
-        alt={alt}
-        width={fill ? undefined : width}
-        height={fill ? undefined : height}
-        fill={fill}
-        sizes={sizes}
-        priority={priority}
-        quality={quality}
-        placeholder={placeholder}
-        blurDataURL={blurDataURL || defaultBlurDataURL}
-        onLoad={handleLoad}
-        onError={handleError}
-        className={cn(
-          'transition-opacity duration-300',
-          isLoading ? 'opacity-0' : 'opacity-100',
-          className
-        )}
-      />
-      
-      {/* Loading skeleton */}
+      {fill ? (
+        <Image {...commonProps} {...fillProps} />
+      ) : (
+        <Image {...commonProps} {...fillProps} />
+      )}
       {isLoading && (
-        <div
-          className={cn(
-            'absolute inset-0 bg-gray-200 animate-pulse',
-            'flex items-center justify-center'
-          )}
-        >
-          <div className="h-6 w-6 animate-spin rounded-full border-2 border-gray-300 border-t-gray-600" />
+        <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
+          <div className="w-6 h-6 border-2 border-gray-300 border-t-black rounded-full animate-spin" />
         </div>
       )}
     </div>
@@ -142,16 +125,17 @@ export function ProductImage({
   priority?: boolean;
 }) {
   return (
-    <LazyImage
-      src={src}
-      alt={alt}
-      fill
-      sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-      priority={priority}
-      quality={85}
-      placeholder="blur"
-      className={cn('object-cover', className)}
-    />
+    <div className={cn('relative w-full h-full', className)}>
+      <LazyImage
+        src={src}
+        alt={alt}
+        width={400}
+        height={500}
+        className="object-cover w-full h-full"
+        priority={priority}
+        sizes="(max-width: 640px) 100vw, 400px"
+      />
+    </div>
   );
 }
 
@@ -166,15 +150,15 @@ export function HeroImage({
   className?: string;
 }) {
   return (
-    <LazyImage
-      src={src}
-      alt={alt}
-      fill
-      sizes="100vw"
-      priority={true}
-      quality={90}
-      placeholder="blur"
-      className={cn('object-cover', className)}
-    />
+    <div className={cn('relative w-full h-full', className)}>
+      <LazyImage
+        src={src}
+        alt={alt}
+        fill
+        className="object-cover w-full h-full"
+        priority
+        sizes="100vw"
+      />
+    </div>
   );
 }

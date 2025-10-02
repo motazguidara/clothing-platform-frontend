@@ -1,5 +1,29 @@
 // Performance monitoring and optimization utilities
 
+// Type declarations for Web Vitals
+interface LayoutShift extends PerformanceEntry {
+  value: number;
+  hadRecentInput: boolean;
+}
+
+interface PerformanceEventTiming extends PerformanceEntry {
+  processingStart: number;
+}
+
+declare global {
+  interface Window {
+    PerformanceObserver: typeof PerformanceObserver;
+  }
+  
+  // Augment the PerformanceEntry interface to include our custom types
+  interface PerformanceEntry {
+    processingStart?: number;
+    value?: number;
+    hadRecentInput?: boolean;
+  }
+}
+
+
 export class PerformanceMonitor {
   private static instance: PerformanceMonitor;
   private metrics: Map<string, number> = new Map();
@@ -36,7 +60,13 @@ export class PerformanceMonitor {
 
   // Get Core Web Vitals
   getCoreWebVitals() {
-    return new Promise((resolve) => {
+    return new Promise<{
+      CLS: number;
+      FID: number;
+      FCP: number;
+      LCP: number;
+      TTFB: number;
+    }>((resolve) => {
       const vitals = {
         CLS: 0,
         FID: 0,
@@ -48,42 +78,57 @@ export class PerformanceMonitor {
       // Largest Contentful Paint
       new PerformanceObserver((list) => {
         const entries = list.getEntries();
-        const lastEntry = entries[entries.length - 1];
-        vitals.LCP = lastEntry.startTime;
-      }).observe({ entryTypes: ['largest-contentful-paint'] });
+        const lastEntry = entries[entries.length - 1] as PerformanceEntry & { startTime: number };
+        if (lastEntry) {
+          vitals.LCP = lastEntry.startTime;
+        }
+      }).observe({ type: 'largest-contentful-paint', buffered: true });
 
       // First Input Delay
       new PerformanceObserver((list) => {
-        const entries = list.getEntries();
-        entries.forEach((entry: any) => {
-          vitals.FID = entry.processingStart - entry.startTime;
+        const entries = list.getEntries() as PerformanceEventTiming[];
+        entries.forEach((entry) => {
+          if ('processingStart' in entry) {
+            vitals.FID = entry.processingStart - entry.startTime;
+          }
         });
-      }).observe({ entryTypes: ['first-input'] });
+      }).observe({ type: 'first-input', buffered: true });
 
       // Cumulative Layout Shift
       new PerformanceObserver((list) => {
-        const entries = list.getEntries();
-        entries.forEach((entry: any) => {
+        const entries = list.getEntries() as LayoutShift[];
+        entries.forEach((entry) => {
           if (!entry.hadRecentInput) {
             vitals.CLS += entry.value;
           }
         });
-      }).observe({ entryTypes: ['layout-shift'] });
+      }).observe({ type: 'layout-shift', buffered: true });
 
       // First Contentful Paint
       new PerformanceObserver((list) => {
         const entries = list.getEntries();
-        entries.forEach((entry) => {
-          if (entry.name === 'first-contentful-paint') {
-            vitals.FCP = entry.startTime;
-          }
-        });
-      }).observe({ entryTypes: ['paint'] });
+        const fcpEntry = entries.find(entry => entry.name === 'first-contentful-paint');
+        if (fcpEntry) {
+          vitals.FCP = fcpEntry.startTime;
+        }
+      }).observe({ type: 'paint', buffered: true });
 
-      // Time to First Byte
-      const navigation = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming;
-      if (navigation) {
-        vitals.TTFB = navigation.responseStart - navigation.requestStart;
+      // Time to First Byte (TTFB)
+      if (typeof window !== 'undefined' && 'performance' in window) {
+        try {
+          const navigationEntries = performance.getEntriesByType('navigation') as PerformanceNavigationTiming[];
+          if (navigationEntries.length > 0) {
+            const navEntry = navigationEntries[0];
+            if (navEntry && 'responseStart' in navEntry && 'requestStart' in navEntry) {
+              const { responseStart, requestStart } = navEntry;
+              if (typeof responseStart === 'number' && typeof requestStart === 'number') {
+                vitals.TTFB = responseStart - requestStart;
+              }
+            }
+          }
+        } catch (error) {
+          console.warn('Failed to measure TTFB:', error);
+        }
       }
 
       setTimeout(() => resolve(vitals), 3000);
@@ -112,12 +157,12 @@ export class PerformanceMonitor {
 export const imageOptimization = {
   // Generate responsive image props
   getResponsiveProps(src: string, alt: string, priority = false) {
+    const safeSrc = typeof src === 'string' && src.trim().length > 0 ? src.trim() : '/file.svg';
     return {
-      src,
+      src: safeSrc,
       alt,
       priority,
       sizes: '(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw',
-      quality: 85,
       placeholder: 'blur' as const,
       blurDataURL: 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAAIAAoDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAhEAACAQMDBQAAAAAAAAAAAAABAgMABAUGIWGRkqGx0f/EABUBAQEAAAAAAAAAAAAAAAAAAAMF/8QAGhEAAgIDAAAAAAAAAAAAAAAAAAECEgMRkf/aAAwDAQACEQMRAD8AltJagyeH0AthI5xdrLcNM91BF5pX2HaH9bcfaSXWGaRmknyJckliyjqTzSlT54b6bk+h0R//2Q==',
     };

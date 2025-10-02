@@ -93,14 +93,20 @@ export const WishlistIdsSchema = z.object({
 
 // Auth schemas
 export const UserSchema = z.object({
-  id: z.string().uuid(),
+  // Backend may return numeric IDs; accept number or string
+  id: z.union([z.number(), z.string()]),
   email: z.string().email(),
-  first_name: z.string(),
-  last_name: z.string(),
-  is_active: z.boolean(),
-  is_verified: z.boolean(),
-  date_joined: z.string().datetime(),
-  last_login: z.string().datetime().nullable(),
+  // Names may be empty or omitted
+  first_name: z.string().optional().default(''),
+  last_name: z.string().optional().default(''),
+  // Some fields may be omitted in certain responses
+  is_active: z.boolean().optional().default(true),
+  // Backend may use a different flag (e.g., is_email_confirmed); keep optional with default
+  is_verified: z.boolean().optional().default(false),
+  email_verified: z.boolean().optional(),
+  // Loosen date validation to tolerate various formats and optional presence
+  date_joined: z.string().optional(),
+  last_login: z.string().nullable().optional(),
 });
 
 export const NotificationPreferencesSchema = z.object({
@@ -126,11 +132,47 @@ export const UserProfileSchema = UserSchema.extend({
   preferences: UserPreferencesSchema,
 });
 
+// /auth/me PATCH payload schema
+export const UpdateMeRequestSchema = z.object({
+  first_name: z.string().optional(),
+  last_name: z.string().optional(),
+  phone: z.string().nullable().optional(),
+  avatar: z.any().optional(),
+  email: z.string().email().optional(),
+  // For email change (re-auth)
+  password: z.string().min(1).optional(),
+  // For password change
+  old_password: z.string().min(1).optional(),
+  new_password: z.string().min(8).optional(),
+  marketing_consent: z.boolean().optional(),
+});
+
 export const AuthResponseSchema = z.object({
   access: z.string(),
   refresh: z.string(),
   user: UserSchema,
 });
+
+// Minimal responses for cookie-JWT mode or lean endpoints
+export const LoginMinimalSchema = z.object({
+  user: z.object({
+    id: z.union([z.number(), z.string()]),
+    email: z.string().email(),
+  }),
+});
+
+export const LoginResponseSchema = z.union([AuthResponseSchema, LoginMinimalSchema]);
+
+export const RegisterResponseSchema = z.union([
+  z.object({
+    id: z.union([z.number(), z.string()]),
+    email: z.string().email(),
+  }),
+  z.object({
+    user: UserSchema,
+    message: z.string().optional(),
+  })
+]);
 
 export const TokenRefreshResponseSchema = z.object({
   access: z.string(),
@@ -298,7 +340,10 @@ export type WishlistIds = z.infer<typeof WishlistIdsSchema>;
 export type User = z.infer<typeof UserSchema>;
 export type UserPreferences = z.infer<typeof UserPreferencesSchema>;
 export type UserProfile = z.infer<typeof UserProfileSchema>;
+export type UpdateMeRequest = z.infer<typeof UpdateMeRequestSchema>;
 export type AuthResponse = z.infer<typeof AuthResponseSchema>;
+export type LoginResponse = z.infer<typeof LoginResponseSchema>;
+export type RegisterResponse = z.infer<typeof RegisterResponseSchema>;
 export type TokenRefreshResponse = z.infer<typeof TokenRefreshResponseSchema>;
 export type Address = z.infer<typeof AddressSchema>;
 export type Cart = z.infer<typeof CartSchema>;

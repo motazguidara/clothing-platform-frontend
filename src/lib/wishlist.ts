@@ -343,22 +343,11 @@ export const useWishlistStore = create<WishlistStore>()(
         lastSyncAt: state.lastSyncAt,
       }),
       onRehydrateStorage: () => (state) => {
-        // Initialize after rehydration
-        if (state) {
-          // Check authentication status and sync if needed
-          const checkAuth = async () => {
-            try {
-              await apiClient.get('/accounts/auth/me/');
-              state.setAuthenticated(true);
-              await state.syncWithServer();
-            } catch {
-              state.setAuthenticated(false);
-            }
-          };
-          
-          if (typeof window !== 'undefined') {
-            checkAuth();
-          }
+        // Initialize after rehydration - don't auto-check auth to avoid 401s on mount
+        // Let the app's auth provider handle this instead
+        if (state && typeof window !== 'undefined') {
+          // Just mark as not authenticated initially; auth provider will update
+          state.setAuthenticated(false);
         }
       },
     }
@@ -374,6 +363,7 @@ export const useWishlist = () => {
     isLoading: store.isLoading,
     error: store.error,
     itemCount: store.getItemCount(),
+    getItemCount: store.getItemCount,
     hasItem: store.hasItem,
     addItem: store.addItem,
     removeItem: store.removeItem,

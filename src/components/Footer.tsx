@@ -76,22 +76,24 @@ export default function Footer() {
 
         {/* Newsletter Signup */}
         <div className="border-t border-gray-800 mt-12 pt-8">
-          <div className="max-w-md">
-            <h3 className="text-lg font-semibold mb-2">Stay in the loop</h3>
-            <p className="text-gray-400 text-sm mb-4">
-              Subscribe to our newsletter for exclusive offers and the latest fashion updates.
-            </p>
-            <div className="flex">
-              <input
-                type="email"
-                placeholder="Enter your email"
-                className="flex-1 px-4 py-2 bg-gray-800 border border-gray-700 rounded-l-md focus:outline-none focus:ring-2 focus:ring-white text-white placeholder-gray-400"
-              />
-              <button className="px-6 py-2 bg-white text-gray-900 rounded-r-md hover:bg-gray-100 transition-colors font-medium">
-                Subscribe
-              </button>
+          <ClientOnly>
+            <div className="max-w-md" suppressHydrationWarning>
+              <h3 className="text-lg font-semibold mb-2">Stay in the loop</h3>
+              <p className="text-gray-400 text-sm mb-4">
+                Subscribe to our newsletter for exclusive offers and the latest fashion updates.
+              </p>
+              <div className="flex">
+                <input
+                  type="email"
+                  placeholder="Enter your email"
+                  className="flex-1 px-4 py-2 bg-gray-800 border border-gray-700 rounded-l-md focus:outline-none focus:ring-2 focus:ring-white text-white placeholder-gray-400"
+                />
+                <button className="px-6 py-2 bg-white text-gray-900 rounded-r-md hover:bg-gray-100 transition-colors font-medium">
+                  Subscribe
+                </button>
+              </div>
             </div>
-          </div>
+          </ClientOnly>
         </div>
 
         {/* Bottom Bar */}

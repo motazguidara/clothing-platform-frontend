@@ -1,19 +1,31 @@
 import React from "react";
 
-export type ButtonVariant = "primary" | "secondary" | "ghost" | "destructive";
-export type ButtonSize = "sm" | "md" | "lg";
+export type ButtonVariant =
+  | "default"
+  | "primary"
+  | "secondary"
+  | "ghost"
+  | "destructive"
+  | "outline"
+  | "link";
+export type ButtonSize = "sm" | "md" | "lg" | "icon";
 
 export const buttonVariantClasses: Record<ButtonVariant, string> = {
+  default: "bg-black text-white hover:bg-black/90",
   primary: "bg-black text-white hover:bg-black/90",
   secondary: "bg-gray-200 text-black hover:bg-gray-300",
   ghost: "bg-transparent text-black hover:bg-gray-100",
   destructive: "bg-red-600 text-white hover:bg-red-700",
+  outline:
+    "bg-white text-gray-900 border border-gray-300 hover:bg-gray-50",
+  link: "bg-transparent text-blue-600 hover:underline hover:bg-transparent",
 };
 
 export const buttonSizeClasses: Record<ButtonSize, string> = {
   sm: "h-8 px-3 text-sm",
   md: "h-10 px-4 text-sm",
   lg: "h-12 px-5 text-base",
+  icon: "h-9 w-9",
 };
 
 type Props = React.ButtonHTMLAttributes<HTMLButtonElement> & {
@@ -23,7 +35,7 @@ type Props = React.ButtonHTMLAttributes<HTMLButtonElement> & {
 };
 
 export function Button({
-  variant = "primary",
+  variant = "default",
   size = "md",
   className = "",
   ...props

@@ -11,6 +11,7 @@ import { ToastProvider } from "@/providers/toast-provider";
 import SearchOverlay from "@/components/SearchOverlay";
 import ErrorBoundary from "@/components/error-boundary";
 import { monitoring } from "@/lib/monitoring";
+import { WishlistProvider } from "@/components/wishlist/wishlist-provider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -150,6 +151,7 @@ export default function RootLayout({
         <ErrorBoundary>
           <QueryProvider>
             <ToastProvider>
+              <WishlistProvider>
               {/* Header with navigation */}
               <Suspense fallback={<div className="h-16 bg-white border-b" />}>
                 <Header />
@@ -171,6 +173,7 @@ export default function RootLayout({
                 <FilterDrawer />
                 <SearchOverlay />
               </Suspense>
+              </WishlistProvider>
             </ToastProvider>
           </QueryProvider>
         </ErrorBoundary>

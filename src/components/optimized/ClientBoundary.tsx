@@ -59,7 +59,7 @@ export function withClientBoundary<P extends Record<string, any>>(
 }
 
 // Dynamic import wrapper with proper loading states
-export function createDynamicComponent<P extends Record<string, any> = Record<string, any>>(
+export function createDynamicComponent<P extends Record<string, any>>(
   importFn: () => Promise<{ default: React.ComponentType<P> }>,
   options?: {
     loading?: () => React.ReactElement;
@@ -67,15 +67,28 @@ export function createDynamicComponent<P extends Record<string, any> = Record<st
     name?: string;
   }
 ) {
-  const DynamicComponent = dynamic(importFn, {
-    loading: options?.loading,
+  const dynamicOptions: {
+    loading?: () => React.ReactElement;
+    ssr?: boolean;
+  } = {
     ssr: options?.ssr ?? false,
-  });
+  };
 
-  return withClientBoundary(DynamicComponent, {
+  if (options?.loading) {
+    dynamicOptions.loading = options.loading;
+  }
+
+  const DynamicComponent = dynamic(importFn, dynamicOptions) as React.ComponentType<P>;
+
+  const boundaryOptions: Omit<ClientBoundaryProps, 'children'> = {
     name: options?.name || 'DynamicComponent',
-    loading: options?.loading,
-  });
+  };
+
+  if (options?.loading) {
+    boundaryOptions.loading = options.loading;
+  }
+
+  return withClientBoundary<P>(DynamicComponent, boundaryOptions);
 }
 
 // Performance monitoring wrapper

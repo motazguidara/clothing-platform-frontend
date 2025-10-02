@@ -3,8 +3,10 @@
 
 import { z } from 'zod';
 import { clientConfig, isDevelopment } from '@/lib/client-env';
+import { tokenStore } from '@/lib/auth/tokens';
 import { ErrorReporter } from '@/lib/error-reporter';
 import * as schemas from './contracts';
+import { TokenRefreshResponseSchema } from '@/lib/api/schemas';
 
 // API Client Configuration
 interface ApiClientConfig {
@@ -155,8 +157,23 @@ export class ApiClient {
       'X-Request-ID': requestId,
     };
 
-    // Add CSRF token for non-GET requests
-    if (method !== 'GET' && typeof window !== 'undefined') {
+    // Attach bearer token in header mode
+    // Exclude only endpoints that must not send Authorization (login/register/refresh)
+    if (typeof window !== 'undefined' && !clientConfig.featureCookieJwt) {
+      const authExclusions = [
+        '/accounts/auth/login/',
+        '/accounts/auth/register/',
+        '/accounts/auth/refresh/',
+      ];
+      const shouldExcludeAuth = authExclusions.some((p) => endpoint.startsWith(p));
+      const token = tokenStore.getAccess();
+      if (token && !shouldExcludeAuth) {
+        requestHeaders['Authorization'] = `Bearer ${token}`;
+      }
+    }
+
+    // Add CSRF token for non-GET requests in cookie mode only
+    if (clientConfig.featureCookieJwt && method !== 'GET' && typeof window !== 'undefined') {
       const csrfToken = this.getCsrfToken();
       if (csrfToken) {
         requestHeaders['X-CSRFToken'] = csrfToken;
@@ -166,7 +183,7 @@ export class ApiClient {
     const requestOptions: RequestInit = {
       method,
       headers: requestHeaders,
-      credentials: 'include', // For httpOnly cookies
+      credentials: clientConfig.featureCookieJwt ? 'include' : 'same-origin',
     };
 
     if (body && method !== 'GET') {
@@ -208,17 +225,18 @@ export class ApiClient {
           config.timeout
         );
 
-        return await this.handleResponse(response, {
+        const handleCfg: { validateResponse: boolean; responseSchema?: z.ZodSchema<T> } = {
           validateResponse: config.validateResponse,
-          responseSchema: config.responseSchema,
-        });
+        };
+        if (config.responseSchema) handleCfg.responseSchema = config.responseSchema as z.ZodSchema<T>;
+        return await this.handleResponse(response, handleCfg);
       } catch (error) {
         lastError = error as Error;
         attempt++;
 
         // Don't retry on client errors (4xx) except 401 with refresh token
-        if (error instanceof ApiError && error.status >= 400 && error.status < 500) {
-          // Handle 401 Unauthorized - try to refresh token
+        if (error instanceof ApiError && typeof error.status === 'number' && error.status >= 400 && error.status < 500) {
+          // Handle 401 Unauthorized - try to refresh token (single guarded retry)
           if (error.status === 401 && !isRetry) {
             try {
               // Try to refresh the token
@@ -338,13 +356,57 @@ export class ApiClient {
   }
 
   private async refreshToken(): Promise<void> {
-    // This would be implemented based on your auth system
-    // For now, we'll just throw an error
-    throw new Error('Token refresh not implemented');
+    const refreshEndpoint = new URL(`${this.config.baseURL}/accounts/auth/refresh/`);
+    // Cookie mode: rely on httpOnly cookies; just call refresh to rotate/access cookie
+    if (clientConfig.featureCookieJwt) {
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      const csrf = this.getCsrfToken();
+      if (csrf) headers['X-CSRFToken'] = csrf;
+      const resp = await this.fetchWithTimeout(
+        refreshEndpoint.toString(),
+        {
+          method: 'POST',
+          headers,
+          credentials: 'include',
+          body: JSON.stringify({}),
+        },
+        this.config.timeout
+      );
+      if (!resp.ok) {
+        await this.handleErrorResponse(resp);
+      }
+      // No tokens to store in cookie mode
+      return;
+    }
+
+    // Header mode: use in-memory refresh token
+    const refresh = tokenStore.getRefresh();
+    if (!refresh) throw new Error('No refresh token available');
+    const resp = await this.fetchWithTimeout(
+      refreshEndpoint.toString(),
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify({ refresh }),
+      },
+      this.config.timeout
+    );
+    if (!resp.ok) {
+      await this.handleErrorResponse(resp);
+    }
+    const text = await resp.text();
+    const data = text ? JSON.parse(text) : {};
+    const parsed = TokenRefreshResponseSchema.safeParse(data);
+    if (!parsed.success) throw new Error('Invalid refresh response');
+    tokenStore.setAccess(parsed.data.access);
+    if (parsed.data.refresh) tokenStore.setRefresh(parsed.data.refresh);
   }
 
   private clearAuth(): void {
     // Clear any stored auth tokens
+    tokenStore.clear();
+    // Back-compat cleanup if any
     if (typeof window !== 'undefined') {
       localStorage.removeItem('access_token');
       localStorage.removeItem('refresh_token');

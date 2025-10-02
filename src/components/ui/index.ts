@@ -1,5 +1,6 @@
 export { Button } from "./button";
 export { Badge } from "./badge";
 export { Card } from "./card";
-export { default as Input } from "./input";
-export { default as Drawer } from "./drawer";
+export { Input } from "./input";
+import Drawer from "./drawer";
+export { Drawer };

@@ -1,7 +1,9 @@
 // src/hooks/useSearch.ts
 import { useQuery } from '@tanstack/react-query';
+import { z } from 'zod';
 import { apiClient } from '@/lib/api/client';
-import { ProductSchema, CatalogResponse, CatalogResponseSchema } from '@/lib/api/contracts';
+import type { CatalogResponse } from '@/lib/api/contracts';
+import { CatalogResponseSchema } from '@/lib/api/contracts';
 
 // Query keys
 export const searchKeys = {

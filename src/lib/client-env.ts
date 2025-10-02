@@ -8,13 +8,14 @@ export const isTest = process.env.NODE_ENV === 'test';
 
 // Client-safe environment variables (NEXT_PUBLIC_ prefixed)
 export const clientConfig = {
-  apiUrl: process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000/api',
-  siteUrl: process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000',
-  gaId: process.env.NEXT_PUBLIC_GA_ID,
-  sentryDsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
-  appEnv: process.env.NEXT_PUBLIC_APP_ENV || 'development',
-  enableAnalytics: process.env.NEXT_PUBLIC_ENABLE_ANALYTICS === 'true',
-  enableMonitoring: process.env.NEXT_PUBLIC_ENABLE_MONITORING === 'true',
+  apiUrl: process.env['NEXT_PUBLIC_API_URL'] || 'http://127.0.0.1:8000/api',
+  siteUrl: process.env['NEXT_PUBLIC_SITE_URL'] || 'http://localhost:3000',
+  gaId: process.env['NEXT_PUBLIC_GA_ID'],
+  sentryDsn: process.env['NEXT_PUBLIC_SENTRY_DSN'],
+  appEnv: process.env['NEXT_PUBLIC_APP_ENV'] || 'development',
+  enableAnalytics: process.env['NEXT_PUBLIC_ENABLE_ANALYTICS'] === 'true',
+  enableMonitoring: process.env['NEXT_PUBLIC_ENABLE_MONITORING'] === 'true',
+  featureCookieJwt: process.env['NEXT_PUBLIC_FEATURE_COOKIE_JWT'] === 'true',
 } as const;
 
 // Feature flags based on environment

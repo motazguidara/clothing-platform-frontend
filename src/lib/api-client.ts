@@ -158,6 +158,7 @@ export class ApiClient {
           method,
           headers: requestHeaders,
           signal: signal || controller.signal,
+          credentials: 'include',
         };
 
         if (body && method !== 'GET') {
@@ -491,10 +492,10 @@ export const api = {
     get: () => apiClient.get('/orders/cart/'),
     
     add: (productId: number, quantity: number, variantId?: number) =>
-      apiClient.post('/orders/cart/add/', {
+      apiClient.post('/orders/cart/items/', {
         product_id: productId,
-        quantity,
-        variant_id: variantId,
+        delta_qty: quantity,
+        ...(variantId != null ? { variant_id: variantId } : {}),
       }),
     
     update: (itemId: number, quantity: number) =>

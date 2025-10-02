@@ -1,28 +1,23 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import type { UseMutationResult } from "@tanstack/react-query";
 import { authService } from "@/lib/api/services/auth";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
+import { toast } from "sonner";
+import type { User } from "@/lib/api/schemas";
+import { clientConfig } from "@/lib/client-env";
 
-// Types
-export interface User {
-  id: number;
-  email: string;
-  first_name?: string | null;
-  last_name?: string | null;
-  is_staff?: boolean;
-  is_active?: boolean;
-  date_joined?: string;
-  last_login?: string | null;
-}
+// Re-export the User type from schemas
+export type { User } from "@/lib/api/schemas";
 
-export interface AuthTokens {
+interface AuthTokens {
   access: string;
   refresh: string;
   user: User;
 }
 
 // Auth hooks
-export function useAuth() {
+export function useAuth(options?: { fetchProfile?: boolean }) {
   const qc = useQueryClient();
   const router = useRouter();
 
@@ -30,25 +25,50 @@ export function useAuth() {
   const isAuthenticated = authService.isAuthenticated();
 
   // Get current user profile
+  const shouldFetchProfile = (options?.fetchProfile ?? true) && isAuthenticated;
   const { data: user, isLoading, error } = useQuery({
     queryKey: ["auth", "profile"],
     queryFn: () => authService.getCurrentUser(),
-    enabled: isAuthenticated,
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    enabled: shouldFetchProfile, // prevent 401 spam when not logged in
+    refetchOnWindowFocus: false,
+    staleTime: 30 * 1000,
     gcTime: 10 * 60 * 1000, // 10 minutes
-    retry: 1,
+    retry: 0,
   });
+
+  // Debug: log auth state in development
+  useEffect(() => {
+    if (process.env.NODE_ENV === 'development') {
+      // Raw token flag vs. profile availability
+      // eslint-disable-next-line no-console
+      console.log('[useAuth] state', {
+        hasToken: isAuthenticated,
+        hasProfile: !!user,
+        loading: isLoading,
+        error: error ? (error as any)?.status || (error as any)?.message : null,
+      });
+    }
+  }, [isAuthenticated, user, isLoading, error]);
 
   // Handle login
   const login = useMutation({
     mutationFn: async (credentials: { email: string; password: string }) => {
       const response = await authService.login(credentials);
-      return response.user;
+      // Normalize to user object
+      const user = (response as any)?.user || null;
+      return user;
     },
-    onSuccess: () => {
+    onSuccess: (user) => {
       qc.invalidateQueries({ queryKey: ["auth"] });
-      router.push("/dashboard");
+      qc.setQueryData(['auth', 'user'], user);
+      // Ensure server-side cart merge is surfaced
+      qc.invalidateQueries({ queryKey: ["cart"] });
     },
+    onError: (error: any) => {
+      console.error('Login error:', error);
+      const errorMessage = error?.response?.data?.detail || 'Failed to log in. Please try again.';
+      toast.error(errorMessage);
+    }
   });
 
   // Handle registration
@@ -58,17 +78,39 @@ export function useAuth() {
       password: string;
       first_name?: string;
       last_name?: string;
+      marketing_consent?: boolean;
+      terms_consent?: boolean;
     }) => {
-      const response = await authService.register({
-        ...data,
+      const payload: {
+        email: string;
+        password: string;
+        password_confirm: string;
+        marketing_consent: boolean;
+        terms_consent: boolean;
+        first_name?: string;
+        last_name?: string;
+      } = {
+        email: data.email,
+        password: data.password,
         password_confirm: data.password,
-        marketing_consent: false, // Default to false, can be made configurable
-      });
-      return response.user;
+        marketing_consent: data.marketing_consent ?? false,
+        terms_consent: data.terms_consent ?? true,
+      };
+
+      if (typeof data.first_name === 'string' && data.first_name.length > 0) {
+        payload.first_name = data.first_name;
+      }
+      if (typeof data.last_name === 'string' && data.last_name.length > 0) {
+        payload.last_name = data.last_name;
+      }
+
+      const response = await authService.register(payload);
+      return (response as any)?.user || response;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["auth"] });
-      router.push("/login");
+      toast.success('Account created');
+      router.replace('/login');
     },
   });
 
@@ -78,8 +120,12 @@ export function useAuth() {
       await authService.logout();
     },
     onSuccess: () => {
-      qc.clear();
-      router.push("/login");
+      // Invalidate key resources
+      qc.invalidateQueries({ queryKey: ["auth"] });
+      qc.invalidateQueries({ queryKey: ["cart"] });
+      qc.invalidateQueries({ queryKey: ["orders"] });
+      qc.invalidateQueries({ queryKey: ["wishlist"] });
+      router.push("/");
     },
   });
 
@@ -98,12 +144,15 @@ export function useAuth() {
   return {
     user,
     isLoading: isLoading || login.isPending || register.isPending || logout.isPending,
-    isAuthenticated: isAuthenticated && !!user,
+    // Expose raw token-based auth to avoid false negatives before profile loads
+    isAuthenticated: isAuthenticated,
+    hasProfile: !!user,
     login: login.mutate,
+    loginAsync: login.mutateAsync,
     register: register.mutate,
     logout: logout.mutate,
     error: login.error || register.error || logout.error,
-  };
+  } as const;
 }
 
 // Protected route hook

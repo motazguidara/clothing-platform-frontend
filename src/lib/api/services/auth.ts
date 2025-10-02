@@ -1,43 +1,46 @@
 import { apiClient } from '../client';
 import * as schemas from '../schemas';
+import { clientConfig } from '@/lib/client-env';
+import { tokenStore } from '@/lib/auth/tokens';
 
 export class AuthService {
   // Token management
   private getAccessToken(): string | null {
-    if (typeof window === 'undefined') return null;
-    return localStorage.getItem('access_token');
+    return tokenStore.getAccess();
   }
 
   private setAccessToken(token: string | null): void {
-    if (typeof window === 'undefined') return;
-    if (token) {
-      localStorage.setItem('access_token', token);
-    } else {
-      localStorage.removeItem('access_token');
-    }
+    tokenStore.setAccess(token);
   }
 
   private getRefreshToken(): string | null {
-    if (typeof window === 'undefined') return null;
-    return localStorage.getItem('refresh_token');
+    return tokenStore.getRefresh();
   }
 
   private setRefreshToken(token: string | null): void {
-    if (typeof window === 'undefined') return;
-    if (token) {
-      localStorage.setItem('refresh_token', token);
-    } else {
-      localStorage.removeItem('refresh_token');
-    }
+    tokenStore.setRefresh(token);
   }
 
   clearAuth(): void {
-    this.setAccessToken(null);
-    this.setRefreshToken(null);
+    tokenStore.clear();
   }
 
   isAuthenticated(): boolean {
-    return !!this.getAccessToken();
+    const token = this.getAccessToken();
+    if (!token) return false;
+    try {
+      const [, payloadB64] = token.split('.');
+      if (!payloadB64) return true; // non-JWT token; assume valid
+      const json = JSON.parse(atob(payloadB64.replace(/-/g, '+').replace(/_/g, '/')));
+      const exp = typeof json?.exp === 'number' ? json.exp : null;
+      if (!exp) return true;
+      const nowSec = Math.floor(Date.now() / 1000);
+      // Consider small clock skew (30s)
+      return exp > nowSec + 30;
+    } catch {
+      // If decoding fails, assume token is present but unknown; treat as not authenticated to be safe
+      return false;
+    }
   }
   async register(data: {
     email: string;
@@ -47,8 +50,8 @@ export class AuthService {
     password_confirm: string;
     marketing_consent: boolean;
     terms_consent: boolean;
-  }): Promise<schemas.AuthResponse> {
-    const response = await apiClient.post<schemas.AuthResponse>(
+  }): Promise<schemas.RegisterResponse> {
+    const response = await apiClient.post<schemas.RegisterResponse>(
       '/accounts/auth/register/',
       {
         email: data.email,
@@ -60,32 +63,31 @@ export class AuthService {
         terms_consent: data.terms_consent ?? true,
       },
       {
-        responseSchema: schemas.AuthResponseSchema,
+        responseSchema: schemas.RegisterResponseSchema,
       }
     );
-
-    // Store tokens
-    this.setAccessToken(response.access);
-    this.setRefreshToken(response.refresh);
     
     return response;
   }
 
-  async login(credentials: { email: string; password: string }): Promise<schemas.AuthResponse> {
-    const response = await apiClient.post<schemas.AuthResponse>(
+  async login(credentials: { email: string; password: string }): Promise<schemas.LoginResponse> {
+    const response = await apiClient.post<schemas.LoginResponse>(
       '/accounts/auth/login/',
       {
         email: credentials.email,
         password: credentials.password,
       },
       {
-        responseSchema: schemas.AuthResponseSchema,
+        responseSchema: schemas.LoginResponseSchema,
       }
     );
 
-    // Store tokens
-    this.setAccessToken(response.access);
-    this.setRefreshToken(response.refresh);
+    // In header mode, store tokens from body if present
+    if (!clientConfig.featureCookieJwt) {
+      const asAny: any = response as any;
+      if (asAny?.access) this.setAccessToken(asAny.access);
+      if (asAny?.refresh) this.setRefreshToken(asAny.refresh);
+    }
     
     return response;
   }
@@ -100,24 +102,19 @@ export class AuthService {
   }
 
   async refreshToken(): Promise<{ access: string; refresh: string }> {
-    const refreshToken = this.getRefreshToken();
-    if (!refreshToken) {
-      throw new Error('No refresh token available');
-    }
-
-    const response = await apiClient.post<{ access: string; refresh: string }>(
+    // Delegate to apiClient logic; here keep types for header mode convenience
+    const refresh = this.getRefreshToken();
+    if (!refresh && !clientConfig.featureCookieJwt) throw new Error('No refresh token available');
+    const resp = await apiClient.post<{ access: string; refresh?: string }>(
       '/accounts/auth/refresh/',
-      { refresh: refreshToken },
+      clientConfig.featureCookieJwt ? {} : { refresh },
       { responseSchema: schemas.TokenRefreshResponseSchema }
     );
-
-    // Update stored tokens
-    this.setAccessToken(response.access);
-    if (response.refresh) {
-      this.setRefreshToken(response.refresh);
+    if (!clientConfig.featureCookieJwt) {
+      if (resp.access) this.setAccessToken(resp.access);
+      if (resp.refresh) this.setRefreshToken(resp.refresh);
     }
-    
-    return response;
+    return { access: resp.access, refresh: resp.refresh || '' };
   }
 
   // Profile management
@@ -142,15 +139,7 @@ export class AuthService {
     });
   }
 
-  async updateProfile(data: Partial<{
-    first_name: string;
-    last_name: string;
-    phone: string | null;
-    date_of_birth: string | null;
-    gender: 'male' | 'female' | 'other' | 'prefer_not_to_say' | null;
-    marketing_consent: boolean;
-    preferences: schemas.UserPreferences;
-  }>): Promise<schemas.UserProfile> {
+  async updateProfile(data: Partial<schemas.UpdateMeRequest>): Promise<schemas.UserProfile> {
     return apiClient.put<schemas.UserProfile>('/accounts/profile/', data, {
       responseSchema: schemas.UserProfileSchema,
     });

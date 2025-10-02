@@ -16,11 +16,36 @@ type Props = {
 export default function CollectionRail({ title, params = {}, href }: Props) {
   const { data, isLoading, isError } = useProducts({ limit: 12, ...params });
   const scrollerRef = React.useRef<HTMLDivElement | null>(null);
+  const [mounted, setMounted] = React.useState(false);
+  const [showLeftButton, setShowLeftButton] = React.useState(false);
+  const [showRightButton, setShowRightButton] = React.useState(false);
+
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const checkScrollPosition = React.useCallback(() => {
+    const el = scrollerRef.current;
+    if (!el) return;
+    
+    const { scrollLeft, scrollWidth, clientWidth } = el;
+    setShowLeftButton(scrollLeft > 0);
+    setShowRightButton(scrollLeft < scrollWidth - clientWidth - 1);
+  }, []);
 
   function scrollBy(delta: number) {
     const el = scrollerRef.current;
     if (!el) return;
-    el.scrollBy({ left: delta, behavior: "smooth" });
+    
+    const scrollAmount = Math.min(
+      delta,
+      el.scrollWidth - el.scrollLeft - el.clientWidth
+    );
+    
+    el.scrollBy({ left: scrollAmount, behavior: "smooth" });
+    
+    // Update button visibility after scroll
+    setTimeout(checkScrollPosition, 300);
   }
 
   return (
@@ -42,8 +67,11 @@ export default function CollectionRail({ title, params = {}, href }: Props) {
           <button
             type="button"
             aria-label="Scroll left"
-            onClick={() => scrollBy(- (scrollerRef.current?.clientWidth || 600))}
-            className="hidden md:flex absolute left-2 top-1/2 -translate-y-1/2 z-10 h-9 w-9 items-center justify-center rounded-full bg-white/90 backdrop-blur border border-border shadow-sm hover:bg-white focus-visible:ring-2 ring-offset-2 ring-black transition-all duration-200 motion-safe:hover:scale-105 opacity-0 group-hover:opacity-100"
+            onClick={() => scrollBy(-(scrollerRef.current?.clientWidth || 600))}
+            className={`hidden md:flex absolute left-2 top-1/2 -translate-y-1/2 z-10 h-9 w-9 items-center justify-center rounded-full bg-white/90 backdrop-blur border border-border shadow-sm hover:bg-white focus-visible:ring-2 ring-offset-2 ring-black transition-all duration-200 motion-safe:hover:scale-105 ${
+              mounted && showLeftButton ? 'opacity-100' : 'opacity-0 cursor-default'
+            }`}
+            disabled={!mounted || !showLeftButton}
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" strokeWidth="1.5" className="stroke-black/80" aria-hidden="true">
               <path d="M15 19l-7-7 7-7" strokeLinecap="round" strokeLinejoin="round" />
@@ -53,7 +81,10 @@ export default function CollectionRail({ title, params = {}, href }: Props) {
             type="button"
             aria-label="Scroll right"
             onClick={() => scrollBy(scrollerRef.current?.clientWidth || 600)}
-            className="hidden md:flex absolute right-2 top-1/2 -translate-y-1/2 z-10 h-9 w-9 items-center justify-center rounded-full bg-white/90 backdrop-blur border border-border shadow-sm hover:bg-white focus-visible:ring-2 ring-offset-2 ring-black transition-all duration-200 motion-safe:hover:scale-105 opacity-0 group-hover:opacity-100"
+            className={`hidden md:flex absolute right-2 top-1/2 -translate-y-1/2 z-10 h-9 w-9 items-center justify-center rounded-full bg-white/90 backdrop-blur border border-border shadow-sm hover:bg-white focus-visible:ring-2 ring-offset-2 ring-black transition-all duration-200 motion-safe:hover:scale-105 ${
+              mounted && showRightButton ? 'opacity-100' : 'opacity-0 cursor-default'
+            }`}
+            disabled={!mounted || !showRightButton}
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" strokeWidth="1.5" className="stroke-black/80" aria-hidden="true">
               <path d="M9 5l7 7-7 7" strokeLinecap="round" strokeLinejoin="round" />
@@ -61,14 +92,21 @@ export default function CollectionRail({ title, params = {}, href }: Props) {
           </button>
 
           <motion.div
-            ref={scrollerRef}
-            className="flex gap-4 overflow-x-auto overflow-y-hidden snap-x snap-mandatory pb-3 scroll-smooth scrollbar-thin-horizontal"
+            ref={(node) => {
+              scrollerRef.current = node;
+              if (node) {
+                checkScrollPosition();
+                node.addEventListener('scroll', checkScrollPosition);
+              }
+            }}
+            onLoad={checkScrollPosition}
+            className="flex gap-4 overflow-x-auto overflow-y-hidden snap-x snap-mandatory pb-3 scrollbar-thin-horizontal"
             role="region"
             aria-label={`${title} products`}
             variants={staggerContainer(0.06)}
             initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, amount: 0.2 }}
+            animate="visible"
+            onScroll={checkScrollPosition}
           >
           {isLoading && (
             <div className="grid grid-flow-col auto-cols-[16rem] gap-4">
@@ -81,7 +119,12 @@ export default function CollectionRail({ title, params = {}, href }: Props) {
             <p className="text-sm text-muted">No products found.</p>
           )}
           {!isLoading && data?.results?.map((p: any) => (
-            <motion.div key={p.id} className="snap-start" variants={fadeInUp}>
+            <motion.div 
+              key={p.id} 
+              className="snap-start flex-shrink-0" 
+              variants={fadeInUp}
+              style={{ minWidth: '16rem' }}
+            >
               <ProductCard product={p} />
             </motion.div>
           ))}

@@ -3,7 +3,7 @@
 
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { useAuth } from '@/auth/useAuth';
+import { useAuth } from '@/hooks/useAuth';
 import { Loading } from '@/components/loading';
 
 interface ProtectedRouteProps {

@@ -1,47 +1,185 @@
 "use client";
 
-import React from "react";
+import { useCallback, useEffect, useState, type ChangeEvent } from "react";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useProducts } from "@/hooks/useCatalog";
-import { useSearchParams } from "next/navigation";
+import { toast } from "@/components/ui/use-toast";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
+import { 
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow 
+} from "@/components/ui/table";
+import { 
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue 
+} from "@/components/ui/select";
+import { 
+  Search as IconSearch,
+  X as IconX,
+  Package as IconPackage,
+  RefreshCw as IconRefresh,
+  Loader2 as IconSpinner,
+  CheckCircle as IconCheckCircle,
+  EyeOff as IconEyeOff,
+  Trash as IconTrash,
+} from "lucide-react";
 import type { Product } from "@/types";
 
-export default function AdminProductsPage() {
-  const searchParams = useSearchParams();
-  const [searchQuery, setSearchQuery] = React.useState(searchParams.get("q") || "");
-  const [selectedProducts, setSelectedProducts] = React.useState<number[]>([]);
+// Extend Product type to include admin-specific fields
+interface AdminProduct extends Omit<Product, 'category'> {
+  status?: 'active' | 'inactive' | 'low_stock';
+  stock_quantity?: number;
+  images?: string[];
+  // Category is optional in the admin interface
+  category?: string;
+}
 
-  // Build search parameters
-  const params: Record<string, string> = {};
-  const allow = ["q", "category", "gender", "price_min", "price_max", "ordering", "page"];
-  for (const key of allow) {
-    const v = searchParams.get(key);
-    if (v && v.length) params[key] = v;
-  }
+// Type for the API response
+interface ProductsResponse {
+  results: AdminProduct[];
+  count: number;
+  next: string | null;
+  previous: string | null;
+}
 
-  const { data, isLoading, isError } = useProducts(params);
+// Debounce hook
+function useDebounce<T>(value: T, delay: number): T {
+  const [debouncedValue, setDebouncedValue] = useState<T>(value);
 
-  const handleSelectAll = () => {
-    if (selectedProducts.length === data?.results.length) {
-      setSelectedProducts([]);
-    } else {
-      setSelectedProducts(data?.results.map(p => p.id) || []);
-    }
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedValue(value);
+    }, delay);
+
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [value, delay]);
+
+  return debouncedValue;
+}
+
+// Status badge component
+const StatusBadge = ({ status }: { status: string }) => {
+  const statusMap = {
+    active: { label: 'Active', variant: 'default' as const },
+    inactive: { label: 'Inactive', variant: 'default' as const },
+    low_stock: { label: 'Low Stock', variant: 'destructive' as const },
   };
 
-  const handleSelectProduct = (productId: number) => {
+  const { label, variant } = statusMap[status as keyof typeof statusMap] || {
+    label: status,
+    variant: 'default' as const,
+  };
+
+  return <Badge variant={variant} className="capitalize">{label}</Badge>;
+};
+
+export default function AdminProductsPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  
+  // State for filters and pagination
+  const [searchQuery, setSearchQuery] = useState(searchParams.get("q") || "");
+  const [category, setCategory] = useState(searchParams.get("category") || "");
+  const [status, setStatus] = useState(searchParams.get("status") || "");
+  const [page, setPage] = useState(parseInt(searchParams.get("page") || "1"));
+  const [selectedProducts, setSelectedProducts] = useState<number[]>([]);
+  const [isBulkActionLoading, setIsBulkActionLoading] = useState(false);
+  
+  // Debounce search query (define before buildParams to avoid TDZ)
+  const debouncedSearchQuery = useDebounce(searchQuery, 500);
+  
+  // Build search parameters
+  const buildParams = useCallback((): Record<string, string> => {
+    const params: Record<string, string> = {};
+    
+    if (debouncedSearchQuery) params['q'] = debouncedSearchQuery;
+    if (category) params['category'] = category;
+    if (status) params['status'] = status;
+    if (page > 1) params['page'] = page.toString();
+    
+    return params;
+  }, [debouncedSearchQuery, category, status, page]);
+
+  // Fetch products with current filters
+  const { 
+    data: productsData, 
+    isLoading: isLoadingProducts, 
+    isError: isProductsError 
+  } = useProducts(buildParams());
+
+  // (debouncedSearchQuery defined above)
+
+  
+  // Handle search input change
+  const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchQuery(e.target.value);
+    setPage(1);
+  };
+  
+  // Handle product selection
+  const handleSelectProduct = useCallback((productId: number) => {
     setSelectedProducts(prev => 
-      prev.includes(productId) 
+      prev.includes(productId)
         ? prev.filter(id => id !== productId)
         : [...prev, productId]
     );
+  }, [productsData?.results]);
+  
+  // Handle bulk actions
+  const handleBulkAction = useCallback(async (action: 'delete' | 'activate' | 'deactivate') => {
+    if (selectedProducts.length === 0) return;
+
+    setIsBulkActionLoading(true);
+    
+    try {
+      // Implement bulk action logic here
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      toast({
+        title: 'Success',
+        description: `Successfully ${action}d ${selectedProducts.length} products`,
+      });
+      
+      // Clear selection after action
+      setSelectedProducts([]);
+      
+      // Refresh the product list
+      // mutate();
+    } catch (error) {
+      console.error(`Failed to ${action} products:`, error);
+      toast({
+        title: 'Error',
+        description: `Failed to ${action} products. Please try again.`,
+        variant: 'destructive',
+      });
+    } finally {
+      setIsBulkActionLoading(false);
+    }
+  }, [selectedProducts.length, setIsBulkActionLoading]);
+  
+  // Handle edit product
+  const handleEditProduct = useCallback((productId: number) => {
+    router.push(`/admin/products/${productId}/edit`);
+  }, [router]);
+  
+  const handleDeleteProduct = async (productId: number) => {
+    if (!confirm('Are you sure you want to delete this product?')) return;
+    // TODO: Wire to API
+    toast({ title: 'Not implemented', description: `Delete product ${productId} coming soon.` });
   };
 
-  const handleBulkAction = (action: string) => {
-    console.log(`Performing ${action} on products:`, selectedProducts);
-    // Here you would implement the actual bulk actions
-    setSelectedProducts([]);
-  };
+  // Handle select all products
+  const handleSelectAll = useCallback(() => {
+    if (selectedProducts.length === productsData?.results?.length) {
+      setSelectedProducts([]);
+    } else {
+      setSelectedProducts(productsData?.results?.map((product) => product.id) || []);
+    }
+  }, [productsData?.results, selectedProducts.length]);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -73,30 +211,61 @@ export default function AdminProductsPage() {
         <div className="bg-white rounded-lg shadow-sm border p-6 mb-6">
           <div className="flex flex-col md:flex-row gap-4">
             <div className="flex-1">
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search products..."
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
-              />
+              <div className="relative">
+                <IconSearch className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search products by name, SKU..."
+                  className="w-full pl-8"
+                />
+              </div>
             </div>
             <div className="flex gap-2">
-              <select className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black">
-                <option value="">All Categories</option>
-                <option value="men">Men</option>
-                <option value="women">Women</option>
-                <option value="kids">Kids</option>
-              </select>
-              <select className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black">
-                <option value="">All Status</option>
-                <option value="active">Active</option>
-                <option value="inactive">Inactive</option>
-                <option value="low_stock">Low Stock</option>
-              </select>
-              <button className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition">
-                Filter
-              </button>
+              <Select 
+                value={category}
+                onValueChange={setCategory}
+              >
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="All Categories" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">All Categories</SelectItem>
+                  <SelectItem value="men">Men</SelectItem>
+                  <SelectItem value="women">Women</SelectItem>
+                  <SelectItem value="kids">Kids</SelectItem>
+                </SelectContent>
+              </Select>
+              
+              <Select 
+                value={status}
+                onValueChange={setStatus}
+              >
+                <SelectTrigger className="w-[150px]">
+                  <SelectValue placeholder="All Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">All Status</SelectItem>
+                  <SelectItem value="active">Active</SelectItem>
+                  <SelectItem value="inactive">Inactive</SelectItem>
+                  <SelectItem value="low_stock">Low Stock</SelectItem>
+                </SelectContent>
+              </Select>
+              
+              <Button 
+                variant="secondary" 
+                onClick={() => {
+                  setSearchQuery("");
+                  setCategory("");
+                  setStatus("");
+                  setPage(1);
+                }}
+                disabled={!searchQuery && !category && !status}
+              >
+                <IconX className="mr-2 h-4 w-4" />
+                Clear
+              </Button>
             </div>
           </div>
         </div>
@@ -104,29 +273,57 @@ export default function AdminProductsPage() {
         {/* Bulk Actions */}
         {selectedProducts.length > 0 && (
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-blue-800">
-                {selectedProducts.length} product{selectedProducts.length !== 1 ? 's' : ''} selected
-              </span>
-              <div className="flex gap-2">
-                <button
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div className="flex items-center">
+                <IconPackage className="h-5 w-5 text-blue-600 mr-2" />
+                <span className="text-sm font-medium text-blue-800">
+                  {selectedProducts.length} product{selectedProducts.length !== 1 ? 's' : ''} selected
+                </span>
+              </div>
+              <div className="flex flex-wrap gap-2 w-full sm:w-auto">
+                <Button 
+                  variant="secondary" 
+                  size="sm"
                   onClick={() => handleBulkAction('activate')}
-                  className="px-3 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700 transition"
+                  disabled={isBulkActionLoading}
                 >
+                  {isBulkActionLoading ? (
+                    <IconSpinner className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <IconCheckCircle className="mr-2 h-4 w-4" />
+                  )}
                   Activate
-                </button>
-                <button
+                </Button>
+                <Button 
+                  variant="secondary" 
+                  size="sm"
                   onClick={() => handleBulkAction('deactivate')}
-                  className="px-3 py-1 bg-yellow-600 text-white rounded text-sm hover:bg-yellow-700 transition"
+                  disabled={isBulkActionLoading}
                 >
+                  {isBulkActionLoading ? (
+                    <IconSpinner className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <IconEyeOff className="mr-2 h-4 w-4" />
+                  )}
                   Deactivate
-                </button>
-                <button
-                  onClick={() => handleBulkAction('delete')}
-                  className="px-3 py-1 bg-red-600 text-white rounded text-sm hover:bg-red-700 transition"
+                </Button>
+                <Button 
+                  variant="destructive" 
+                  size="sm"
+                  onClick={() => {
+                    if (confirm('Are you sure you want to delete the selected products? This action cannot be undone.')) {
+                      handleBulkAction('delete');
+                    }
+                  }}
+                  disabled={isBulkActionLoading}
                 >
+                  {isBulkActionLoading ? (
+                    <IconSpinner className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <IconTrash className="mr-2 h-4 w-4" />
+                  )}
                   Delete
-                </button>
+                </Button>
               </div>
             </div>
           </div>
@@ -136,95 +333,112 @@ export default function AdminProductsPage() {
         <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-gray-50 border-b border-gray-200">
-                <tr>
-                  <th className="px-6 py-3 text-left">
-                    <input
-                      type="checkbox"
-                      checked={selectedProducts.length === data?.results.length && data?.results.length > 0}
-                      onChange={handleSelectAll}
-                      className="rounded border-gray-300 text-black focus:ring-black"
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-[40px]">
+                    <Checkbox
+                      checked={selectedProducts.length > 0 && selectedProducts.length === productsData?.results.length}
+                      onCheckedChange={handleSelectAll}
+                      aria-label="Select all"
+                      className="translate-y-[2px]"
                     />
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Product
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Category
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Price
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Stock
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Status
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {isLoading ? (
+                  </TableHead>
+                  <TableHead className="min-w-[300px]">Product</TableHead>
+                  <TableHead>Category</TableHead>
+                  <TableHead>Price</TableHead>
+                  <TableHead>Stock</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {isLoadingProducts ? (
                   Array.from({ length: 5 }).map((_, i) => (
-                    <tr key={i}>
-                      <td className="px-6 py-4"><div className="h-4 bg-gray-200 rounded animate-pulse"></div></td>
-                      <td className="px-6 py-4"><div className="h-4 bg-gray-200 rounded animate-pulse"></div></td>
-                      <td className="px-6 py-4"><div className="h-4 bg-gray-200 rounded animate-pulse"></div></td>
-                      <td className="px-6 py-4"><div className="h-4 bg-gray-200 rounded animate-pulse"></div></td>
-                      <td className="px-6 py-4"><div className="h-4 bg-gray-200 rounded animate-pulse"></div></td>
-                      <td className="px-6 py-4"><div className="h-4 bg-gray-200 rounded animate-pulse"></div></td>
-                      <td className="px-6 py-4"><div className="h-4 bg-gray-200 rounded animate-pulse"></div></td>
-                    </tr>
+                    <TableRow key={i}>
+                      <TableCell><div className="h-4 bg-muted rounded animate-pulse"></div></TableCell>
+                      <TableCell><div className="h-4 bg-muted rounded animate-pulse"></div></TableCell>
+                      <TableCell><div className="h-4 bg-muted rounded animate-pulse"></div></TableCell>
+                      <TableCell><div className="h-4 bg-muted rounded animate-pulse w-16"></div></TableCell>
+                      <TableCell><div className="h-4 bg-muted rounded animate-pulse w-12"></div></TableCell>
+                      <TableCell><div className="h-4 bg-muted rounded animate-pulse w-20"></div></TableCell>
+                      <TableCell className="text-right">
+                        <div className="h-4 bg-muted rounded animate-pulse w-20 ml-auto"></div>
+                      </TableCell>
+                    </TableRow>
                   ))
+                ) : productsData?.results.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="h-24 text-center">
+                      <div className="flex flex-col items-center justify-center py-8">
+                        <IconPackage className="h-12 w-12 text-muted-foreground mb-2" />
+                        <h3 className="text-lg font-medium">No products found</h3>
+                        <p className="text-sm text-muted-foreground">
+                          Try adjusting your search or filter to find what you're looking for.
+                        </p>
+                        <Button variant="secondary" className="mt-4" onClick={() => {
+                          setSearchQuery('');
+                          setCategory('');
+                          setStatus('');
+                          setPage(1);
+                        }}>
+                          <IconRefresh className="mr-2 h-4 w-4" />
+                          Reset filters
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
                 ) : (
-                  data?.results.map((product) => (
-                    <tr key={product.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4">
-                        <input
-                          type="checkbox"
+                  productsData?.results.map((product) => (
+                    <TableRow key={product.id}>
+                      <TableCell>
+                        <Checkbox
                           checked={selectedProducts.includes(product.id)}
-                          onChange={() => handleSelectProduct(product.id)}
-                          className="rounded border-gray-300 text-black focus:ring-black"
+                          onCheckedChange={() => handleSelectProduct(product.id)}
+                          aria-label={`Select ${product.name}`}
                         />
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center">
-                          <div className="h-10 w-10 bg-gray-200 rounded-md mr-3"></div>
+                      </TableCell>
+                      <TableCell className="font-medium">
+                        <div className="flex items-center gap-3">
+                          {product.images?.[0] ? (
+                            <img
+                              src={product.images[0]}
+                              alt={product.name}
+                              className="h-10 w-10 rounded-md object-cover"
+                            />
+                          ) : (
+                            <div className="h-10 w-10 bg-muted rounded-md flex items-center justify-center">
+                              <IconPackage className="h-4 w-4 text-muted-foreground" />
+                            </div>
+                          )}
                           <div>
-                            <div className="text-sm font-medium text-gray-900">{product.name}</div>
-                            <div className="text-sm text-gray-500">SKU: {product.slug}</div>
+                            <div className="font-medium text-foreground">{product.name}</div>
+                            <div className="text-sm text-muted-foreground">SKU: {product.sku || 'N/A'}</div>
                           </div>
                         </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="text-sm text-gray-900">{(product as any).gender || 'N/A'}</div>
-                        <div className="text-sm text-gray-500">{product.category || 'Uncategorized'}</div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="text-sm text-gray-900">${product.price}</div>
-                        {product.is_on_sale && (
-                          <div className="text-sm text-green-600">Sale: ${product.sale_price}</div>
+                      </TableCell>
+                      <TableCell className="capitalize">
+                        {product.category || 'Uncategorized'}
+                      </TableCell>
+                      <TableCell>
+                        ${product.price?.toFixed(2) || '0.00'}
+                      </TableCell>
+                      <TableCell>
+                        {product.stock_quantity !== undefined ? (
+                          <Badge
+                            variant={product.stock_quantity > 10 ? 'default' : 'destructive'}
+                            className="font-mono"
+                          >
+                            {product.stock_quantity} in stock
+                          </Badge>
+                        ) : (
+                          <Badge variant="default">N/A</Badge>
                         )}
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className={`text-sm ${product.in_stock ? 'text-green-600' : 'text-red-600'}`}>
-                          {product.in_stock ? 'In Stock' : 'Out of Stock'}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                          product.is_featured 
-                            ? 'bg-green-100 text-green-800' 
-                            : 'bg-gray-100 text-gray-800'
-                        }`}>
-                          {product.is_featured ? 'Featured' : 'Standard'}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-sm font-medium">
-                        <div className="flex items-center gap-2">
+                      </TableCell>
+                      <TableCell>
+                        <StatusBadge status={product.status || 'inactive'} />
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end gap-3">
                           <Link
                             href={`/admin/products/${product.id}/edit`}
                             className="text-blue-600 hover:text-blue-900"
@@ -238,20 +452,23 @@ export default function AdminProductsPage() {
                           >
                             View
                           </Link>
-                          <button className="text-red-600 hover:text-red-900">
+                          <button
+                            onClick={() => handleDeleteProduct(product.id)}
+                            className="text-red-600 hover:text-red-900"
+                          >
                             Delete
                           </button>
                         </div>
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                   ))
                 )}
-              </tbody>
+              </TableBody>
             </table>
           </div>
 
           {/* Pagination */}
-          {!isLoading && data && data.count > 20 && (
+          {!isLoadingProducts && productsData && productsData.count > 20 && (
             <div className="bg-white px-4 py-3 border-t border-gray-200 sm:px-6">
               <div className="flex items-center justify-between">
                 <div className="flex-1 flex justify-between sm:hidden">
@@ -266,7 +483,7 @@ export default function AdminProductsPage() {
                   <div>
                     <p className="text-sm text-gray-700">
                       Showing <span className="font-medium">1</span> to <span className="font-medium">20</span> of{' '}
-                      <span className="font-medium">{data.count}</span> results
+                      <span className="font-medium">{productsData.count}</span> results
                     </p>
                   </div>
                   <div>
@@ -292,7 +509,7 @@ export default function AdminProductsPage() {
         </div>
 
         {/* Empty State */}
-        {!isLoading && data?.results.length === 0 && (
+        {!isLoadingProducts && productsData?.results.length === 0 && (
           <div className="bg-white rounded-lg shadow-sm border p-12 text-center">
             <svg className="w-12 h-12 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />

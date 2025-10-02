@@ -2,38 +2,51 @@
 
 import React from "react";
 import Link from "next/link";
-// Removed unused Button import
 import { IconButton } from "@/components/ui/icon-button";
-import WishlistIcon from "@/components/WishlistIcon";
-import { useCart } from "@/hooks/useCart";
-import { useWishlistIds } from "@/hooks/useWishlist";
+import { WishlistLink } from "@/components/ui/wishlist-link";
+import { useAuth } from "@/hooks/useAuth";
 import { useUIStore } from "@/store/ui";
+import { useCart } from "@/hooks/useCart";
 
 export default function Header() {
   const [scrolled, setScrolled] = React.useState(false);
-  const openCart = useUIStore((s) => s.openCart);
+  const [mounted, setMounted] = React.useState(false);
   const openMenu = useUIStore((s) => s.openMenu);
   const closeMenu = useUIStore((s) => s.closeMenu);
   const isMenuOpen = useUIStore((s) => s.isMenuOpen);
+  
   const { data: cart } = useCart();
-  const cartCount = (cart?.items ?? []).reduce((sum: number, it: any) => sum + (it.quantity || 1), 0);
-  const { data: wishlist } = useWishlistIds();
-  const wishCount = (wishlist?.ids ?? []).length;
-  const [mounted, setMounted] = React.useState(false);
+  const cartCount = React.useMemo(() => 
+    (cart?.items ?? []).reduce((sum: number, it: any) => sum + (it.quantity || 1), 0),
+    [cart?.items]
+  );
+  
+  const displayCartCount = mounted ? cartCount : 0;
+  const openCart = useUIStore((s) => s.openCart);
+  const { isAuthenticated, hasProfile, user, isLoading } = useAuth({ fetchProfile: false });
 
+  // Debug: log auth state from header
   React.useEffect(() => {
-    function onScroll() {
-      setScrolled(window.scrollY > 16);
+    if (process.env.NODE_ENV === 'development') {
+      // eslint-disable-next-line no-console
+      console.log('[Header] auth', { isAuthenticated, hasProfile, user: user ? { id: (user as any).id, email: (user as any).email } : null, loading: isLoading });
     }
-    onScroll();
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
+  }, [isAuthenticated, hasProfile, user, isLoading]);
+
+  // Handle scroll effect
+  React.useEffect(() => {
+    const handleScroll = () => {
+      setScrolled(window.scrollY > 16);
+    };
+    
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  // Prevent hydration mismatches by deferring dynamic counts until after mount
-  React.useEffect(() => setMounted(true), []);
-  const displayWishCount = mounted ? wishCount : 0;
-  const displayCartCount = mounted ? cartCount : 0;
+  // Set mounted state after component mounts
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Handle escape key to close mobile menu
   React.useEffect(() => {
@@ -88,12 +101,14 @@ export default function Header() {
 
             {/* Right icons */}
             <div className="flex items-center gap-2">
-              <Link href="/login" className="px-3 py-2 rounded-md hover:bg-secondary/50 text-sm hidden md:block">Login</Link>
-              <Link href="/profile" aria-label="Profile" className="px-3 py-2 rounded-md hover:bg-secondary/50 text-sm hidden md:block">Profile</Link>
+              {!isAuthenticated && (
+                <Link href="/login" className="px-3 py-2 rounded-md hover:bg-secondary/50 text-sm hidden md:block">Login</Link>
+              )}
+              {isAuthenticated && (
+                <Link href="/profile" aria-label="Profile" className="px-3 py-2 rounded-md hover:bg-secondary/50 text-sm hidden md:block">Profile</Link>
+              )}
 
-              <Link href="/wishlist" aria-label="Wishlist">
-                <WishlistIcon count={displayWishCount} tooltip="Wishlist" />
-              </Link>
+              <WishlistLink size="sm" />
 
               <div className="relative">
                 <IconButton onClick={openCart} aria-label="Open cart" tooltip="Cart">
@@ -216,27 +231,28 @@ export default function Header() {
 
               <hr className="my-6" />
 
-              <Link
-                href="/login"
+              {!isAuthenticated && (
+                <Link
+                  href="/login"
+                  className="block py-3 text-lg font-medium hover:text-primary transition-colors"
+                  onClick={closeMenu}
+                >
+                  Login
+                </Link>
+              )}
+              {isAuthenticated && (
+                <Link
+                  href="/profile"
+                  className="block py-3 text-lg font-medium hover:text-primary transition-colors"
+                  onClick={closeMenu}
+                >
+                  Profile
+                </Link>
+              )}
+              <WishlistLink 
                 className="block py-3 text-lg font-medium hover:text-primary transition-colors"
                 onClick={closeMenu}
-              >
-                Login
-              </Link>
-              <Link
-                href="/profile"
-                className="block py-3 text-lg font-medium hover:text-primary transition-colors"
-                onClick={closeMenu}
-              >
-                Profile
-              </Link>
-              <Link
-                href="/wishlist"
-                className="block py-3 text-lg font-medium hover:text-primary transition-colors"
-                onClick={closeMenu}
-              >
-                Wishlist ({displayWishCount})
-              </Link>
+              />
               <Link
                 href="/search"
                 className="block py-3 text-lg font-medium hover:text-primary transition-colors"

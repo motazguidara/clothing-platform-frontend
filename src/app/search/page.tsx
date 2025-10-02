@@ -4,13 +4,12 @@ import React from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useProducts } from "@/hooks/useCatalog";
 import ProductCard from "@/components/product-card";
-import { useUIStore } from "@/store/ui";
 import { useFilters } from "@/store/filters";
+import { FilterSidebar, SortSelect } from "@/components/filters/filter-sidebar";
 
 export default function SearchPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const openFilter = useUIStore((s) => s.openFilter);
   const filters = useFilters();
   const [searchQuery, setSearchQuery] = React.useState(searchParams.get("q") || "");
   const [suggestions, setSuggestions] = React.useState<string[]>([]);
@@ -159,36 +158,21 @@ export default function SearchPage() {
           )}
         </div>
         <div className="flex items-center gap-2">
-          <button 
-            onClick={openFilter} 
-            className="px-3 py-2 border rounded-md text-sm hover:bg-gray-100"
-          >
-            Filters
-          </button>
-          <select 
-            className="px-3 py-2 border rounded-md text-sm" 
-            defaultValue={params["ordering"] || "-created_at"}
-            onChange={(e) => {
-              const v = e.target.value;
-              const url = new URL(window.location.href);
-              if (v) url.searchParams.set("ordering", v); 
-              else url.searchParams.delete("ordering");
-              url.searchParams.delete("page");
-              router.push(url.toString());
-            }}
-          >
-            <option value="-created_at">Newest</option>
-            <option value="-bestseller">Best Sellers</option>
-            <option value="price">Price: Low to High</option>
-            <option value="-price">Price: High to Low</option>
-            <option value="-avg_rating">Highest Rated</option>
-            <option value="name">Name A-Z</option>
-          </select>
+          <SortSelect />
         </div>
       </div>
 
+      {/* Grid: Left sticky filters / Right results */}
+      <div className="mt-8 grid grid-cols-1 lg:grid-cols-12 gap-8">
+        <div className="lg:col-span-3 lg:sticky lg:top-24 lg:self-start max-lg:order-2">
+          <div className="lg:max-h-[calc(100vh-7rem)] lg:overflow-y-auto pr-1">
+            <FilterSidebar />
+          </div>
+        </div>
+        <div className="lg:col-span-9 min-h-[50vh]">
+
       {/* Quick Filter Tags */}
-      <div className="mb-6 flex flex-wrap gap-2">
+      <div className="mb-6 flex flex-wrap items-center gap-2">
         <button
           onClick={() => {
             const url = new URL(window.location.href);
@@ -253,6 +237,32 @@ export default function SearchPage() {
           }`}
         >
           Kids
+        </button>
+        <button
+          onClick={() => {
+            const url = new URL(window.location.href);
+            const q = url.searchParams.get("q");
+            // Clear common filters
+            [
+              "sale",
+              "in_stock",
+              "gender",
+              "category",
+              "size",
+              "color",
+              "price_min",
+              "price_max",
+              "ordering",
+              "page",
+            ].forEach((k) => url.searchParams.delete(k));
+            // Preserve the query param if present
+            url.search = q ? `?q=${encodeURIComponent(q)}` : "";
+            router.push(url.toString());
+          }}
+          className="ml-2 px-3 py-1 rounded-full text-sm border hover:bg-gray-100"
+          aria-label="Clear filters"
+        >
+          Clear filters
         </button>
       </div>
 
@@ -418,6 +428,8 @@ export default function SearchPage() {
           </div>
         </div>
       )}
+        </div>{/* right column end */}
+      </div>{/* grid end */}
     </section>
   );
 }

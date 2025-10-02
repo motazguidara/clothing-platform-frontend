@@ -16,7 +16,6 @@ interface OptimizedProductCardProps {
   className?: string;
   showQuickAdd?: boolean;
   showWishlist?: boolean;
-  onQuickView?: (product: Product) => void;
   lazy?: boolean;
 }
 
@@ -26,7 +25,6 @@ const OptimizedProductCard = React.memo<OptimizedProductCardProps>(({
   className,
   showQuickAdd = true,
   showWishlist = true,
-  onQuickView,
   lazy = true,
 }) => {
   const addToCart = useAddToCart();
@@ -36,6 +34,7 @@ const OptimizedProductCard = React.memo<OptimizedProductCardProps>(({
   const [isHovered, setIsHovered] = React.useState(false);
   const [currentImageIndex, setCurrentImageIndex] = React.useState(0);
   const cardRef = React.useRef<HTMLDivElement>(null);
+  const [mounted, setMounted] = React.useState(false);
 
   // Intersection Observer for lazy loading
   const [isVisible, setIsVisible] = React.useState(!lazy);
@@ -58,6 +57,11 @@ const OptimizedProductCard = React.memo<OptimizedProductCardProps>(({
     return () => observer.disconnect();
   }, [lazy]);
 
+  // Avoid SSR/CSR mismatches for client-only state (e.g., wishlist)
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
+
   // Image cycling on hover
   React.useEffect(() => {
     const imagesCount = product.images?.length ?? 0;
@@ -75,7 +79,7 @@ const OptimizedProductCard = React.memo<OptimizedProductCardProps>(({
     (e: React.MouseEvent) => {
       e.preventDefault();
       e.stopPropagation();
-      addToCart.mutate({ product_id: product.id, quantity: 1 });
+      addToCart.mutate({ product_id: product.id, delta_qty: 1 });
     },
     [addToCart, product.id]
   );
@@ -94,14 +98,7 @@ const OptimizedProductCard = React.memo<OptimizedProductCardProps>(({
     [addToWishlist, removeFromWishlist, isInWishlist, product.id]
   );
 
-  const handleQuickView = React.useCallback(
-    (e: React.MouseEvent) => {
-      e.preventDefault();
-      e.stopPropagation();
-      onQuickView?.(product);
-    },
-    [onQuickView, product]
-  );
+  
 
   const handleMouseEnter = React.useCallback(() => {
     setIsHovered(true);
@@ -124,7 +121,9 @@ const OptimizedProductCard = React.memo<OptimizedProductCardProps>(({
 
   // Image props
   const imageProps = React.useMemo(() => {
-    const mainImage = product.images?.[currentImageIndex] || product.image || '/placeholder-product.jpg';
+    // Use an existing asset from public/ to avoid 400s if no product image
+    const fallback = '/file.svg';
+    const mainImage = product.images?.[currentImageIndex] || product.image || fallback;
     return imageOptimization.getResponsiveProps(mainImage, product.name, priority);
   }, [product.images, currentImageIndex, product.image, product.name, priority]);
 
@@ -194,7 +193,7 @@ const OptimizedProductCard = React.memo<OptimizedProductCardProps>(({
               <svg
                 className={cn(
                   "w-4 h-4 transition-colors duration-200",
-                  isInWishlist(product.id) ? "text-red-500 fill-current" : "text-gray-600"
+                  mounted && isInWishlist(product.id) ? "text-red-500 fill-current" : "text-gray-600"
                 )}
                 fill="none"
                 stroke="currentColor"
@@ -227,17 +226,6 @@ const OptimizedProductCard = React.memo<OptimizedProductCardProps>(({
                   {product.in_stock ? 'Add to Cart' : 'Out of Stock'}
                 </OptimizedButton>
               )}
-              
-              {onQuickView && (
-                <OptimizedButton
-                  size="sm"
-                  variant="outline"
-                  onClick={handleQuickView}
-                  className="bg-white/90 text-black border-white hover:bg-white"
-                >
-                  Quick View
-                </OptimizedButton>
-              )}
             </div>
           </div>
 
@@ -260,11 +248,16 @@ const OptimizedProductCard = React.memo<OptimizedProductCardProps>(({
         {/* Product Info */}
         <div className="p-4">
           {/* Brand */}
-          {product.brand && (
-            <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">
-              {product.brand}
-            </p>
-          )}
+          {(() => {
+            const brandText = typeof product.brand === 'string'
+              ? product.brand
+              : (product as any)?.brand?.name ?? '';
+            return brandText ? (
+              <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">
+                {brandText}
+              </p>
+            ) : null;
+          })()}
 
           {/* Product Name */}
           <h3 className="font-medium text-gray-900 line-clamp-2 mb-2 group-hover:text-gray-700 transition-colors">
@@ -296,14 +289,23 @@ const OptimizedProductCard = React.memo<OptimizedProductCardProps>(({
 
           {/* Price */}
           <div className="flex items-center gap-2">
-            <span className="font-semibold text-gray-900">
-              ${Number(product.price || 0).toFixed(2)}
-            </span>
-            {product.compare_at_price && product.compare_at_price > product.price && (
-              <span className="text-sm text-gray-500 line-through">
-                ${Number(product.compare_at_price || 0).toFixed(2)}
-              </span>
-            )}
+            {(() => {
+              const display: any = (product as any)?.sale_price ?? (product as any)?.price ?? (product as any)?.base_price ?? 0;
+              const base: any = (product as any)?.base_price ?? (product as any)?.compare_at_price;
+              const onSale = Boolean((product as any)?.is_on_sale) && base != null && Number(base) > Number(display);
+              const fmt = (v: any) => {
+                const n = typeof v === 'string' ? Number(v) : v;
+                return `$${(Number.isFinite(n) ? n : 0).toFixed(2)}`;
+              };
+              return (
+                <>
+                  <span className="font-semibold text-gray-900">{fmt(display)}</span>
+                  {onSale && (
+                    <span className="text-sm text-gray-500 line-through">{fmt(base)}</span>
+                  )}
+                </>
+              );
+            })()}
           </div>
 
           {/* Color Variants */}

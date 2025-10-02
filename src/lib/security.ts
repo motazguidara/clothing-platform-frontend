@@ -306,7 +306,10 @@ export const securityHeaders = {
 export const apiSecurity = {
   // Validate API key
   validateApiKey: (apiKey: string): boolean => {
-    const validApiKeys = process.env.VALID_API_KEYS?.split(',') || [];
+    if (typeof process === 'undefined' || !process.env) {
+      return false;
+    }
+    const validApiKeys = (process.env['VALID_API_KEYS'] || '').split(',').filter(Boolean);
     return validApiKeys.includes(apiKey);
   },
 

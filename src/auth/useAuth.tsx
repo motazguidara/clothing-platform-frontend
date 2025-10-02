@@ -68,16 +68,45 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  const register = React.useCallback(async (p: { email: string; password: string; first_name?: string; last_name?: string; terms_consent?: boolean }) => {
+  const register = React.useCallback(async (p: { 
+    email: string; 
+    password: string; 
+    first_name?: string; 
+    last_name?: string; 
+    terms_consent?: boolean;
+    marketing_consent?: boolean;
+  }) => {
     setLoading(true);
     try {
-      await authService.register({ 
-        ...p, 
-        password_confirm: p.password, 
-        marketing_consent: false,
-        terms_consent: p.terms_consent ?? true 
-      });
+      // Ensure all required fields are provided with defaults
+      const registrationData = { 
+        email: p.email.trim(),
+        password: p.password,
+        password_confirm: p.password,
+        first_name: p.first_name?.trim() || '',
+        last_name: p.last_name?.trim() || '',
+        marketing_consent: p.marketing_consent ?? false,
+        terms_consent: p.terms_consent ?? false // Default to false to force explicit consent
+      };
+
+      // Validate required fields
+      if (!registrationData.email || !registrationData.password) {
+        throw new Error('Email and password are required');
+      }
+
+      if (registrationData.password.length < 8) {
+        throw new Error('Password must be at least 8 characters long');
+      }
+
+      if (!registrationData.terms_consent) {
+        throw new Error('You must accept the terms and conditions');
+      }
+
+      await authService.register(registrationData);
       await login({ email: p.email, password: p.password });
+    } catch (error) {
+      // Rethrow the error to be handled by the form
+      throw error;
     } finally {
       setLoading(false);
     }

@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useCallback, useTransition } from 'react';
+import { useState, useCallback, useTransition, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { OptimizedButton } from '@/components/ui/optimized-button';
+import { useUIStore } from '@/store/ui';
 import { useAddToCart } from '@/hooks/useCart';
 import { useWishlist } from '@/lib/wishlist';
 import type { Product } from '@/types';
@@ -20,15 +21,19 @@ export function ProductClient({ product, selectedVariant }: ProductClientProps) 
   const [quantity, setQuantity] = useState(1);
   
   const addToCart = useAddToCart();
+  const openCart = useUIStore((s) => s.openCart);
   const { addItem: addToWishlist, removeItem: removeFromWishlist, hasItem: isInWishlist } = useWishlist();
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
 
-  const isInWishlistState = isInWishlist(product.id);
+  const isInWishlistState = mounted ? isInWishlist(product.id) : false;
 
   const handleAddToCart = useCallback(async () => {
     if (!product.in_stock) return;
     
     try {
-      await addToCart.mutateAsync({ product_id: product.id, quantity });
+      await addToCart.mutateAsync({ product_id: product.id, delta_qty: quantity });
+      openCart();
       
       // Show success toast or feedback
       if (typeof window !== 'undefined' && window.gtag) {
@@ -184,6 +189,7 @@ export function ProductClient({ product, selectedVariant }: ProductClientProps) 
             onClick={handleWishlistToggle}
             variant="outline"
             className="flex-1"
+            aria-label={isInWishlistState ? 'Remove from Wishlist' : 'Add to Wishlist'}
             icon={
               <svg className="w-4 h-4" fill={isInWishlistState ? "currentColor" : "none"} stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
