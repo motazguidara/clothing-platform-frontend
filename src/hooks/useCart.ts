@@ -1,3 +1,5 @@
+"use client";
+
 import * as React from 'react';
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { UseQueryOptions } from "@tanstack/react-query";
@@ -30,21 +32,22 @@ export interface Cart {
 
 // Schema for API response validation
 const CartItemSchema = z.object({
-  id: z.number().optional(),
-  product_id: z.number(),
-  variant_id: z.number().nullable().optional(),
-  quantity: z.number(),
-  price: z.number(),
+  id: z.coerce.number().optional(),
+  product_id: z.coerce.number(),
+  variant_id: z.coerce.number().nullable().optional(),
+  quantity: z.coerce.number(),
+  price: z.coerce.number(),
   product_title: z.string().optional(),
+  product_name: z.string().optional(), // backend alias
   sku: z.string().nullable().optional(),
   currency: z.string().optional(),
 });
 
 const TotalsSchema = z.object({
-  subtotal: z.number(),
-  tax: z.number(),
-  shipping: z.number(),
-  total: z.number(),
+  subtotal: z.coerce.number(),
+  tax: z.coerce.number(),
+  shipping: z.coerce.number(),
+  total: z.coerce.number(),
 });
 
 const CartSchema = z.object({
@@ -80,7 +83,29 @@ export function useCart() {
     retry: 1,
   };
 
-  return useQuery<Cart, Error>(queryOptions);
+  const query = useQuery<Cart, Error>(queryOptions);
+
+  // Dev logging of cart data and errors
+  React.useEffect(() => {
+    if (process.env.NODE_ENV === 'development' && query.data) {
+      // eslint-disable-next-line no-console
+      console.log('[useCart] fetched', {
+        id: query.data.id,
+        itemsCount: Array.isArray(query.data.items) ? query.data.items.length : 0,
+        items: query.data.items,
+        totals: query.data.totals,
+      });
+    }
+  }, [query.data]);
+
+  React.useEffect(() => {
+    if (process.env.NODE_ENV === 'development' && query.error) {
+      // eslint-disable-next-line no-console
+      console.error('[useCart] error', query.error);
+    }
+  }, [query.error]);
+
+  return query;
 }
 
 export function useAddToCart() {
@@ -95,8 +120,14 @@ export function useAddToCart() {
       });
       return response;
     },
-    onSuccess: async () => {
-      // Invalidate and immediately refetch to ensure the drawer shows fresh data
+    onSuccess: async (data) => {
+      if (process.env.NODE_ENV === 'development') {
+        // eslint-disable-next-line no-console
+        console.log('[useAddToCart] success, invalidating cart', { items: data?.items });
+      }
+      // Optimistically update cache with server response
+      qc.setQueryData(cartKeys.all, data);
+      // Invalidate and refetch to ensure freshness
       await qc.invalidateQueries({ queryKey: cartKeys.all });
       await qc.refetchQueries({ queryKey: cartKeys.all });
     },
@@ -120,16 +151,45 @@ export function useRemoveFromCart() {
 
 export function useUpdateCartItem() {
   const qc = useQueryClient();
-  return useMutation<Cart, Error, { item_id: number; quantity: number }>({
+  const CartItemUpdateResponseSchema = z.object({
+    ok: z.boolean().optional(),
+    item: CartItemSchema,
+    totals: TotalsSchema.optional(),
+  });
+
+  return useMutation<{ ok?: boolean; item: CartItem; totals?: Cart['totals'] }, Error, { item_id: number; quantity: number }>({
     mutationFn: async ({ item_id, quantity }) => {
-      const response = await apiClient.request<Cart>(`/orders/cart/items/${item_id}/`, {
+      const response = await apiClient.request<{ ok?: boolean; item: CartItem; totals?: Cart['totals'] }>(`/orders/cart/items/${item_id}/`, {
         method: 'PATCH',
         body: { quantity },
-        responseSchema: CartSchema,
+        responseSchema: CartItemUpdateResponseSchema,
       });
       return response;
     },
+    onMutate: async ({ item_id, quantity }) => {
+      // Optimistically update cache
+      const prev = qc.getQueryData<Cart>(cartKeys.all);
+      if (prev) {
+        const next: Cart = {
+          ...prev,
+          items: prev.items.map((it) => it.id === item_id ? { ...it, quantity } : it),
+        };
+        qc.setQueryData(cartKeys.all, next);
+      }
+    },
     onSuccess: (data) => {
+      // Merge server-confirmed item fields if present
+      const prev = qc.getQueryData<Cart>(cartKeys.all);
+      if (prev && data?.item?.id != null) {
+        const itemId = Number(data.item.id);
+        const totals = data.totals ?? prev.totals;
+        const base: Cart = {
+          ...prev,
+          items: prev.items.map((it) => it.id === itemId ? { ...it, ...data.item } : it),
+        } as Cart;
+        const next = totals ? { ...base, totals } as Cart : base;
+        qc.setQueryData(cartKeys.all, next);
+      }
       qc.invalidateQueries({ queryKey: cartKeys.all });
     },
   });

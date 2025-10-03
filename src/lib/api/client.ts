@@ -180,10 +180,12 @@ export class ApiClient {
       }
     }
 
+    // Include credentials for orders/cart-related endpoints to support session carts
+    const needsCookies = endpoint.startsWith('/orders/');
     const requestOptions: RequestInit = {
       method,
       headers: requestHeaders,
-      credentials: clientConfig.featureCookieJwt ? 'include' : 'same-origin',
+      credentials: (clientConfig.featureCookieJwt || needsCookies) ? 'include' : 'same-origin',
     };
 
     if (body && method !== 'GET') {

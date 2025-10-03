@@ -7,19 +7,27 @@ import { WishlistLink } from "@/components/ui/wishlist-link";
 import { useAuth } from "@/hooks/useAuth";
 import { useUIStore } from "@/store/ui";
 import { useCart } from "@/hooks/useCart";
+import { usePathname, useSearchParams } from "next/navigation";
+import { SearchOverlay } from "@/components/search/search-overlay";
 
 export default function Header() {
   const [scrolled, setScrolled] = React.useState(false);
   const [mounted, setMounted] = React.useState(false);
+  const [isSearchOpen, setIsSearchOpen] = React.useState(false);
   const openMenu = useUIStore((s) => s.openMenu);
   const closeMenu = useUIStore((s) => s.closeMenu);
   const isMenuOpen = useUIStore((s) => s.isMenuOpen);
   
   const { data: cart } = useCart();
-  const cartCount = React.useMemo(() => 
-    (cart?.items ?? []).reduce((sum: number, it: any) => sum + (it.quantity || 1), 0),
-    [cart?.items]
-  );
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const cartCount = React.useMemo(() => {
+    const items = Array.isArray(cart?.items) ? cart!.items : [];
+    return items.reduce((sum: number, it: any) => {
+      const q = typeof it.quantity === 'string' ? parseInt(it.quantity, 10) : (Number(it.quantity) || 1);
+      return sum + (isFinite(q) && q > 0 ? q : 1);
+    }, 0);
+  }, [cart?.items]);
   
   const displayCartCount = mounted ? cartCount : 0;
   const openCart = useUIStore((s) => s.openCart);
@@ -42,6 +50,12 @@ export default function Header() {
     window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
+
+  // Close search overlay on route or query changes to ensure it never remains open after navigation
+  React.useEffect(() => {
+    if (isSearchOpen) setIsSearchOpen(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname, searchParams?.toString()]);
 
   // Set mounted state after component mounts
   React.useEffect(() => {
@@ -75,20 +89,22 @@ export default function Header() {
           <div className="flex items-center gap-6">
             <Link href="/" className="text-xl font-bold tracking-tight uppercase">Clothing</Link>
             <nav className="hidden md:flex items-center gap-6 text-sm" aria-label="Main navigation">
-              <Link href="/men" className="hover:opacity-80">Men</Link>
-              <Link href="/women" className="hover:opacity-80">Women</Link>
-              <Link href="/kids" className="hover:opacity-80">Kids</Link>
-              <Link href="/catalog?sale=true" className="hover:opacity-80">Sale</Link>
-              <Link href="/catalog" className="hover:opacity-80">All Products</Link>
+              <Link href="/catalog?ordering=-created_at" className="underline-link transition-soft">New</Link>
+              <Link href="/men" className="underline-link transition-soft">Men</Link>
+              <Link href="/women" className="underline-link transition-soft">Women</Link>
+              <Link href="/kids" className="underline-link transition-soft">Kids</Link>
+              <Link href="/catalog?category=sport" className="underline-link transition-soft">Sport</Link>
+              <Link href="/catalog?sale=1" className="underline-link transition-soft">Sale</Link>
             </nav>
           </div>
 
           <div className="flex items-center gap-3 w-full justify-end">
             {/* Centered search pill */}
-            <div className="hidden md:flex flex-1 justify-center">
-              <Link
-                href="/search"
-                className="w-full max-w-xl rounded-full bg-gray-100 shadow-inner px-4 py-2 flex items-center gap-2 text-sm hover:bg-gray-200 focus-visible:ring-2 ring-offset-2 ring-black"
+            <div className={`hidden md:flex flex-1 justify-center`}>
+              <button
+                type="button"
+                onClick={() => setIsSearchOpen(true)}
+                className="w-full max-w-xl rounded-full bg-gray-100 shadow-inner px-4 py-2 flex items-center gap-2 text-sm hover:bg-gray-200 focus-visible:ring-2 ring-offset-2 ring-black cursor-pointer"
                 aria-label="Open search"
               >
                 <svg width="18" height="18" viewBox="0 0 24 24" className="stroke-gray-500" fill="none" strokeWidth="1.5" aria-hidden="true">
@@ -96,16 +112,16 @@ export default function Header() {
                   <path d="M20 20l-3.5-3.5" stroke="currentColor" strokeLinecap="round" />
                 </svg>
                 <span className="text-gray-600">Search</span>
-              </Link>
+              </button>
             </div>
 
             {/* Right icons */}
             <div className="flex items-center gap-2">
               {!isAuthenticated && (
-                <Link href="/login" className="px-3 py-2 rounded-md hover:bg-secondary/50 text-sm hidden md:block">Login</Link>
+                <Link href="/login" className="px-3 py-2 rounded-md text-sm hidden md:block underline-link transition-soft">Login</Link>
               )}
               {isAuthenticated && (
-                <Link href="/profile" aria-label="Profile" className="px-3 py-2 rounded-md hover:bg-secondary/50 text-sm hidden md:block">Profile</Link>
+                <Link href="/profile" aria-label="Profile" className="px-3 py-2 rounded-md text-sm hidden md:block underline-link transition-soft">Profile</Link>
               )}
 
               <WishlistLink size="sm" />
@@ -124,21 +140,22 @@ export default function Header() {
               </div>
 
               {/* Mobile search trigger */}
-              <Link
-                href="/search"
-                className="md:hidden h-10 w-10 grid place-items-center rounded-md hover:bg-secondary/50"
+              <button
+                type="button"
+                onClick={() => setIsSearchOpen(true)}
+                className={`md:hidden h-10 w-10 grid place-items-center rounded-md hover:bg-secondary/50 cursor-pointer`}
                 aria-label="Open search"
               >
                 <svg width="20" height="20" viewBox="0 0 24 24" className="stroke-black/80" fill="none" strokeWidth="1.5" aria-hidden="true">
                   <circle cx="11" cy="11" r="7" stroke="currentColor" />
                   <path d="M20 20l-3.5-3.5" stroke="currentColor" strokeLinecap="round" />
                 </svg>
-              </Link>
+              </button>
 
               {/* Mobile hamburger menu */}
               <button
                 onClick={openMenu}
-                className="md:hidden h-10 w-10 grid place-items-center rounded-md hover:bg-secondary/50"
+                className="md:hidden h-10 w-10 grid place-items-center rounded-md hover:bg-secondary/50 cursor-pointer"
                 aria-label="Open menu"
                 aria-expanded={isMenuOpen}
               >
@@ -158,6 +175,8 @@ export default function Header() {
           </div>
         </div>
       </header>
+      {/* Search Overlay (only navigates to /search on submit) */}
+      <SearchOverlay isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} />
 
       {/* Mobile Menu Overlay */}
       <div
@@ -253,6 +272,20 @@ export default function Header() {
                 className="block py-3 text-lg font-medium hover:text-primary transition-colors"
                 onClick={closeMenu}
               />
+              <Link
+                href="/catalog?ordering=-created_at"
+                className="block py-3 text-lg font-medium hover:text-primary transition-colors"
+                onClick={closeMenu}
+              >
+                New
+              </Link>
+              <Link
+                href="/catalog?category=sport"
+                className="block py-3 text-lg font-medium hover:text-primary transition-colors"
+                onClick={closeMenu}
+              >
+                Sport
+              </Link>
               <Link
                 href="/search"
                 className="block py-3 text-lg font-medium hover:text-primary transition-colors"

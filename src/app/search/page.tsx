@@ -14,6 +14,8 @@ export default function SearchPage() {
   const [searchQuery, setSearchQuery] = React.useState(searchParams.get("q") || "");
   const [suggestions, setSuggestions] = React.useState<string[]>([]);
   const [showSuggestions, setShowSuggestions] = React.useState(false);
+  const [bannerActive, setBannerActive] = React.useState(() => !Boolean(searchParams.get("q")));
+  const barRef = React.useRef<HTMLDivElement | null>(null);
 
   // Build search parameters
   const params: Record<string, string> = {};
@@ -29,6 +31,10 @@ export default function SearchPage() {
   const mockSuggestions = React.useMemo(() => [
     "t-shirt", "dress", "jeans", "hoodie", "sneakers", "jacket", 
     "polo shirt", "sweater", "shorts", "skirt", "boots", "sandals"
+  ], []);
+
+  const popularTerms = React.useMemo(() => [
+    "football boots", "p6000", "air force 1", "air max 95", "air max", "jordan 4", "jordan", "socks"
   ], []);
 
   // Handle search input changes with debounced suggestions
@@ -55,6 +61,7 @@ export default function SearchPage() {
     url.searchParams.delete("page");
     router.push(url.toString());
     setShowSuggestions(false);
+    setBannerActive(false);
   };
 
   const handleSuggestionClick = (suggestion: string) => {
@@ -73,68 +80,134 @@ export default function SearchPage() {
   const currentQuery = searchParams.get("q") || "";
   const resultCount = data?.count || 0;
 
+  // Hide suggestions on outside click, and allow overlay click to navigate back
+  React.useEffect(() => {
+    const handleDocClick = (e: MouseEvent) => {
+      if (!barRef.current) return;
+      if (!barRef.current.contains(e.target as Node)) {
+        setShowSuggestions(false);
+      }
+    };
+    document.addEventListener('click', handleDocClick);
+    return () => document.removeEventListener('click', handleDocClick);
+  }, []);
+
+  // Prevent background scroll while banner is active
+  React.useEffect(() => {
+    const original = document.body.style.overflow;
+    if (bannerActive) document.body.style.overflow = 'hidden';
+    else document.body.style.overflow = original || '';
+    return () => { document.body.style.overflow = original || ''; };
+  }, [bannerActive]);
+
+  // Close banner when a query is present; do NOT auto-open when cleared
+  React.useEffect(() => {
+    const hasQ = Boolean(searchParams.get("q"));
+    if (hasQ && bannerActive) setBannerActive(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams?.toString()]);
+
   return (
-    <section className="max-w-7xl mx-auto px-6 py-16">
+    <section className="max-w-7xl mx-auto px-6 pb-16 pt-36">
       {/* Search Header */}
       <div className="mb-8">
         <h1 className="text-3xl font-semibold tracking-tight uppercase">Search</h1>
         <p className="text-muted mt-2">Find exactly what you're looking for</p>
       </div>
 
-      {/* Enhanced Search Bar */}
-      <div className="relative mb-8">
-        <div className="relative">
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                handleSearch(searchQuery);
-              }
-              if (e.key === "Escape") {
-                setShowSuggestions(false);
-              }
-            }}
-            onFocus={() => searchQuery.length > 1 && setShowSuggestions(true)}
-            placeholder="Search for products..."
-            className="w-full px-4 py-3 pl-12 pr-12 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-black transition-colors"
-          />
-          <div className="absolute left-4 top-1/2 transform -translate-y-1/2">
-            <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
-          </div>
-          {searchQuery && (
-            <button
-              onClick={clearSearch}
-              className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          )}
-        </div>
+      {/* Fixed Top Search Bar (covers header) */}
+      {bannerActive && (
+        <div className="fixed inset-x-0 top-0 z-50 bg-white/95 backdrop-blur border-b">
+          <div ref={barRef} className="max-w-7xl mx-auto px-6 py-4">
+            <div className="flex items-center gap-4">
+              <div className="relative flex-1">
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") handleSearch(searchQuery);
+                    if (e.key === "Escape") setShowSuggestions(false);
+                  }}
+                  onFocus={() => {
+                    setBannerActive(true);
+                    if (searchQuery.length > 1) setShowSuggestions(true);
+                  }}
+                  placeholder="Search"
+                  className="w-full px-4 py-3 pl-10 pr-10 rounded-full bg-gray-100 shadow-inner focus:outline-none focus:ring-2 ring-black"
+                />
+                <div className="absolute left-3 top-1/2 -translate-y-1/2">
+                  <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <circle cx="11" cy="11" r="7" stroke="currentColor" />
+                    <path d="M20 20l-3.5-3.5" stroke="currentColor" strokeLinecap="round" />
+                  </svg>
+                </div>
+                {searchQuery && (
+                  <button
+                    onClick={clearSearch}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    aria-label="Clear search"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                )}
 
-        {/* Search Suggestions */}
-        {showSuggestions && suggestions.length > 0 && (
-          <div className="absolute top-full left-0 right-0 bg-white border border-gray-200 rounded-lg shadow-lg z-10 mt-1">
-            {suggestions.map((suggestion, index) => (
+                {/* Suggestions dropdown below input */}
+                {showSuggestions && suggestions.length > 0 && (
+                  <div className="absolute left-0 right-0 mt-2 bg-white border border-gray-200 rounded-lg shadow-lg z-10">
+                    {suggestions.map((suggestion, index) => (
+                      <button
+                        key={index}
+                        onClick={() => handleSuggestionClick(suggestion)}
+                        className="w-full px-4 py-3 text-left hover:bg-gray-100 first:rounded-t-lg last:rounded-b-lg flex items-center gap-3"
+                      >
+                        <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
+                        <span className="text-sm">{suggestion}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
               <button
-                key={index}
-                onClick={() => handleSuggestionClick(suggestion)}
-                className="w-full px-4 py-3 text-left hover:bg-gray-100 first:rounded-t-lg last:rounded-b-lg flex items-center gap-3"
+                onClick={() => { setBannerActive(false); setShowSuggestions(false); }}
+                className="text-sm text-gray-600 hover:text-black"
+                aria-label="Cancel"
               >
-                <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                </svg>
-                <span className="text-sm">{suggestion}</span>
+                Cancel
               </button>
-            ))}
+            </div>
+
+            {/* Popular Search Terms */}
+            <div className="mt-4">
+              <div className="text-xs text-gray-500 mb-2">Popular Search Terms</div>
+              <div className="flex flex-wrap gap-2">
+                {popularTerms.map((term) => (
+                  <button
+                    key={term}
+                    onClick={() => handleSearch(term)}
+                    className="px-3 py-1 bg-gray-100 rounded-full text-sm hover:bg-gray-200 transition-colors"
+                  >
+                    {term}
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
+
+      {/* Dimming overlay under the fixed search bar (no redirect on close) */}
+      {bannerActive && (
+        <button
+          aria-label="Dismiss search"
+          onClick={() => { setBannerActive(false); setShowSuggestions(false); }}
+          className="fixed inset-0 top-0 bg-black/20 animate-fade-in z-40"
+        />
+      )}
 
       {/* Search Results Header */}
       <div className="flex items-center justify-between mb-6">
@@ -319,7 +392,7 @@ export default function SearchPage() {
         )}
         
         {isLoading && (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-10 xl:gap-12">
             {Array.from({ length: 8 }).map((_, i) => (
               <div key={i} className="h-80 rounded-md bg-gray-200 animate-pulse" />
             ))}
@@ -363,7 +436,7 @@ export default function SearchPage() {
                 )}
               </div>
             ) : (
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-10 xl:gap-12">
                 {data.results.map((product) => (
                   <ProductCard key={product.id} product={product} />
                 ))}

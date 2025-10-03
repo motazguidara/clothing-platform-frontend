@@ -62,15 +62,13 @@ const OptimizedProductCard = React.memo<OptimizedProductCardProps>(({
     setMounted(true);
   }, []);
 
-  // Image cycling on hover
+  // Optional image cycling on hover (disabled when user selects a thumbnail)
   React.useEffect(() => {
     const imagesCount = product.images?.length ?? 0;
     if (!isHovered || imagesCount <= 1) return;
-
     const interval = setInterval(() => {
       setCurrentImageIndex((prev) => (prev >= imagesCount - 1 ? 0 : prev + 1));
-    }, 1000);
-
+    }, 1500);
     return () => clearInterval(interval);
   }, [isHovered, product.images]);
 
@@ -165,7 +163,8 @@ const OptimizedProductCard = React.memo<OptimizedProductCardProps>(({
             sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
           />
 
-          {/* Loading Skeleton */}
+          {/* Loading Skeleton */
+          }
           {!imageLoaded && (
             <div className="absolute inset-0 bg-gray-200 animate-pulse" />
           )}
@@ -229,17 +228,28 @@ const OptimizedProductCard = React.memo<OptimizedProductCardProps>(({
             </div>
           </div>
 
-          {/* Image Indicators */}
+          {/* Thumbnail strip (on hover) */}
           {product.images && product.images.length > 1 && (
-            <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 flex gap-1">
-              {product.images.map((_, index) => (
-                <div
-                  key={index}
+            <div className="absolute bottom-2 left-2 right-2 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+              {product.images.slice(0, 4).map((img, idx) => (
+                <button
+                  key={idx}
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); setCurrentImageIndex(idx); }}
+                  onMouseEnter={(e) => { e.preventDefault(); setCurrentImageIndex(idx); }}
+                  aria-label={`Show image ${idx + 1}`}
                   className={cn(
-                    "w-1.5 h-1.5 rounded-full transition-all duration-200",
-                    index === currentImageIndex ? "bg-white" : "bg-white/50"
+                    "relative w-10 h-10 rounded overflow-hidden border",
+                    idx === currentImageIndex ? "border-white" : "border-white/50"
                   )}
-                />
+                >
+                  <Image
+                    src={img}
+                    alt={`${product.name} thumbnail ${idx + 1}`}
+                    fill
+                    sizes="40px"
+                    className="object-cover"
+                  />
+                </button>
               ))}
             </div>
           )}
@@ -247,6 +257,13 @@ const OptimizedProductCard = React.memo<OptimizedProductCardProps>(({
 
         {/* Product Info */}
         <div className="p-4">
+          {/* Sustainability or badges */}
+          {(() => {
+            const isSustainable = (product as any)?.is_sustainable || (Array.isArray((product as any)?.tags) && (product as any).tags.includes('sustainable'));
+            return isSustainable ? (
+              <p className="text-xs font-semibold text-emerald-700 mb-1">Sustainable Materials</p>
+            ) : null;
+          })()}
           {/* Brand */}
           {(() => {
             const brandText = typeof product.brand === 'string'
@@ -263,6 +280,11 @@ const OptimizedProductCard = React.memo<OptimizedProductCardProps>(({
           <h3 className="font-medium text-gray-900 line-clamp-2 mb-2 group-hover:text-gray-700 transition-colors">
             {product.name}
           </h3>
+
+          {/* Subtitle */}
+          {((product as any)?.subtitle) && (
+            <p className="text-sm text-gray-600 mb-1">{(product as any).subtitle}</p>
+          )}
 
           {/* Rating */}
           {product.rating && (
@@ -310,20 +332,25 @@ const OptimizedProductCard = React.memo<OptimizedProductCardProps>(({
 
           {/* Color Variants */}
           {product.available_colors && product.available_colors.length > 0 && (
-            <div className="flex items-center gap-1 mt-2">
-              {product.available_colors.slice(0, 4).map((color, index) => (
-                <div
-                  key={index}
-                  className="w-4 h-4 rounded-full border border-gray-300"
-                  style={{ backgroundColor: color.toLowerCase() }}
-                  title={color}
-                />
-              ))}
-              {product.available_colors.length > 4 && (
-                <span className="text-xs text-gray-500 ml-1">
-                  +{product.available_colors.length - 4}
-                </span>
-              )}
+            <div className="flex items-center gap-2 mt-2">
+              <div className="flex items-center gap-1">
+                {product.available_colors.slice(0, 4).map((color, index) => (
+                  <div
+                    key={index}
+                    className="w-4 h-4 rounded-full border border-gray-300"
+                    style={{ backgroundColor: color.toLowerCase() }}
+                    title={color}
+                  />
+                ))}
+                {product.available_colors.length > 4 && (
+                  <span className="text-xs text-gray-500 ml-1">
+                    +{product.available_colors.length - 4}
+                  </span>
+                )}
+              </div>
+              <span className="text-xs text-gray-500">
+                {product.available_colors.length} {product.available_colors.length === 1 ? 'Colour' : 'Colours'}
+              </span>
             </div>
           )}
         </div>

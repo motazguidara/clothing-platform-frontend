@@ -32,7 +32,18 @@ export function ProductClient({ product, selectedVariant }: ProductClientProps) 
     if (!product.in_stock) return;
     
     try {
-      await addToCart.mutateAsync({ product_id: product.id, delta_qty: quantity });
+      // Resolve variant id if variants exist by matching selected size/color
+      const variants: any[] = (product as any)?.variants || [];
+      let variant_id: number | undefined = undefined;
+      if (variants.length) {
+        const matched = variants.find(v => {
+          const sizeOk = selectedSize ? String(v.size).toLowerCase() === String(selectedSize).toLowerCase() : true;
+          const colorOk = selectedColor ? String(v.color || '').toLowerCase() === String(selectedColor).toLowerCase() : true;
+          return sizeOk && colorOk;
+        }) || variants.find(v => selectedSize ? String(v.size).toLowerCase() === String(selectedSize).toLowerCase() : false);
+        variant_id = matched?.id;
+      }
+      await addToCart.mutateAsync({ product_id: product.id, ...(variant_id ? { variant_id } : {}), delta_qty: quantity });
       openCart();
       
       // Show success toast or feedback
@@ -52,7 +63,7 @@ export function ProductClient({ product, selectedVariant }: ProductClientProps) 
     } catch (error) {
       console.error('Failed to add to cart:', error);
     }
-  }, [addToCart, product, quantity, selectedSize, selectedColor]);
+  }, [addToCart, product, quantity, selectedSize, selectedColor, openCart]);
 
   const handleWishlistToggle = useCallback(async () => {
     try {
@@ -84,7 +95,7 @@ export function ProductClient({ product, selectedVariant }: ProductClientProps) 
     });
   }, [router]);
 
-  const canAddToCart = product.in_stock && (!product.available_sizes?.length || selectedSize);
+  const canAddToCart = product.in_stock && (!((product as any)?.variants?.length) || selectedSize);
 
   return (
     <div className="space-y-6">

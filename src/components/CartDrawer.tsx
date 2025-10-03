@@ -16,8 +16,7 @@ type CartItemWithVariant = {
   product_id: number;
   variant_id?: number;
   quantity: number;
-  price: string | number;
-  total_price: string;
+  price: number;
   product_name: string;
   product_image?: string;
   variant_name?: string;
@@ -30,12 +29,39 @@ type CartItemWithVariant = {
 export function CartDrawer() {
   const isOpen = useUIStore((s) => s.isCartOpen);
   const close = useUIStore((s) => s.closeCart);
-  const { data, isLoading } = useCart();
+  const { data, isLoading, error } = useCart();
   const { mutate: removeItem, isPending: isRemoving } = useRemoveFromCart();
   const { addItem: addToWishlist, removeItem: removeFromWishlist, hasItem: isInWishlist } = useWishlist();
   const { show } = useToast();
   const { mutate: updateQuantity } = useUpdateCartItem();
   const items = React.useMemo(() => data?.items ?? [], [data?.items]);
+  const normalizedItems = React.useMemo(() => {
+    return (items as any[]).map((raw, idx) => {
+      const id = Number((raw as any).id ?? idx + 1);
+      const product_id = Number((raw as any).product_id ?? 0);
+      const quantity = Number((raw as any).quantity ?? 1);
+      const price = typeof (raw as any).price === 'string' ? parseFloat((raw as any).price) : Number((raw as any).price ?? 0);
+      const product_name = (raw as any).product_name || (raw as any).product_title || 'Item';
+      const variant = (raw as any).variant;
+      const variant_name = variant?.name || (raw as any).variant_name;
+      return { id, product_id, quantity, price, product_name, variant, variant_name } as CartItemWithVariant;
+    });
+  }, [items]);
+
+  // Dev logging of cart drawer state
+  React.useEffect(() => {
+    if (process.env.NODE_ENV === 'development') {
+      // eslint-disable-next-line no-console
+      console.log('[CartDrawer] state', {
+        isOpen,
+        isLoading,
+        error: error ? String(error) : null,
+        cartId: data?.id,
+        itemsCount: items.length,
+        items,
+      });
+    }
+  }, [isOpen, isLoading, error, data?.id, items]);
   
   const handleRemoveItem = (itemId: number) => {
     removeItem(itemId, {
@@ -88,12 +114,11 @@ export function CartDrawer() {
   
   React.useEffect(() => {
     const init: Record<number, number> = {};
-    for (const item of items) {
-      // Ensure quantity is a number and at least 1
-      init[item.id] = typeof item.quantity === 'number' ? Math.max(1, item.quantity) : 1;
+    for (const item of normalizedItems) {
+      init[item.id] = Math.max(1, Number(item.quantity) || 1);
     }
     setQtyMap(init);
-  }, [items]);
+  }, [normalizedItems]);
 
   const getQty = (id: number, quantity?: number) => {
     // Return the mapped quantity if it exists, otherwise use the provided quantity or default to 1
@@ -102,12 +127,12 @@ export function CartDrawer() {
   
   // Calculate subtotal
   const subtotal = React.useMemo(() => {
-    return items.reduce((sum, item) => {
-      const price = typeof item.price === 'string' ? parseFloat(item.price) : 0;
+    return normalizedItems.reduce((sum, item) => {
+      const unit = Number(item.price ?? 0);
       const quantity = getQty(item.id, item.quantity);
-      return sum + (price * quantity);
+      return sum + (unit * quantity);
     }, 0);
-  }, [items, getQty]);
+  }, [normalizedItems, getQty]);
   
   const total = subtotal;
   
@@ -119,9 +144,17 @@ export function CartDrawer() {
           <SheetDescription>Review and manage items in your shopping cart</SheetDescription>
         </SheetHeader>
         <div className="py-6 px-2 sm:px-4 space-y-5">
+          {process.env.NODE_ENV === 'development' && (
+            <details className="text-xs text-muted">
+              <summary>Debug cart payload</summary>
+              <pre className="whitespace-pre-wrap break-words max-h-48 overflow-auto">
+                {JSON.stringify({ id: data?.id, items: data?.items, totals: data?.totals, error: error ? String(error) : null }, null, 2)}
+              </pre>
+            </details>
+          )}
           {isLoading ? (
             <p className="text-sm text-muted">Loading…</p>
-          ) : items.length === 0 ? (
+          ) : normalizedItems.length === 0 ? (
             <>
               <p className="text-sm text-muted">Your cart is empty.</p>
               <Button onClick={close} className="w-full">
@@ -131,7 +164,7 @@ export function CartDrawer() {
           ) : (
             <div className="space-y-4">
               <ul className="divide-y divide-border" role="list">
-                {items.map((it: CartItemWithVariant) => (
+                {normalizedItems.map((it: CartItemWithVariant) => (
                   <li key={it.id} className="py-5 flex gap-4 items-start">
                     <div className="h-20 w-20 bg-subtle rounded" />
                     <div className="flex-1">
@@ -161,7 +194,10 @@ export function CartDrawer() {
                         </div>
                         <div className="text-right space-y-1">
                           <div className="text-sm font-semibold">
-                            {formatPrice((typeof it.price === 'string' ? parseFloat(it.price) : 0) * getQty(it.id, it.quantity))}
+                            {(() => {
+                              const unit = typeof it.price === 'string' ? parseFloat(it.price) : Number(it.price ?? 0);
+                              return formatPrice(unit * getQty(it.id, it.quantity));
+                            })()}
                           </div>
                           <div className="flex gap-2 justify-end">
                             <button

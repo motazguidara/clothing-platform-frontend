@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { OptimizedProductCard } from '@/components/ui/optimized-product-card';
+import ProductCard from '@/components/product-card';
 import { FilterSidebar, SortSelect } from '@/components/filters/filter-sidebar';
 import type { Product } from '@/types';
 
@@ -19,7 +19,7 @@ interface CatalogSearchParams {
 }
 
 interface CatalogPageProps {
-  searchParams: Promise<CatalogSearchParams>;
+  searchParams: CatalogSearchParams;
 }
 
 // Server-side data fetching
@@ -49,7 +49,7 @@ async function getProducts(sp: CatalogSearchParams) {
 
 // Generate metadata for SEO
 export async function generateMetadata({ searchParams }: CatalogPageProps): Promise<Metadata> {
-  const sp = await searchParams;
+  const sp = searchParams;
   const { category, q } = sp;
   
   let title = 'Catalog | Your Store';
@@ -75,7 +75,7 @@ export async function generateMetadata({ searchParams }: CatalogPageProps): Prom
 }
 
 export default async function CatalogPage({ searchParams }: CatalogPageProps) {
-  const sp = await searchParams;
+  const sp = searchParams;
   const data = await getProducts(sp);
   const results = Array.isArray(data) ? data : (Array.isArray(data?.results) ? data.results : []);
   const products: Product[] = results || [];
@@ -118,7 +118,7 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
       />
       
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <section className="max-w-7xl mx-auto px-6 py-16">
         {/* Heading and Sort */}
         <div className="flex items-end justify-between gap-4 mb-6">
           <div>
@@ -146,15 +146,9 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
           {/* Product Grid */}
           <div className="lg:col-span-9 min-h-[50vh]">
             {products.length > 0 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-10 xl:gap-12">
                 {products.map((product) => (
-                  <OptimizedProductCard 
-                    key={product.id} 
-                    product={product}
-                    priority={products.indexOf(product) < 4}
-                    showQuickAdd
-                    showWishlist
-                  />
+                  <ProductCard key={product.id} product={product} />
                 ))}
               </div>
             ) : (

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useCart, useRemoveFromCart, useUpdateCartItem } from "@/hooks/useCart";
 import { formatPrice } from "@/lib/utils";
 import PromoCodeForm from "@/components/PromoCodeForm";
+import CollectionRail from "@/components/CollectionRail";
 import { useCheckoutStore } from "@/store/checkout";
 
 export default function CartPage() {
@@ -15,10 +16,17 @@ export default function CartPage() {
   const [qtyMap, setQtyMap] = React.useState<Record<number, number>>({});
   React.useEffect(() => {
     const init: Record<number, number> = {};
-    for (const it of items) init[it.id] = it.quantity ?? 1;
+    for (const it of items as any[]) {
+      const key = Number((it as any).id);
+      const q = Number((it as any).quantity ?? 1);
+      if (Number.isFinite(key)) init[key] = Math.max(1, Number.isFinite(q) ? q : 1);
+    }
     setQtyMap(init);
   }, [items.length]);
-  const getQty = (id: number, fallback: number = 1) => qtyMap[id] ?? fallback;
+  const getQty = (id: number, fallback: number = 1) => {
+    const key = Number(id);
+    return Number.isFinite(key) ? (qtyMap[key] ?? fallback) : fallback;
+  };
   const subtotal = items.reduce((sum: number, it: any) => sum + (it.price || 0) * getQty(it.id, it.quantity || 1), 0);
   const [coupon, setCoupon] = React.useState<{ code: string; discount: number } | null>(null);
   const discountAmount = coupon ? (subtotal * coupon.discount) / 100 : 0;
@@ -43,7 +51,7 @@ export default function CartPage() {
 
   return (
     <section className="max-w-6xl mx-auto px-6 py-16">
-      <h1 className="text-3xl font-semibold tracking-tight uppercase">Your Bag</h1>
+      <h1 className="text-3xl font-semibold tracking-tight uppercase">Bag</h1>
       <p className="text-muted mt-2">Review items and proceed to checkout.</p>
       <div className="mt-3 text-sm rounded-md border border-border p-3 bg-subtle space-y-2">
         {!hasDiscounts ? (
@@ -82,8 +90,8 @@ export default function CartPage() {
                       <div className="flex items-start justify-between">
                         <div>
                           <div className="text-sm font-semibold">{it.product_title ?? "Item"}</div>
-                          {it.variant && (
-                            <div className="text-xs text-muted">{it.variant?.name}</div>
+                          {(it.variant?.name || it.variant_name) && (
+                            <div className="text-xs text-muted">{it.variant?.name || it.variant_name}</div>
                           )}
                           <div className="mt-2 flex items-center gap-2">
                             <button
@@ -122,7 +130,10 @@ export default function CartPage() {
                             </button>
                           </div>
                         </div>
-                        <div className="text-sm font-semibold">{formatPrice((it.price || 0) * getQty(it.id, it.quantity || 1), "TND")}</div>
+                        <div className="text-right space-y-1">
+                          <div className="text-xs text-muted">Unit: {formatPrice((it.price || 0), "TND")}</div>
+                          <div className="text-sm font-semibold">{formatPrice((it.price || 0) * getQty(it.id, it.quantity || 1), "TND")}</div>
+                        </div>
                       </div>
                       <div className="mt-2">
                         <button className="text-xs underline" onClick={() => remove.mutate(it.id)}>Remove</button>
@@ -159,6 +170,10 @@ export default function CartPage() {
           </div>
 
           <aside className="border rounded-md p-4 space-y-4 h-max">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-base font-semibold">Summary</span>
+              <span className="text-xs text-muted">{items.length} {items.length === 1 ? 'item' : 'items'}</span>
+            </div>
             <div className="flex items-center justify-between">
               <span className="text-sm text-muted">Subtotal</span>
               <span className="text-sm font-semibold">{formatPrice(subtotal, "TND")}</span>
@@ -210,6 +225,10 @@ export default function CartPage() {
             Checkout
           </button>
         </Link>
+      </div>
+      {/* You Might Also Like */}
+      <div className="mt-16 border-t pt-8">
+        <CollectionRail title="You Might Also Like" params={{ ordering: "-bestseller" }} />
       </div>
     </section>
   );

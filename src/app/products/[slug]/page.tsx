@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import Image from "next/image";
+import ProductGalleryClient from "./product-gallery-client";
 import { ProductClient } from "./product-client";
 import { ProductSkeleton } from "./product-skeleton";
 import { ProductImagePlaceholder } from "@/components/product-image-placeholder";
@@ -237,49 +238,8 @@ export default async function ProductPage({ params, searchParams }: ProductPageP
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Images */}
-          <div className="space-y-4">
-            <div className="aspect-square relative overflow-hidden rounded-lg bg-gray-100">
-              {mainImage ? (
-                <Image
-                  src={mainImage}
-                  alt={product.name || "Product"}
-                  fill
-                  className="object-cover"
-                  priority
-                  sizes="(max-width: 768px) 100vw, 50vw"
-                />
-              ) : (
-                <ProductImagePlaceholder
-                  className="flex h-full w-full items-center justify-center text-gray-500"
-                  productName={product.name}
-                />
-              )}
-            </div>
-
-            {/* Thumbnails */}
-            {product.images && product.images.length > 1 && (
-              <div className="grid grid-cols-4 gap-2">
-                {product.images
-                  .slice(1, 5)
-                  .filter((image): image is string => typeof image === 'string' && image.length > 0)
-                  .map((image, index) => (
-                    <div
-                      key={image + index}
-                      className="aspect-square relative overflow-hidden rounded-md bg-gray-100"
-                    >
-                      <Image
-                        src={image}
-                        alt={`${product.name} view ${index + 2}`}
-                        fill
-                        className="object-cover"
-                        sizes="(max-width: 768px) 25vw, 12.5vw"
-                      />
-                    </div>
-                  ))}
-              </div>
-            )}
-          </div>
+          {/* Images (color-aware) */}
+          <ProductGalleryClient product={product as any} />
 
           {/* Info */}
           <div className="space-y-6">
