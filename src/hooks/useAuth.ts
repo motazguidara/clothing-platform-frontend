@@ -109,8 +109,6 @@ export function useAuth(options?: { fetchProfile?: boolean }) {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["auth"] });
-      toast.success('Account created');
-      router.replace('/login');
     },
   });
 
@@ -150,6 +148,7 @@ export function useAuth(options?: { fetchProfile?: boolean }) {
     login: login.mutate,
     loginAsync: login.mutateAsync,
     register: register.mutate,
+    registerAsync: register.mutateAsync,
     logout: logout.mutate,
     error: login.error || register.error || logout.error,
   } as const;
@@ -168,3 +167,4 @@ export function useProtectedRoute(redirectTo = "/login") {
 
   return { isLoading, isAuthenticated };
 }
+

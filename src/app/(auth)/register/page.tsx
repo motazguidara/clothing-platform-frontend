@@ -100,7 +100,9 @@ export default function RegisterPage() {
       if (fn) payload.first_name = fn;
       if (ln) payload.last_name = ln;
 
-      await auth.register(payload);
+      await auth.registerAsync(payload);
+      
+      await auth.loginAsync({ email: formData.email, password: formData.password });
       
       toast.success('Account created successfully!');
       router.push(redirectTo);
@@ -314,7 +316,7 @@ export default function RegisterPage() {
               <button
                 type="submit"
                 disabled={auth.isLoading}
-                className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="group relative w-full flex justify-center py-2 px-4 border border-black text-sm font-medium rounded-md text-black bg-white hover:bg-black hover:text-white transition focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-black disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {auth.isLoading ? (
                   <>
@@ -355,6 +357,7 @@ export default function RegisterPage() {
     </div>
   );
 }
+
 
 
 

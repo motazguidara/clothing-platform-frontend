@@ -12,7 +12,13 @@ interface WishlistProviderProps {
 
 export function WishlistProvider({ children }: WishlistProviderProps) {
   const { isAuthenticated } = useAuth();
-  const { syncWithServer } = useWishlistStore();
+  const setAuthenticated = useWishlistStore((state) => state.setAuthenticated);
+  const syncWithServer = useWishlistStore((state) => state.syncWithServer);
+
+  // Keep wishlist auth-aware store aligned with current auth status
+  useEffect(() => {
+    setAuthenticated(isAuthenticated);
+  }, [isAuthenticated, setAuthenticated]);
 
   // Sync wishlist with server on authentication state change
   useEffect(() => {

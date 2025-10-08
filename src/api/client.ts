@@ -29,7 +29,7 @@ api.interceptors.response.use(
         isRefreshing = true;
         const refresh = getRefreshToken();
         if (!refresh) throw new Error("No refresh token");
-        const r = await axios.post(`${API_BASE}/auth/refresh/`, { refresh }, { headers: { "Content-Type": "application/json" } });
+        const r = await axios.post(`${API_BASE}/accounts/auth/refresh/`, { refresh }, { headers: { "Content-Type": "application/json" } });
         const newAccess = r.data?.access;
         if (!newAccess) throw new Error("No new access token");
         setTokens(newAccess, undefined);

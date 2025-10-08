@@ -14,7 +14,7 @@ export default function HomeHero({ hero }: { hero: THero }) {
           // Decorative background image
           <Image src={bg} alt="" fill priority className="object-cover" />
         )}
-        <div className="absolute inset-0 bg-gradient-to-t from-white via-white/60 to-white" />
+        <div className="absolute inset-0 bg-gradient-to-t from-white/60 via-white/20 to-white/60" />
       </div>
       <div className="mx-auto max-w-7xl px-6 py-16 sm:py-24">
         <motion.h1

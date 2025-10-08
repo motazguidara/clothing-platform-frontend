@@ -5,7 +5,6 @@ import { z } from 'zod';
 import { clientConfig, isDevelopment } from '@/lib/client-env';
 import { tokenStore } from '@/lib/auth/tokens';
 import { ErrorReporter } from '@/lib/error-reporter';
-import * as schemas from './contracts';
 import { TokenRefreshResponseSchema } from '@/lib/api/schemas';
 
 // API Client Configuration
@@ -28,6 +27,12 @@ interface RequestOptions<T = unknown> {
   validateResponse?: boolean;
   responseSchema?: z.ZodSchema;
 }
+
+type ErrorResponsePayload = Record<string, unknown> & {
+  detail?: unknown;
+  message?: unknown;
+  code?: unknown;
+};
 
 // API Error types
 export class ApiError extends Error {
@@ -243,9 +248,21 @@ export class ApiClient {
             try {
               // Try to refresh the token
               await this.refreshToken();
+              // Update Authorization header with refreshed token when using header mode
+              if (!clientConfig.featureCookieJwt) {
+                const headers = options.headers as Record<string, string> | undefined;
+                const newAccessToken = tokenStore.getAccess();
+                if (headers) {
+                  if (newAccessToken) {
+                    headers['Authorization'] = `Bearer ${newAccessToken}`;
+                  } else {
+                    delete headers['Authorization'];
+                  }
+                }
+              }
               // Retry the original request with new token
               return this.executeWithRetry(url, options, config, true);
-            } catch (refreshError) {
+            } catch {
               // If refresh fails, clear auth and rethrow
               this.clearAuth();
               throw new ApiError(
@@ -269,7 +286,7 @@ export class ApiClient {
     }
 
     // If we get here, all retries failed
-    throw lastError || new Error('Request failed after multiple attempts');
+    throw lastError ?? new Error('Request failed after multiple attempts');
   }
 
   private async fetchWithTimeout(
@@ -323,19 +340,28 @@ export class ApiClient {
   }
 
   private async handleErrorResponse(response: Response): Promise<never> {
-    let errorData: any;
+    let errorData: ErrorResponsePayload = {};
 
     try {
       const text = await response.text();
-      errorData = text ? JSON.parse(text) : {};
+      if (text) {
+        const parsed = JSON.parse(text) as unknown;
+        if (parsed && typeof parsed === 'object') {
+          errorData = parsed as ErrorResponsePayload;
+        }
+      }
     } catch {
       errorData = {};
     }
 
+    const detail = typeof errorData.detail === 'string' ? errorData.detail : undefined;
+    const message = typeof errorData.message === 'string' ? errorData.message : undefined;
+    const code = typeof errorData.code === 'string' ? errorData.code : undefined;
+
     const error = new ApiError(
-      errorData.detail || errorData.message || response.statusText,
+      detail ?? message ?? response.statusText,
       response.status,
-      errorData.code,
+      code,
       errorData
     );
 
@@ -354,7 +380,7 @@ export class ApiClient {
       .find(row => row.startsWith('csrftoken='))
       ?.split('=')[1];
 
-    return cookieValue || null;
+    return cookieValue ?? null;
   }
 
   private async refreshToken(): Promise<void> {

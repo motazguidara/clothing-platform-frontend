@@ -183,7 +183,7 @@ const OptimizedProductCard = React.memo<OptimizedProductCardProps>(({
             <button
               onClick={handleWishlistToggle}
               className={cn(
-                "absolute top-2 right-2 z-10 p-2 rounded-full transition-all duration-200",
+                "absolute top-2 right-2 z-10 p-2 rounded-full transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-black",
                 "bg-white/80 hover:bg-white shadow-sm hover:shadow-md",
                 "opacity-0 group-hover:opacity-100 transform translate-y-2 group-hover:translate-y-0"
               )}

@@ -18,9 +18,9 @@ interface CatalogSearchParams {
   in_stock?: string;
 }
 
-interface CatalogPageProps {
-  searchParams: CatalogSearchParams;
-}
+type CatalogPageProps = {
+  searchParams: Promise<CatalogSearchParams>;
+};
 
 // Server-side data fetching
 async function getProducts(sp: CatalogSearchParams) {
@@ -49,7 +49,7 @@ async function getProducts(sp: CatalogSearchParams) {
 
 // Generate metadata for SEO
 export async function generateMetadata({ searchParams }: CatalogPageProps): Promise<Metadata> {
-  const sp = searchParams;
+  const sp = await searchParams;
   const { category, q } = sp;
   
   let title = 'Catalog | Your Store';
@@ -75,10 +75,10 @@ export async function generateMetadata({ searchParams }: CatalogPageProps): Prom
 }
 
 export default async function CatalogPage({ searchParams }: CatalogPageProps) {
-  const sp = searchParams;
+  const sp = await searchParams;
   const data = await getProducts(sp);
   const results = Array.isArray(data) ? data : (Array.isArray(data?.results) ? data.results : []);
-  const products: Product[] = results || [];
+  const products: Product[] = results ?? [];
   const totalCount = typeof data?.count === 'number' ? data.count : products.length;
 
   // Generate structured data for SEO
@@ -98,7 +98,7 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
           '@type': 'Product',
           name: product.name,
           description: product.description,
-          image: product.images?.[0] || product.image,
+          image: product.images?.[0] ?? product.image ?? undefined,
           offers: {
             '@type': 'Offer',
             price: product.price,

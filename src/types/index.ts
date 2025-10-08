@@ -112,7 +112,9 @@ export interface User {
   is_active: boolean;
   is_email_confirmed: boolean;
   is_locked: boolean;
-  phone_number?: string;
+  phone?: string;
+  preferred_language?: string;
+  preferred_country?: string;
   profile_image?: string;
   date_of_birth?: string;
   gender?: string;

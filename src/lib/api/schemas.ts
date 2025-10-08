@@ -124,12 +124,15 @@ export const UserPreferencesSchema = z.object({
 });
 
 export const UserProfileSchema = UserSchema.extend({
-  phone: z.string().nullable(),
-  date_of_birth: z.string().date().nullable(),
-  gender: z.enum(['male', 'female', 'other', 'prefer_not_to_say']).nullable(),
-  avatar: z.string().url().nullable(),
-  marketing_consent: z.boolean(),
-  preferences: UserPreferencesSchema,
+  phone: z.string().nullable().optional(),
+  preferred_language: z.string().optional().default('en-US'),
+  preferred_country: z.string().length(2).optional().default(''),
+  timezone: z.string().optional().default('UTC'),
+  date_of_birth: z.string().date().nullable().optional(),
+  gender: z.enum(['male', 'female', 'other', 'prefer_not_to_say']).nullable().optional(),
+  avatar: z.string().url().nullable().optional(),
+  marketing_consent: z.boolean().optional().default(false),
+  preferences: UserPreferencesSchema.optional(),
 });
 
 // /auth/me PATCH payload schema
@@ -137,6 +140,8 @@ export const UpdateMeRequestSchema = z.object({
   first_name: z.string().optional(),
   last_name: z.string().optional(),
   phone: z.string().nullable().optional(),
+  preferred_language: z.string().optional(),
+  preferred_country: z.string().length(2).nullable().optional(),
   avatar: z.any().optional(),
   email: z.string().email().optional(),
   // For email change (re-auth)

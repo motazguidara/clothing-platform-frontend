@@ -10,11 +10,13 @@ export interface WishlistItem {
   productId: number;
   variantId?: number;
   addedAt: string;
-  // Product details for offline display
+  // Product details for richer UI experiences
   name?: string;
   price?: number;
-  image?: string;
+  image?: string | null;
   slug?: string;
+  brandName?: string;
+  product?: unknown;
 }
 
 export interface WishlistState {
@@ -219,13 +221,32 @@ export const useWishlistStore = create<WishlistStore>()(
       },
 
       setAuthenticated: (authenticated: boolean) => {
+        const wasAuthenticated = get().isAuthenticated;
+        if (wasAuthenticated === authenticated) {
+          return;
+        }
+
         set((draft) => {
           draft.isAuthenticated = authenticated;
+          if (!authenticated) {
+            draft.items = [];
+            draft.lastSyncAt = null;
+          }
         });
-        
-        // If user just authenticated, merge anonymous wishlist
+
         if (authenticated) {
-          get().mergeAnonymousWishlist();
+          // Merge any locally stored items, otherwise hydrate from server
+          if (get().items.length > 0) {
+            get().mergeAnonymousWishlist();
+          } else {
+            get()
+              .syncWithServer()
+              .catch((error) => {
+                if (process.env.NODE_ENV === 'development') {
+                  console.warn('[wishlist] Failed to sync after auth change', error);
+                }
+              });
+          }
         }
       },
 
@@ -243,16 +264,34 @@ export const useWishlistStore = create<WishlistStore>()(
         });
 
         try {
-          // Get wishlist IDs from server
-          const response = await apiClient.get<{ ids: number[] }>('/catalog/wishlist/ids/');
-          const serverIds = Array.isArray(response?.ids) ? response.ids : [];
-          
-          // Convert to WishlistItem format
-          const items: WishlistItem[] = serverIds.map((id: number) => ({
-            id: Date.now() + Math.random(), // Generate unique ID
-            productId: id,
-            addedAt: new Date().toISOString(), // We don't have the actual date from server
-          }));
+          // Fetch full wishlist products from server
+          const response = await apiClient.get<{ results?: any[]; count?: number }>('/catalog/wishlist/?page_size=200');
+          const results = Array.isArray((response as any)?.results) ? (response as any).results : [];
+
+          const nowIso = new Date().toISOString();
+          const items: WishlistItem[] = results.map((product: any) => {
+            const primaryImage =
+              Array.isArray(product?.images) && product.images.length > 0
+                ? product.images[0]?.image ?? null
+                : product?.image ?? null;
+            const currentPrice =
+              typeof product?.current_price === 'number'
+                ? product.current_price
+                : typeof product?.price === 'number'
+                ? product.price
+                : undefined;
+            return {
+              id: Number(product?.id) || Date.now() + Math.random(),
+              productId: Number(product?.id),
+              addedAt: product?.added_at || nowIso,
+              name: product?.name,
+              price: currentPrice,
+              image: primaryImage,
+              slug: product?.slug,
+              brandName: product?.brand?.name,
+              product,
+            };
+          });
 
           set((draft) => {
             draft.items = items;
@@ -283,19 +322,36 @@ export const useWishlistStore = create<WishlistStore>()(
         });
 
         try {
-          // Add all anonymous items to server
-          const promises = state.items.map((item: WishlistItem) =>
-            apiClient.post('/catalog/wishlist/toggle/', {
-              product_id: item.productId,
-              variant_id: item.variantId,
-            }).catch(() => {
-              // Ignore individual failures during merge
-            })
-          );
+          // Load server wishlist first to avoid removing existing items
+          const serverSnapshot = await apiClient
+            .get<{ results?: any[] }>('/catalog/wishlist/?page_size=200')
+            .catch(() => ({ results: [] }));
+          const serverIds = Array.isArray((serverSnapshot as any)?.results)
+            ? new Set(
+                ((serverSnapshot as any).results as any[]).map((product) =>
+                  Number(product?.id)
+                )
+              )
+            : new Set<number>();
+
+          const pendingIds = state.items
+            .map((item) => Number(item.productId))
+            .filter((productId) => Number.isFinite(productId) && !serverIds.has(productId));
+
+          if (pendingIds.length > 0) {
+            await Promise.all(
+              pendingIds.map((productId) =>
+                apiClient
+                  .post('/catalog/wishlist/toggle/', {
+                    product_id: productId,
+                  })
+                  .catch(() => {
+                    // Ignore individual failures during merge so the rest can succeed
+                  })
+              )
+            );
+          }
           
-          await Promise.all(promises);
-          
-          // Sync with server to get the final state
           await get().syncWithServer();
         } catch (error) {
           set((draft) => {
@@ -390,12 +446,10 @@ export const useWishlistAuth = () => {
   
   const handleLogin = async () => {
     store.setAuthenticated(true);
-    await store.mergeAnonymousWishlist();
   };
   
   const handleLogout = () => {
     store.setAuthenticated(false);
-    store.setItems([]);
   };
   
   return {

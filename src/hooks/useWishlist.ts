@@ -1,35 +1,29 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { apiClient } from "@/lib/api/client";
+import { useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/auth/useAuth";
+import { useWishlistStore } from "@/lib/wishlist";
 
 export function useWishlistIds() {
   const { isAuthenticated } = useAuth();
-  return useQuery<{ ids: number[] }>({
-    queryKey: ["wishlist", "ids"],
-    queryFn: async () => {
-      try {
-        const res = await apiClient.get<{ ids: number[] }>("/catalog/wishlist/ids/");
-        return { ids: Array.isArray((res as any)?.ids) ? (res as any).ids.map((x: any) => Number(x)) : [] };
-      } catch {
-        // If unauthenticated or any error, treat as empty wishlist for UI simplicity
-        return { ids: [] };
-      }
-    },
-    enabled: !!isAuthenticated,
-    retry: false,
-  });
+  const items = useWishlistStore((state) => state.items);
+  const isLoading = useWishlistStore((state) => state.isLoading);
+  const error = useWishlistStore((state) => state.error);
+
+  return {
+    data: { ids: items.map((item) => item.productId) },
+    isLoading: isAuthenticated ? isLoading : false,
+    error,
+  } as const;
 }
 
 export function useToggleWishlist() {
-  const qc = useQueryClient();
-  return useMutation<{ added: boolean; product_id: number }, Error, { product_id: number}>(
-  {
-    mutationFn: async ({ product_id }) => {
-      const res = await apiClient.post("/catalog/wishlist/toggle/", { product_id });
-      return res as any;
+  const toggle = useWishlistStore((state) => state.toggleItem);
+  const hasItem = useWishlistStore((state) => state.hasItem);
+
+  return useMutation<{ added: boolean; product_id: number }, Error, { product_id: number; variant_id?: number }>({
+    mutationFn: async ({ product_id, variant_id }) => {
+      await toggle(product_id, variant_id);
+      const added = hasItem(product_id, variant_id);
+      return { added, product_id };
     },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["wishlist", "ids"] });
-    }
   });
 }

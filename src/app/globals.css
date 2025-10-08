@@ -53,7 +53,6 @@ body {
 
 /* Utilities for high-contrast focus */
 :focus { outline: 2px solid transparent; outline-offset: 2px; }
-:focus-visible { box-shadow: 0 0 0 4px rgba(17,24,39,0.08); }
 
 /* Minor helper to ensure the header shrinks smoothly */
 .header-shrink { transition: height 200ms ease, padding 200ms ease; }

@@ -5,36 +5,44 @@ import ProductCard from "@/components/product-card";
 import { useAddToCart } from "@/hooks/useCart";
 import { useUIStore } from "@/store/ui";
 import { useToast } from "@/providers/toast-provider";
-import { useToggleWishlist, useWishlistIds } from "@/hooks/useWishlist";
-import { useWishlist } from "@/lib/wishlist";
+import { useWishlistStore, type WishlistItem } from "@/lib/wishlist";
+import { useToggleWishlist } from "@/hooks/useWishlist";
 import { useAuth } from "@/auth/useAuth";
 import { useQuery } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api/client";
 
-function WishlistItem({ id }: { id: number }) {
-  // Fetch product by numeric ID endpoint
+function WishlistEntry({ item }: { item: WishlistItem }) {
+  const productId = item.productId;
+  const hasPrefetchedProduct = Boolean(item.product);
+  const toggleWishlist = useToggleWishlist();
   const { data, isLoading, isError } = useQuery({
-    queryKey: ["wishlist", "product", id],
-    queryFn: async () => {
-      return apiClient.get(`/catalog/products/${id}/`);
-    },
+    queryKey: ["wishlist", "product", productId],
+    queryFn: async () => apiClient.get(`/catalog/products/${productId}/`),
+    enabled: !hasPrefetchedProduct,
   });
+  const product = (item.product as any) ?? data;
   const add = useAddToCart();
   const openCart = useUIStore((s) => s.openCart);
   const { show } = useToast();
 
-  if (isLoading) return <div className="h-80 rounded-md bg-subtle animate-pulse" />;
-  if (isError || !data) return null;
+  if (!product) {
+    if (isLoading) {
+      return <div className="h-80 rounded-md bg-subtle animate-pulse" />;
+    }
+    if (isError) {
+      return null;
+    }
+  }
 
   return (
     <div className="relative">
-      <ProductCard product={data as any} />
+      {product ? <ProductCard product={product as any} /> : null}
       <div className="mt-2 grid grid-cols-2 gap-2">
         <button
           className="px-3 py-2 border rounded-md text-sm hover:bg-gray-100 transition-colors"
           onClick={() => {
             add.mutate(
-              { product_id: id, delta_qty: 1 },
+              { product_id: productId, delta_qty: 1 },
               {
                 onSuccess: () => {
                   show({ title: "Added to bag", variant: "success" });
@@ -42,12 +50,19 @@ function WishlistItem({ id }: { id: number }) {
                 },
                 onError: () => {
                   show({ title: "Failed to add to bag", variant: "error" });
-                }
+                },
               }
             );
           }}
         >
           Add to Bag
+        </button>
+        <button
+          type="button"
+          className="px-3 py-2 border rounded-md text-sm text-red-600 hover:bg-red-50 transition-colors"
+          onClick={() => toggleWishlist.mutate({ product_id: productId, variant_id: item.variantId })}
+        >
+          Remove
         </button>
       </div>
     </div>
@@ -56,16 +71,10 @@ function WishlistItem({ id }: { id: number }) {
 
 export default function WishlistPage() {
   const { isAuthenticated } = useAuth();
-  const { data: wishlist, isLoading } = useWishlistIds();
-  const local = useWishlist();
-  const toggle = useToggleWishlist();
-  const items = React.useMemo(() => {
-    if (isAuthenticated) return wishlist?.ids ?? [];
-    // Fallback to local store for anonymous users
-    return (local.items ?? []).map((it) => it.productId);
-  }, [isAuthenticated, wishlist?.ids, local.items]);
+  const items = useWishlistStore((state) => state.items);
+  const isLoading = useWishlistStore((state) => state.isLoading);
+  const clearWishlist = useWishlistStore((state) => state.clearWishlist);
 
-  // Real-time count display
   const itemCount = items.length;
 
   return (
@@ -81,13 +90,7 @@ export default function WishlistPage() {
           <button
             className="px-3 py-2 border rounded-md text-sm"
             onClick={async () => {
-              if (isAuthenticated) {
-                for (const id of items) {
-                  await toggle.mutateAsync({ product_id: id });
-                }
-              } else {
-                await local.clearWishlist();
-              }
+              await clearWishlist();
             }}
           >
             Clear all
@@ -95,14 +98,17 @@ export default function WishlistPage() {
         )}
       </div>
 
-      {isLoading ? (
-        <div className="mt-10 text-sm text-muted">Loading…</div>
+      {isAuthenticated && isLoading ? (
+        <div className="mt-10 text-sm text-muted">Loading...</div>
       ) : items.length === 0 ? (
-        <div className="mt-10 text-sm text-muted">No items yet. Explore the catalog and add favorites ♥</div>
+        <div className="mt-10 text-sm text-muted">No items yet. Explore the catalog and add favorites &hearts;</div>
       ) : (
         <div className="mt-8 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-8">
-          {items.map((id) => (
-            <WishlistItem key={id} id={id} />
+          {items.map((item) => (
+            <WishlistEntry
+              key={`${item.productId}-${item.variantId ?? "base"}`}
+              item={item}
+            />
           ))}
         </div>
       )}

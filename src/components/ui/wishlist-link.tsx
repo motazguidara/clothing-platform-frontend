@@ -36,7 +36,7 @@ export function WishlistLink({
       className={cn(
         'relative inline-flex items-center justify-center',
         'rounded-md hover:bg-secondary/50',
-        'focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2',
+        'focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
         'transition-colors',
         {
           'h-10 w-10': size === 'icon',

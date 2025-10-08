@@ -8,13 +8,13 @@ info:
     email: api-support@clothingplatform.com
 
 servers:
-  - url: http://127.0.0.1:8000/api/accounts
+  - url: http://127.0.0.1:8000/api
     description: Development server
-  - url: https://api.clothingplatform.com/accounts
+  - url: https://api.clothingplatform.com/api
     description: Production server
 
 paths:
-  /auth/register/:
+  /accounts/auth/register/:
     post:
       summary: Register a new user
       operationId: registerUser
@@ -39,7 +39,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ValidationError'
 
-  /auth/login/:
+  /accounts/auth/login/:
     post:
       summary: Login user
       operationId: loginUser
@@ -70,7 +70,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
-  /auth/logout/:
+  /accounts/auth/logout/:
     post:
       summary: Logout user
       operationId: logoutUser
@@ -94,7 +94,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
-  /auth/refresh/:
+  /accounts/auth/refresh/:
     post:
       summary: Refresh access token
       operationId: refreshToken
@@ -129,7 +129,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
-  /auth/me/:
+  /accounts/auth/me/:
     get:
       summary: Get current user profile
       operationId: getCurrentUser
@@ -150,7 +150,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
-  /profile/:
+  /accounts/profile/:
     get:
       summary: Get user profile
       operationId: getUserProfile
@@ -203,7 +203,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
-  /addresses/:
+  /accounts/addresses/:
     get:
       summary: List user addresses
       operationId: listAddresses
@@ -258,7 +258,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
-  /addresses/{id}/:
+  /accounts/addresses/{id}/:
     get:
       summary: Get address details
       operationId: getAddress
