@@ -22,10 +22,12 @@ export function useAuth(options?: { fetchProfile?: boolean }) {
   const router = useRouter();
 
   // Check if user is authenticated
-  const isAuthenticated = authService.isAuthenticated();
+  const tokenAuthenticated = authService.isAuthenticated();
+  const cookieSession = clientConfig.featureCookieJwt;
 
   // Get current user profile
-  const shouldFetchProfile = (options?.fetchProfile ?? true) && isAuthenticated;
+  const shouldFetchProfile =
+    (options?.fetchProfile ?? true) && (tokenAuthenticated || cookieSession);
   const { data: user, isLoading, error } = useQuery({
     queryKey: ["auth", "profile"],
     queryFn: () => authService.getCurrentUser(),
@@ -42,13 +44,13 @@ export function useAuth(options?: { fetchProfile?: boolean }) {
       // Raw token flag vs. profile availability
       // eslint-disable-next-line no-console
       console.log('[useAuth] state', {
-        hasToken: isAuthenticated,
+        hasToken: tokenAuthenticated,
         hasProfile: !!user,
         loading: isLoading,
         error: error ? (error as any)?.status || (error as any)?.message : null,
       });
     }
-  }, [isAuthenticated, user, isLoading, error]);
+  }, [tokenAuthenticated, user, isLoading, error]);
 
   // Handle login
   const login = useMutation({
@@ -143,7 +145,7 @@ export function useAuth(options?: { fetchProfile?: boolean }) {
     user,
     isLoading: isLoading || login.isPending || register.isPending || logout.isPending,
     // Expose raw token-based auth to avoid false negatives before profile loads
-    isAuthenticated: isAuthenticated,
+    isAuthenticated: tokenAuthenticated || (cookieSession ? !!user : false),
     hasProfile: !!user,
     login: login.mutate,
     loginAsync: login.mutateAsync,

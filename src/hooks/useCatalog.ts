@@ -136,7 +136,79 @@ export function useProducts(params?: Record<string, unknown>) {
         return product;
       });
       const count = typeof data?.count === 'number' ? data.count : mapped.length;
-      return { results: mapped, count };
+
+      const heroImagesSource =
+        Array.isArray((data as any)?.hero_images)
+          ? (data as any).hero_images
+          : Array.isArray((data as any)?.heroImages)
+          ? (data as any).heroImages
+          : Array.isArray((data as any)?.hero?.images)
+          ? (data as any).hero.images
+          : [];
+
+      const heroImages = heroImagesSource
+        .map((image: any) => {
+          if (typeof image === 'string') {
+            return image.trim();
+          }
+          if (image && typeof image === 'object') {
+            const candidates = ['image', 'url', 'src', 'original', 'large', 'medium'];
+            for (const key of candidates) {
+              const value = (image as Record<string, unknown>)[key];
+              if (typeof value === 'string' && value.trim().length > 0) {
+                return value.trim();
+              }
+            }
+          }
+          return null;
+        })
+        .filter((value: string | null): value is string => typeof value === 'string' && value.length > 0);
+
+      const heroTitle =
+        typeof (data as any)?.hero_title === 'string'
+          ? (data as any).hero_title
+          : typeof (data as any)?.hero?.title === 'string'
+          ? (data as any).hero.title
+          : undefined;
+
+      const heroSubtitle =
+        typeof (data as any)?.hero_subtitle === 'string'
+          ? (data as any).hero_subtitle
+          : typeof (data as any)?.hero?.subtitle === 'string'
+          ? (data as any).hero.subtitle
+          : undefined;
+
+      const heroCtaRaw =
+        (data as any)?.hero_cta ??
+        (data as any)?.hero?.cta ??
+        undefined;
+
+      const heroCta =
+        heroCtaRaw && typeof heroCtaRaw === 'object'
+          ? {
+              label:
+                typeof (heroCtaRaw as any).label === 'string'
+                  ? (heroCtaRaw as any).label
+                  : typeof (heroCtaRaw as any).text === 'string'
+                  ? (heroCtaRaw as any).text
+                  : 'View catalog',
+              href:
+                typeof (heroCtaRaw as any).href === 'string'
+                  ? (heroCtaRaw as any).href
+                  : typeof (heroCtaRaw as any).url === 'string'
+                  ? (heroCtaRaw as any).url
+                  : '/admin/products/new',
+            }
+          : undefined;
+
+      return {
+        results: mapped,
+        count,
+        ...(heroImages.length > 0 ? { heroImages } : {}),
+        ...(heroTitle ? { heroTitle } : {}),
+        ...(heroSubtitle ? { heroSubtitle } : {}),
+        ...(heroCta ? { heroCta } : {}),
+      };
     },
   });
 }

@@ -7,6 +7,7 @@ export default function AdminOrdersPage() {
   const [selectedOrders, setSelectedOrders] = React.useState<string[]>([]);
   const [statusFilter, setStatusFilter] = React.useState("all");
   const [searchQuery, setSearchQuery] = React.useState("");
+  const [dateFilter, setDateFilter] = React.useState("all");
 
   // Mock orders data - in a real app, this would come from an API
   const orders = [
@@ -68,7 +69,32 @@ export default function AdminOrdersPage() {
       order.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
       order.customer.toLowerCase().includes(searchQuery.toLowerCase()) ||
       order.email.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesStatus && matchesSearch;
+    const matchesDate = (() => {
+      if (dateFilter === "all") return true;
+      const orderDate = new Date(order.date);
+      const now = new Date();
+
+      switch (dateFilter) {
+        case "today": {
+          const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+          return orderDate >= startOfToday;
+        }
+        case "week": {
+          const sevenDaysAgo = new Date(now);
+          sevenDaysAgo.setDate(now.getDate() - 7);
+          return orderDate >= sevenDaysAgo;
+        }
+        case "month": {
+          const thirtyDaysAgo = new Date(now);
+          thirtyDaysAgo.setDate(now.getDate() - 30);
+          return orderDate >= thirtyDaysAgo;
+        }
+        default:
+          return true;
+      }
+    })();
+
+    return matchesStatus && matchesSearch && matchesDate;
   });
 
   const handleSelectAll = () => {
@@ -155,11 +181,15 @@ export default function AdminOrdersPage() {
                 <option value="delivered">Delivered</option>
                 <option value="cancelled">Cancelled</option>
               </select>
-              <select className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black">
-                <option value="">All Time</option>
+              <select
+                value={dateFilter}
+                onChange={(e) => setDateFilter(e.target.value)}
+                className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
+              >
+                <option value="all">All Dates</option>
                 <option value="today">Today</option>
-                <option value="week">This Week</option>
-                <option value="month">This Month</option>
+                <option value="week">Last 7 Days</option>
+                <option value="month">Last 30 Days</option>
               </select>
             </div>
           </div>

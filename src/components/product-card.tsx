@@ -48,21 +48,22 @@ const resolveVariantImage = (variant?: VariantLike): string | undefined => {
   if (!variant) {
     return undefined;
   }
-  const primaryImage = pickFirstString([
-    variant.image,
-    variant.image_url,
-    variant.thumbnail,
-  ]);
 
-  if (primaryImage) {
-    return primaryImage;
+  const directSources: Array<unknown> = [variant.image, variant.image_url, variant.thumbnail];
+  for (const source of directSources) {
+    const candidate = extractImageUrl(source);
+    if (candidate) {
+      return candidate;
+    }
   }
 
   if (Array.isArray(variant.images)) {
-    const firstImage = variant.images.find(
-      (image): image is string => typeof image === "string" && image.trim().length > 0
-    );
-    return firstImage;
+    for (const entry of variant.images as Array<unknown>) {
+      const candidate = extractImageUrl(entry);
+      if (candidate) {
+        return candidate;
+      }
+    }
   }
 
   return undefined;
@@ -88,6 +89,26 @@ const sanitizeImageSource = (value: string | null | undefined): string | undefin
   }
   const trimmed = value.trim();
   return trimmed.length > 0 ? trimmed : undefined;
+};
+
+const extractImageUrl = (value: unknown): string | undefined => {
+  if (typeof value === "string") {
+    return sanitizeImageSource(value);
+  }
+  if (value && typeof value === "object") {
+    const record = value as Record<string, unknown>;
+    const possibleKeys = ["image", "url", "src", "thumbnail", "original", "large", "medium", "small"];
+    for (const key of possibleKeys) {
+      const candidate = record[key];
+      if (typeof candidate === "string") {
+        const sanitized = sanitizeImageSource(candidate);
+        if (sanitized) {
+          return sanitized;
+        }
+      }
+    }
+  }
+  return undefined;
 };
 
 export default function ProductCard({ product }: Props) {
@@ -177,6 +198,23 @@ export default function ProductCard({ product }: Props) {
       )
     : colors;
 
+  const normalizedImages = React.useMemo(() => {
+    const collected: string[] = [];
+    const primary = extractImageUrl(product.image);
+    if (primary) {
+      collected.push(primary);
+    }
+    if (Array.isArray(product.images)) {
+      for (const entry of product.images as Array<unknown>) {
+        const candidate = extractImageUrl(entry);
+        if (candidate && !collected.includes(candidate)) {
+          collected.push(candidate);
+        }
+      }
+    }
+    return collected;
+  }, [product.image, product.images]);
+
   return (
     <article className="w-full p-2 select-none card-hover">
       <div
@@ -192,7 +230,7 @@ export default function ProductCard({ product }: Props) {
         <Link href={`/products/${product.slug ?? product.id}`} className="absolute inset-0 block" aria-label={`View ${displayTitle}`} />
         <motion.div initial={{ scale: 1 }} whileHover={{ scale: 1.03 }} transition={{ duration: 0.2, ease: "easeOut" }} className="absolute inset-0 pointer-events-none">
           {(() => {
-            const fallback = sanitizeImageSource(product.images?.[currentImageIndex]);
+            const fallback = normalizedImages[currentImageIndex] ?? normalizedImages[0];
             const src = sanitizeImageSource(previewImage) ?? sanitizeImageSource(lockedPreview) ?? fallback;
             return src ? (
               <Image

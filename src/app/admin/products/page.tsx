@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState, type ChangeEvent } from "react";
+import { useCallback, useEffect, useMemo, useState, type ChangeEvent } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useProducts } from "@/hooks/useCatalog";
@@ -26,6 +26,7 @@ import {
   Trash as IconTrash,
 } from "lucide-react";
 import type { Product } from "@/types";
+import Image from "next/image";
 
 // Extend Product type to include admin-specific fields
 interface AdminProduct extends Omit<Product, 'category'> {
@@ -115,7 +116,7 @@ export default function AdminProductsPage() {
 
   
   // Handle search input change
-  const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleSearch = (e: ChangeEvent<HTMLInputElement>) => {
     setSearchQuery(e.target.value);
     setPage(1);
   };
@@ -181,6 +182,54 @@ export default function AdminProductsPage() {
     }
   }, [productsData?.results, selectedProducts.length]);
 
+  const heroImages = useMemo(() => {
+    const provided = Array.isArray(productsData?.heroImages)
+      ? productsData.heroImages.filter((src): src is string => typeof src === "string" && src.trim().length > 0)
+      : [];
+
+    if (provided.length > 0) {
+      return provided;
+    }
+
+    const fallback =
+      productsData?.results
+        ?.map((product) => {
+          const primaryImage =
+            (Array.isArray(product.images) && product.images.find((src) => typeof src === "string" && src.trim().length > 0)) ||
+            (typeof product.image === "string" ? product.image : null);
+          return typeof primaryImage === "string" ? primaryImage.trim() : null;
+        })
+        .filter((src): src is string => typeof src === "string" && src.length > 0) ?? [];
+
+    return Array.from(new Set(fallback)).slice(0, 5);
+  }, [productsData]);
+
+  const heroTitle = productsData?.heroTitle ?? "Catalog spotlight";
+  const heroSubtitle =
+    productsData?.heroSubtitle ??
+    (productsData
+      ? `${productsData.count.toLocaleString("en-US")} products currently available`
+      : "Stay on top of your product catalog and highlight what matters.");
+  const heroCta = productsData?.heroCta ?? { label: "Add product", href: "/admin/products/new" };
+
+  const [currentHeroIndex, setCurrentHeroIndex] = useState(0);
+
+  useEffect(() => {
+    setCurrentHeroIndex(0);
+  }, [heroImages.length]);
+
+  useEffect(() => {
+    if (heroImages.length <= 1) {
+      return;
+    }
+
+    const interval = window.setInterval(() => {
+      setCurrentHeroIndex((prev) => (prev + 1) % heroImages.length);
+    }, 6000);
+
+    return () => window.clearInterval(interval);
+  }, [heroImages.length]);
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -207,6 +256,65 @@ export default function AdminProductsPage() {
       </div>
 
       <div className="max-w-7xl mx-auto px-6 py-8">
+        {heroImages.length > 0 && (
+          <section className="mb-8">
+            <div className="relative overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+              <div className="relative h-60 sm:h-72 lg:h-80">
+                {heroImages.map((src, index) => (
+                  <div
+                    key={`${src}-${index}`}
+                    className="absolute inset-0 transition-opacity duration-700 ease-out"
+                    style={{ opacity: currentHeroIndex === index ? 1 : 0 }}
+                    aria-hidden={currentHeroIndex !== index}
+                  >
+                    <Image
+                      src={src}
+                      alt={`Hero slide ${index + 1}`}
+                      fill
+                      sizes="(min-width: 1024px) 960px, 100vw"
+                      className="object-cover"
+                      priority={index === 0}
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/45 via-black/20 to-transparent" />
+                  </div>
+                ))}
+              </div>
+              <div className="relative z-10 flex flex-col gap-6 p-6 sm:p-8 lg:p-10">
+                <div className="max-w-2xl text-white">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-white/80">Admin Spotlight</p>
+                  <h2 className="mt-2 text-2xl sm:text-3xl font-bold">{heroTitle}</h2>
+                  <p className="mt-3 text-sm sm:text-base text-white/80">{heroSubtitle}</p>
+                </div>
+                <div className="flex flex-wrap items-center gap-4">
+                  {heroCta?.href && heroCta?.label ? (
+                    <Link
+                      href={heroCta.href}
+                      className="inline-flex items-center rounded-md bg-white/90 px-4 py-2 text-sm font-semibold text-gray-900 shadow hover:bg-white transition"
+                    >
+                      {heroCta.label}
+                    </Link>
+                  ) : null}
+                  {heroImages.length > 1 && (
+                    <div className="flex items-center gap-2">
+                      {heroImages.map((_, index) => (
+                        <button
+                          key={`dot-${index}`}
+                          type="button"
+                          onClick={() => setCurrentHeroIndex(index)}
+                          className={`h-2.5 w-2.5 rounded-full transition ${
+                            currentHeroIndex === index ? "bg-white" : "bg-white/50 hover:bg-white/70"
+                          }`}
+                          aria-label={`Show slide ${index + 1}`}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </section>
+        )}
+
         {/* Filters and Search */}
         <div className="bg-white rounded-lg shadow-sm border p-6 mb-6">
           <div className="flex flex-col md:flex-row gap-4">

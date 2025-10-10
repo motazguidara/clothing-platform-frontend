@@ -311,4 +311,14 @@ export type SortOption =
   | 'rating' 
   | 'popularity';
 
-export type ProductList = { results: Product[]; count: number };
+export type ProductList = {
+  results: Product[];
+  count: number;
+  heroImages?: string[];
+  heroTitle?: string;
+  heroSubtitle?: string;
+  heroCta?: {
+    label: string;
+    href: string;
+  } | null;
+};
