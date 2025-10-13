@@ -89,7 +89,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/accounts/profile/": {
+    "/profile/": {
         parameters: {
             query?: never;
             header?: never;
@@ -107,7 +107,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/accounts/addresses/": {
+    "/addresses/": {
         parameters: {
             query?: never;
             header?: never;
@@ -125,7 +125,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/accounts/addresses/{id}/": {
+    "/addresses/{id}/": {
         parameters: {
             query?: never;
             header?: never;

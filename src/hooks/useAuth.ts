@@ -1,7 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { UseMutationResult } from "@tanstack/react-query";
 import { authService } from "@/lib/api/services/auth";
-import { useWishlistAuth } from "@/lib/wishlist";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { toast } from "sonner";
@@ -21,7 +20,6 @@ interface AuthTokens {
 export function useAuth(options?: { fetchProfile?: boolean }) {
   const qc = useQueryClient();
   const router = useRouter();
-  const { handleLogin: handleWishlistLogin, handleLogout: handleWishlistLogout } = useWishlistAuth();
 
   // Check if user is authenticated
   const tokenAuthenticated = authService.isAuthenticated();
@@ -40,8 +38,6 @@ export function useAuth(options?: { fetchProfile?: boolean }) {
     retry: 0,
   });
 
-  const isAuthenticated = tokenAuthenticated || (cookieSession ? !!user : false);
-
   // Debug: log auth state in development
   useEffect(() => {
     if (process.env.NODE_ENV === 'development') {
@@ -55,14 +51,6 @@ export function useAuth(options?: { fetchProfile?: boolean }) {
       });
     }
   }, [tokenAuthenticated, user, isLoading, error]);
-
-  useEffect(() => {
-    if (isAuthenticated) {
-      handleWishlistLogin();
-    } else {
-      handleWishlistLogout();
-    }
-  }, [isAuthenticated, handleWishlistLogin, handleWishlistLogout]);
 
   // Handle login
   const login = useMutation({
@@ -157,7 +145,7 @@ export function useAuth(options?: { fetchProfile?: boolean }) {
     user,
     isLoading: isLoading || login.isPending || register.isPending || logout.isPending,
     // Expose raw token-based auth to avoid false negatives before profile loads
-    isAuthenticated,
+    isAuthenticated: tokenAuthenticated || (cookieSession ? !!user : false),
     hasProfile: !!user,
     login: login.mutate,
     loginAsync: login.mutateAsync,

@@ -1,12 +1,10 @@
 "use client";
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { toast } from "sonner";
-
-import { FormHint } from "@/components/forms/FormHint";
 import { useAuth } from "@/hooks/useAuth";
+import Link from "next/link";
+import { toast } from "sonner";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -28,13 +26,6 @@ export default function RegisterPage() {
   const [isLoading, setIsLoading] = useState(true);
   const emailRef = useRef<HTMLInputElement>(null);
 
-  const describedBy = (...ids: Array<string | false | null | undefined>) => {
-    const filtered = ids.filter((value): value is string => Boolean(value));
-    return filtered.length ? filtered.join(" ") : undefined;
-  };
-  const emailHintId = "register-email-hint";
-  const passwordHintId = "register-password-hint";
-  const confirmHintId = "register-confirm-hint";
   // Handle redirect if already authenticated
   useEffect(() => {
     if (auth.isAuthenticated) {
@@ -170,12 +161,9 @@ export default function RegisterPage() {
                 required
                 className={`appearance-none block w-full px-3 py-2 border ${errors['email'] ? 'border-red-300' : 'border-gray-300'} rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm`}
                 aria-invalid={!!errors['email']}
-                aria-describedby={describedBy(errors['email'] && 'email-error', emailHintId)}
+                aria-describedby={errors['email'] ? 'email-error' : undefined}
               />
             </div>
-            <FormHint id={emailHintId}>
-              We will send order updates and account recovery information to this address.
-            </FormHint>
             {errors['email'] && (
               <p id="email-error" className="mt-1 text-sm text-red-600">
                 {errors['email']}
@@ -233,12 +221,9 @@ export default function RegisterPage() {
                 required
                 className={`appearance-none block w-full px-3 py-2 border ${errors['password'] ? 'border-red-300' : 'border-gray-300'} rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm`}
                 aria-invalid={!!errors['password']}
-                aria-describedby={describedBy(errors['password'] && 'password-error', passwordHintId)}
+                aria-describedby={errors['password'] ? 'password-error' : undefined}
               />
             </div>
-            <FormHint id={passwordHintId}>
-              Use at least 8 characters and combine letters, numbers, or symbols for better security.
-            </FormHint>
             {errors['password'] ? (
               <p id="password-error" className="mt-1 text-sm text-red-600">
                 {errors['password']}
@@ -265,12 +250,9 @@ export default function RegisterPage() {
                 required
                 className={`appearance-none block w-full px-3 py-2 border ${errors['confirm'] ? 'border-red-300' : 'border-gray-300'} rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm`}
                 aria-invalid={!!errors['confirm']}
-                aria-describedby={describedBy(errors['confirm'] && 'confirm-error', confirmHintId)}
+                aria-describedby={errors['confirm'] ? 'confirm-error' : undefined}
               />
             </div>
-            <FormHint id={confirmHintId}>
-              Re-enter your password so we can make sure there are no typos before creating the account.
-            </FormHint>
             {errors['confirm'] && (
               <p id="confirm-error" className="mt-1 text-sm text-red-600">
                 {errors['confirm']}

@@ -1,12 +1,10 @@
 "use client";
 
-import React, { useEffect, useMemo, useRef, useState } from "react";
-import Link from "next/link";
+import React, { useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { toast } from "sonner";
-
-import { FormHint } from "@/components/forms/FormHint";
 import { useAuth } from "@/hooks/useAuth";
+import Link from "next/link";
+import { toast } from "sonner";
 
 // This is a client component that handles the login form
 // It uses the useAuth hook to manage authentication state
@@ -22,14 +20,6 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const emailRef = useRef<HTMLInputElement>(null);
-  const emailHintId = "login-email-hint";
-  const passwordHintId = "login-password-hint";
-  const errorId = "login-error";
-  const emailDescribedBy = useMemo(
-    () =>
-      [error ? errorId : null, emailHintId].filter(Boolean).join(" ") || undefined,
-    [error]
-  );
 
   useEffect(() => {
     // Check if we need to redirect
@@ -109,11 +99,7 @@ export default function LoginPage() {
             required
             className="mt-1 block w-full border border-border rounded-md px-3 py-2"
             aria-invalid={!!error}
-            aria-describedby={emailDescribedBy}
           />
-          <FormHint id={emailHintId}>
-            Use the email you registered with so we can link your account activity.
-          </FormHint>
         </div>
         <div>
           <label className="block text-sm font-medium" htmlFor="password">Password</label>
@@ -124,35 +110,22 @@ export default function LoginPage() {
             onChange={(e) => setPassword(e.target.value)}
             required
             className="mt-1 block w-full border border-border rounded-md px-3 py-2"
-            aria-describedby={passwordHintId}
           />
-          <FormHint id={passwordHintId}>
-            Passwords are case sensitive. Double-check caps lock before signing in.
-          </FormHint>
         </div>
-        {error && (
-          <p
-            id={errorId}
-            className="text-sm text-red-600"
-            role="alert"
-            aria-live="assertive"
-          >
-            {error}
-          </p>
-        )}
+        {error && <p className="text-sm text-red-600" role="alert" aria-live="assertive">{error}</p>}
         <button
           type="submit"
           disabled={isLoggingIn || auth.isLoading}
           className="w-full inline-flex items-center justify-center rounded-md bg-primary text-primary-foreground px-6 py-3 text-sm font-semibold hover:opacity-90 transition disabled:opacity-50"
         >
-          {isLoggingIn ? "Signing in..." : "Sign in"}
+          {isLoggingIn ? "Signing in…" : "Sign in"}
         </button>
       </form>
       <div className="mt-3 text-sm">
         <a className="underline" href="/forgot-password">Forgot password?</a>
       </div>
       <p className="mt-2 text-sm">
-        Don't have an account? <Link className="underline" href="/register">Create one</Link>
+        Don’t have an account? <Link className="underline" href="/register">Create one</Link>
       </p>
     </section>
   );

@@ -1,8 +1,8 @@
-import { useCallback } from 'react';
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
 import { apiClient } from './api/client';
+import { clientEnv } from './env';
 
 // Types
 export interface WishlistItem {
@@ -51,6 +51,9 @@ export interface WishlistActions {
 }
 
 export type WishlistStore = WishlistState & WishlistActions;
+
+// Storage key for anonymous users
+const ANONYMOUS_STORAGE_KEY = 'anonymous_wishlist';
 
 // Create the store
 export const useWishlistStore = create<WishlistStore>()(
@@ -439,21 +442,20 @@ export const useWishlistItem = (productId: number, variantId?: number) => {
 
 // Auth integration hook
 export const useWishlistAuth = () => {
-  const setAuthenticated = useWishlistStore((state) => state.setAuthenticated);
-  const syncWithServer = useWishlistStore((state) => state.syncWithServer);
-
-  const handleLogin = useCallback(() => {
-    setAuthenticated(true);
-  }, [setAuthenticated]);
-
-  const handleLogout = useCallback(() => {
-    setAuthenticated(false);
-  }, [setAuthenticated]);
-
+  const store = useWishlistStore();
+  
+  const handleLogin = async () => {
+    store.setAuthenticated(true);
+  };
+  
+  const handleLogout = () => {
+    store.setAuthenticated(false);
+  };
+  
   return {
     handleLogin,
     handleLogout,
-    syncWithServer,
+    syncWithServer: store.syncWithServer,
   };
 };
 
