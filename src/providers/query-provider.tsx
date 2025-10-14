@@ -2,7 +2,6 @@
 
 import React from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { AuthProvider } from "@/auth/useAuth";
 
 type Props = {
   children: React.ReactNode;
@@ -30,7 +29,7 @@ export function QueryProvider({ children }: Props) {
   const client = React.useState(getQueryClient)[0];
   return (
     <QueryClientProvider client={client}>
-      <AuthProvider>{children}</AuthProvider>
+      {children}
     </QueryClientProvider>
   );
 }

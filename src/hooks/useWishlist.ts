@@ -1,5 +1,5 @@
 import { useMutation } from "@tanstack/react-query";
-import { useAuth } from "@/auth/useAuth";
+import { useAuth } from "@/hooks/useAuth";
 import { useWishlistStore } from "@/lib/wishlist";
 
 export function useWishlistIds() {

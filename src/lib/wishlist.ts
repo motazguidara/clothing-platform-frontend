@@ -233,21 +233,6 @@ export const useWishlistStore = create<WishlistStore>()(
             draft.lastSyncAt = null;
           }
         });
-
-        if (authenticated) {
-          // Merge any locally stored items, otherwise hydrate from server
-          if (get().items.length > 0) {
-            get().mergeAnonymousWishlist();
-          } else {
-            get()
-              .syncWithServer()
-              .catch((error) => {
-                if (process.env.NODE_ENV === 'development') {
-                  console.warn('[wishlist] Failed to sync after auth change', error);
-                }
-              });
-          }
-        }
       },
 
       // Sync operations

@@ -237,8 +237,7 @@ export class ApiClient {
     return this.request<T>(endpoint, { ...config, method: 'DELETE' });
   }
 
-  // File upload with progress
-  async uploadFile(
+  private performMultipartUpload(
     endpoint: string,
     file: File,
     onProgress?: (progress: number) => void
@@ -289,13 +288,11 @@ export class ApiClient {
       });
 
       xhr.open('POST', `${this.baseUrl}${endpoint}`);
-      
-      // Add auth header if available
+
       if (this.defaultHeaders['Authorization']) {
         xhr.setRequestHeader('Authorization', this.defaultHeaders['Authorization']);
       }
 
-      // Add CSRF token
       const csrfToken = this.getCSRFToken();
       if (csrfToken) {
         xhr.setRequestHeader('X-CSRFToken', csrfToken);
@@ -303,6 +300,41 @@ export class ApiClient {
 
       xhr.send(formData);
     });
+  }
+
+  async uploadFile(
+    endpoint: string,
+    file: File,
+    onProgress?: (progress: number) => void,
+    options?: { retryDelays?: number[]; attempts?: number }
+  ): Promise<ApiResponse> {
+    const retryDelays = options?.retryDelays ?? [300, 600, 1200];
+    const attempts = options?.attempts ?? retryDelays.length;
+
+    let attempt = 0;
+    let lastError: any = null;
+
+    while (attempt < attempts) {
+      try {
+        if (attempt > 0 && onProgress) {
+          onProgress(0);
+        }
+        return await this.performMultipartUpload(endpoint, file, onProgress);
+      } catch (error) {
+        lastError = error;
+        if (attempt >= attempts - 1) {
+          break;
+        }
+        const delay = retryDelays[Math.min(attempt, retryDelays.length - 1)];
+        await new Promise((resolve) => setTimeout(resolve, delay));
+        attempt += 1;
+      }
+    }
+
+    throw lastError ?? {
+      message: 'Upload failed',
+      status: 0,
+    };
   }
 
   // Get CSRF token from cookies or meta tag

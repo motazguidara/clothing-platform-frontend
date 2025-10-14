@@ -7,7 +7,7 @@ import { useUIStore } from "@/store/ui";
 import { useToast } from "@/providers/toast-provider";
 import { useWishlistStore, type WishlistItem } from "@/lib/wishlist";
 import { useToggleWishlist } from "@/hooks/useWishlist";
-import { useAuth } from "@/auth/useAuth";
+import { useAuth } from "@/hooks/useAuth";
 import { useQuery } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api/client";
 

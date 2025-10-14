@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { useWishlistStore } from '@/lib/wishlist';
 import { useWishlistIds } from '@/hooks/useWishlist';
-import { useAuth } from '@/auth/useAuth';
+import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
 import * as React from 'react';
 

@@ -111,6 +111,23 @@ const extractImageUrl = (value: unknown): string | undefined => {
   return undefined;
 };
 
+const sanitizeHexColor = (value: VariantAttributeValue): string | undefined => {
+  if (typeof value !== "string") {
+    return undefined;
+  }
+  const trimmed = value.trim();
+  if (trimmed.length === 0) {
+    return undefined;
+  }
+  if (/^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(trimmed)) {
+    return trimmed;
+  }
+  if (/^([0-9a-f]{3}|[0-9a-f]{6})$/i.test(trimmed)) {
+    return `#${trimmed}`;
+  }
+  return undefined;
+};
+
 export default function ProductCard({ product }: Props) {
   const displayTitle = product.name ?? "Product";
   const { hasItem, toggleItem } = useWishlist();
@@ -131,7 +148,7 @@ export default function ProductCard({ product }: Props) {
     }
     return [];
   }, [product.variants]);
-  const [selectedColor, setSelectedColor] = React.useState<string | undefined>();
+  const [selectedColorKey, setSelectedColorKey] = React.useState<string | null>(null);
   const [selectedSize, setSelectedSize] = React.useState<string | undefined>();
 
   // Helpers to normalize variant attributes
@@ -154,49 +171,99 @@ export default function ProductCard({ product }: Props) {
     return pickFirstString([variant.size, attributes?.["size"], attributes?.["Size"], attributes?.["SIZE"]]);
   }, []);
 
-  const colorsSet = new Set<string>();
-  for (const variant of rawVariants) {
-    const color = getColor(variant);
-    if (color) {
-      colorsSet.add(color);
+  const getColorHex = React.useCallback((variant: VariantLike): string | undefined => {
+    const attributes = variant.attributes ?? {};
+    return sanitizeHexColor(
+      pickFirstString([
+        variant.hex,
+        variant.hex_code,
+        attributes?.["hex"],
+        attributes?.["HEX"],
+        attributes?.["colour_hex"],
+        attributes?.["color_hex"],
+        attributes?.["swatch"],
+        variant.swatch,
+      ])
+    );
+  }, []);
+
+  const colorSwatches = React.useMemo(() => {
+    const map = new Map<string, { key: string; label: string; preview?: string; swatchColor?: string }>();
+
+    for (const variant of rawVariants) {
+      const label = getColor(variant);
+      if (!label) continue;
+      const key = label.trim().toLowerCase();
+      if (!key || map.has(key)) continue;
+      const preview = sanitizeImageSource(resolveVariantImage(variant));
+      map.set(key, {
+        key,
+        label,
+        preview: preview ?? undefined,
+        swatchColor: getColorHex(variant),
+      });
     }
-  }
-  // Also support products that expose colors separately
-  if (Array.isArray(product.available_colors)) {
-    for (const color of product.available_colors) {
-      if (color != null) {
-        colorsSet.add(String(color));
+
+    if (Array.isArray(product.available_colors)) {
+      for (const color of product.available_colors) {
+        if (color == null) continue;
+        const label = String(color);
+        const key = label.trim().toLowerCase();
+        if (!key || map.has(key)) continue;
+        map.set(key, { key, label, preview: undefined, swatchColor: undefined });
       }
     }
-  }
-  const colors = Array.from(colorsSet);
-  const sizes = Array.from(
-    new Set(
-      rawVariants
-        .map((variant) => getSize(variant))
-        .filter((value): value is string => typeof value === "string" && value.length > 0)
-    )
-  );
 
-  const normalizedSelectedColor = selectedColor?.toLowerCase() ?? null;
-  const normalizedSelectedSize = selectedSize?.toLowerCase() ?? null;
-  const filteredColors: string[] = normalizedSelectedSize
-    ? Array.from(
+    return Array.from(map.values());
+  }, [rawVariants, product.available_colors, getColor, getColorHex]);
+
+  const sizes = React.useMemo(
+    () =>
+      Array.from(
         new Set(
           rawVariants
-            .map((variant) => ({
-              size: getSize(variant)?.toLowerCase(),
-              color: getColor(variant),
-            }))
-            .filter(
-              (entry): entry is { size: string; color: string } =>
-                Boolean(entry.size) && entry.color != null && entry.color.length > 0
-            )
-            .filter((entry) => entry.size === normalizedSelectedSize)
-            .map((entry) => entry.color)
+            .map((variant) => getSize(variant))
+            .filter((value): value is string => typeof value === "string" && value.length > 0)
         )
-      )
-    : colors;
+      ),
+    [rawVariants, getSize]
+  );
+
+  const normalizedSelectedColor = selectedColorKey;
+  const normalizedSelectedSize = selectedSize?.toLowerCase() ?? null;
+
+  const colorsForSize = React.useMemo(() => {
+    if (!normalizedSelectedSize) return null;
+    const allowed = new Set<string>();
+    for (const variant of rawVariants) {
+      const size = getSize(variant)?.toLowerCase();
+      if (size && size === normalizedSelectedSize) {
+        const color = getColor(variant)?.trim().toLowerCase();
+        if (color) {
+          allowed.add(color);
+        }
+      }
+    }
+    return allowed;
+  }, [normalizedSelectedSize, rawVariants, getColor, getSize]);
+
+  const filteredSwatches = React.useMemo(() => {
+    if (!colorsForSize) {
+      return colorSwatches;
+    }
+    return colorSwatches.filter((swatch) => colorsForSize.has(swatch.key));
+  }, [colorSwatches, colorsForSize]);
+
+  const swatchesToDisplay = filteredSwatches.slice(0, 6);
+  const hiddenSwatchCount = Math.max(0, filteredSwatches.length - swatchesToDisplay.length);
+
+  React.useEffect(() => {
+    if (selectedColorKey && !filteredSwatches.some((swatch) => swatch.key === selectedColorKey)) {
+      setSelectedColorKey(null);
+      setLockedPreview(null);
+      setPreviewImage(null);
+    }
+  }, [filteredSwatches, selectedColorKey]);
 
   const normalizedImages = React.useMemo(() => {
     const collected: string[] = [];
@@ -228,7 +295,7 @@ export default function ProductCard({ product }: Props) {
         }}
       >
         <Link href={`/products/${product.slug ?? product.id}`} className="absolute inset-0 block" aria-label={`View ${displayTitle}`} />
-        <motion.div initial={{ scale: 1 }} whileHover={{ scale: 1.03 }} transition={{ duration: 0.2, ease: "easeOut" }} className="absolute inset-0 pointer-events-none">
+        <motion.div suppressHydrationWarning initial={{ scale: 1 }} whileHover={{ scale: 1.03 }} transition={{ duration: 0.2, ease: "easeOut" }} className="absolute inset-0 pointer-events-none">
           {(() => {
             const fallback = normalizedImages[currentImageIndex] ?? normalizedImages[0];
             const src = sanitizeImageSource(previewImage) ?? sanitizeImageSource(lockedPreview) ?? fallback;
@@ -288,43 +355,49 @@ export default function ProductCard({ product }: Props) {
       </div>
 
       {/* Color variant swatches below image (non-blocking) */}
-      {filteredColors.length > 0 && (
+      {swatchesToDisplay.length > 0 && (
         <div className="mt-3 flex items-center gap-2">
-          {filteredColors.slice(0, 6).map((c: string) => (
+          {swatchesToDisplay.map((swatch) => (
             <button
-              key={c}
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                const normalizedColor = c.toLowerCase();
-                setSelectedColor(c);
+              key={swatch.key}
+              type="button"
+              onClick={(event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                const nextPreview = swatch.preview ?? null;
+                setSelectedColorKey(swatch.key);
+                setLockedPreview(nextPreview);
+                setPreviewImage(nextPreview);
                 setCurrentImageIndex(0);
-                const match = rawVariants.find((variant) => getColor(variant)?.toLowerCase() === normalizedColor);
-                const candidate = sanitizeImageSource(resolveVariantImage(match) ?? undefined);
-                setLockedPreview(candidate ?? null);
-                setPreviewImage(candidate ?? null);
               }}
               onMouseEnter={() => {
-                // Try to preview variant image for this color
-                const normalizedColor = c.toLowerCase();
-                const match = rawVariants.find((variant) => getColor(variant)?.toLowerCase() === normalizedColor);
-                const candidate = sanitizeImageSource(resolveVariantImage(match) ?? undefined);
-                if (candidate) {
-                  setPreviewImage(candidate);
+                if (swatch.preview) {
+                  setPreviewImage(swatch.preview);
+                }
+              }}
+              onFocus={() => {
+                if (swatch.preview) {
+                  setPreviewImage(swatch.preview);
                 }
               }}
               onMouseLeave={() => {
-                // Revert to locked preview if set; otherwise clear
                 setPreviewImage(lockedPreview);
               }}
-              aria-label={`Select color ${c}`}
-              title={c}
-              className={`w-5 h-5 rounded-full border ${selectedColor === c ? 'ring-2 ring-black' : ''}`}
-              style={{ backgroundColor: c.toLowerCase() }}
+              onBlur={() => {
+                setPreviewImage(lockedPreview);
+              }}
+              aria-label={`${displayTitle} in ${swatch.label}`}
+              title={swatch.label}
+              className={`w-5 h-5 rounded-full border transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black ${selectedColorKey === swatch.key ? 'ring-2 ring-black' : ''}`}
+              style={{
+                backgroundColor:
+                  swatch.swatchColor ??
+                  (/\s/.test(swatch.label) ? undefined : swatch.label.toLowerCase()),
+              }}
             />
           ))}
-          {filteredColors.length > 6 && (
-            <span className="text-xs text-gray-500">+{filteredColors.length - 6}</span>
+          {hiddenSwatchCount > 0 && (
+            <span className="text-xs text-gray-500">+{hiddenSwatchCount}</span>
           )}
         </div>
       )}
