@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React from "react";
 import Link from "next/link";
@@ -134,7 +134,7 @@ export default function CheckoutPage() {
                 step === stepItem.key ? "bg-black text-white" : 
                 ["shipping", "payment", "review"].indexOf(step) > index ? "bg-green-500 text-white" : "bg-gray-200 text-gray-600"
               }`}>
-                {["shipping", "payment", "review"].indexOf(step) > index ? "✓" : index + 1}
+                {["shipping", "payment", "review"].indexOf(step) > index ? "âœ“" : index + 1}
               </div>
               <span className={`ml-2 text-sm ${step === stepItem.key ? "font-semibold" : "text-gray-600"}`}>
                 {stepItem.label}
@@ -153,9 +153,9 @@ export default function CheckoutPage() {
               <h2 className="text-lg font-semibold mb-4">Shipping Information</h2>
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium mb-1">Email</label>
+                  `<label className="block block text-sm font-medium mb-1">Email</label>
                   <input
-                    type="email"
+                    type="email" id="checkout_email" name="email"
                     value={form.email}
                     onChange={(e) => updateForm({ email: e.target.value })}
                     className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-black"
@@ -165,20 +165,20 @@ export default function CheckoutPage() {
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium mb-1">First Name</label>
+                    `<label className="block block text-sm font-medium mb-1">First Name</label>
                     <input
                       type="text"
-                      value={form.firstName}
+                      id="checkout_first_name" name="firstName" value={form.firstName}
                       onChange={(e) => updateForm({ firstName: e.target.value })}
                       className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-black"
                       required
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-1">Last Name</label>
+                    `<label className="block block text-sm font-medium mb-1">Last Name</label>
                     <input
                       type="text"
-                      value={form.lastName}
+                      id="checkout_last_name" name="lastName" value={form.lastName}
                       onChange={(e) => updateForm({ lastName: e.target.value })}
                       className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-black"
                       required
@@ -186,7 +186,7 @@ export default function CheckoutPage() {
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-1">Address</label>
+                  `<label className="block block text-sm font-medium mb-1">Address</label>
                   <input
                     type="text"
                     value={form.address}
@@ -198,20 +198,20 @@ export default function CheckoutPage() {
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium mb-1">City</label>
+                    `<label className="block block text-sm font-medium mb-1">City</label>
                     <input
                       type="text"
-                      value={form.city}
+                      id="checkout_city" name="city" value={form.city}
                       onChange={(e) => updateForm({ city: e.target.value })}
                       className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-black"
                       required
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-1">Postal Code</label>
+                    `<label className="block block text-sm font-medium mb-1">Postal Code</label>
                     <input
                       type="text"
-                      value={form.postalCode}
+                      id="checkout_postal" name="postalCode" value={form.postalCode}
                       onChange={(e) => updateForm({ postalCode: e.target.value })}
                       className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-black"
                       required
@@ -219,9 +219,9 @@ export default function CheckoutPage() {
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-1">Phone</label>
+                  `<label className="block block text-sm font-medium mb-1">Phone</label>
                   <input
-                    type="tel"
+                    type="tel" id="checkout_phone" name="phone"
                     value={form.phone}
                     onChange={(e) => updateForm({ phone: e.target.value })}
                     className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-black"
@@ -244,7 +244,7 @@ export default function CheckoutPage() {
               <h2 className="text-lg font-semibold mb-4">Payment Method</h2>
               <div className="space-y-4">
                 <div className="flex gap-4">
-                  <label className="flex items-center gap-2 cursor-pointer">
+                  `<label className="block flex items-center gap-2 cursor-pointer">
                     <input
                       type="radio"
                       name="paymentMethod"
@@ -254,7 +254,7 @@ export default function CheckoutPage() {
                     />
                     <span>Credit/Debit Card</span>
                   </label>
-                  <label className="flex items-center gap-2 cursor-pointer">
+                  `<label className="block flex items-center gap-2 cursor-pointer">
                     <input
                       type="radio"
                       name="paymentMethod"
@@ -269,10 +269,10 @@ export default function CheckoutPage() {
                 {form.paymentMethod === "card" && (
                   <div className="space-y-4 pt-4 border-t">
                     <div>
-                      <label className="block text-sm font-medium mb-1">Cardholder Name</label>
+                      `<label className="block block text-sm font-medium mb-1">Cardholder Name</label>
                       <input
                         type="text"
-                        value={form.cardName || ""}
+                        id="checkout_card_name" name="cardName" value={form.cardName || ""}
                         onChange={(e) => updateForm({ cardName: e.target.value })}
                         className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-black"
                         placeholder="John Doe"
@@ -280,10 +280,10 @@ export default function CheckoutPage() {
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium mb-1">Card Number</label>
+                      `<label className="block block text-sm font-medium mb-1">Card Number</label>
                       <input
                         type="text"
-                        value={form.cardNumber || ""}
+                        id="checkout_card_number" name="cardNumber" value={form.cardNumber || ""}
                         onChange={(e) => updateForm({ cardNumber: e.target.value })}
                         className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-black"
                         placeholder="1234 5678 9012 3456"
@@ -292,10 +292,10 @@ export default function CheckoutPage() {
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-sm font-medium mb-1">Expiry Date</label>
+                        `<label className="block block text-sm font-medium mb-1">Expiry Date</label>
                         <input
                           type="text"
-                          value={form.expiryDate || ""}
+                          id="checkout_expiry" name="expiryDate" value={form.expiryDate || ""}
                           onChange={(e) => updateForm({ expiryDate: e.target.value })}
                           className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-black"
                           placeholder="MM/YY"
@@ -303,10 +303,10 @@ export default function CheckoutPage() {
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium mb-1">CVV</label>
+                        `<label className="block block text-sm font-medium mb-1">CVV</label>
                         <input
                           type="text"
-                          value={form.cvv || ""}
+                          id="checkout_cvv" name="cvv" value={form.cvv || ""}
                           onChange={(e) => updateForm({ cvv: e.target.value })}
                           className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-black"
                           placeholder="123"

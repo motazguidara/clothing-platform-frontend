@@ -3,6 +3,8 @@
 import React from "react";
 import { useCoupon } from "@/hooks/useCatalog";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { FormField } from "@/components/ui";
 
 type Props = {
   onApplied: (code: string, discountPercent: number) => void;
@@ -28,14 +30,15 @@ export default function PromoCodeForm({ onApplied }: Props) {
   }
 
   return (
-    <form onSubmit={onSubmit} className="flex gap-2">
-      <input
-        value={code}
-        onChange={(e) => setCode(e.target.value)}
-        placeholder="Enter code"
-        aria-label="Promo code"
-        className="flex-1 border border-border rounded-md px-3 py-2"
-      />
+    <form onSubmit={onSubmit} className="flex gap-2" noValidate>
+      <FormField label="Promo code" hint="Enter a discount code if you have one.">
+        <Input
+          name="promo"
+          value={code}
+          onChange={(e) => setCode(e.target.value)}
+          placeholder="Enter code"
+        />
+      </FormField>
       <Button type="submit" disabled={!code || isFetching}>Apply</Button>
       {error && <span className="sr-only" role="alert">{error}</span>}
     </form>
