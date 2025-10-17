@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React from "react";
 import { useSearchParams, useRouter } from "next/navigation";
@@ -355,7 +355,7 @@ export default function SearchPage() {
                 }}
                 className="ml-1 text-gray-500 hover:text-gray-700"
               >
-                ✕
+                âœ•
               </button>
             </div>
           );
@@ -392,7 +392,7 @@ export default function SearchPage() {
         )}
         
         {isLoading && (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-10 xl:gap-12">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6 md:gap-4">
             {Array.from({ length: 8 }).map((_, i) => (
               <div key={i} className="h-80 rounded-md bg-gray-200 animate-pulse" />
             ))}
@@ -418,9 +418,9 @@ export default function SearchPage() {
                 <div className="space-y-2">
                   <p className="text-sm text-gray-500">Try:</p>
                   <ul className="text-sm text-gray-500 space-y-1">
-                    <li>• Checking your spelling</li>
-                    <li>• Using fewer or different keywords</li>
-                    <li>• Removing some filters</li>
+                    <li>â€¢ Checking your spelling</li>
+                    <li>â€¢ Using fewer or different keywords</li>
+                    <li>â€¢ Removing some filters</li>
                   </ul>
                 </div>
                 {(currentQuery || Object.keys(params).length > 0) && (
@@ -436,7 +436,7 @@ export default function SearchPage() {
                 )}
               </div>
             ) : (
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-10 xl:gap-12">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6 md:gap-4">
                 {data.results.map((product) => (
                   <ProductCard key={product.id} product={product} />
                 ))}
@@ -506,3 +506,4 @@ export default function SearchPage() {
     </section>
   );
 }
+

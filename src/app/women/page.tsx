@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React from "react";
 import { useProducts } from "@/hooks/useCatalog";
@@ -38,7 +38,7 @@ export default function WomenPage() {
         <div className="lg:col-span-9 min-h-[50vh]">
           {isError && <p className="text-sm text-red-600">Failed to load products.</p>}
           {isLoading && (
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-10 xl:gap-12">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6 md:gap-4">
               {Array.from({ length: 8 }).map((_, i) => (
                 <div key={i} className="h-80 rounded-md bg-gray-200 animate-pulse" />
               ))}
@@ -49,7 +49,7 @@ export default function WomenPage() {
               <div className="mb-4 text-sm text-gray-600">
                 {data.count} products found
               </div>
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-10 xl:gap-12">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6 md:gap-4">
                 {data.results.map((p) => (
                   <ProductCard key={p.id} product={p} />
                 ))}
@@ -101,3 +101,4 @@ export default function WomenPage() {
     </section>
   );
 }
+

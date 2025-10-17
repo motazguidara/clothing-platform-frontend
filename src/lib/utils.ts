@@ -5,9 +5,9 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-export function formatPrice(value?: number | string, currency: string = "USD") {
+export function formatPrice(value?: number | string, currency: string = "TND") {
   const n = typeof value === "string" ? Number(value) : value;
-  if (typeof n !== "number" || Number.isNaN(n)) return "$0.00";
+  if (typeof n !== "number" || Number.isNaN(n)) return new Intl.NumberFormat("en-US", { style: "currency", currency: "TND" }).format(0);
   return new Intl.NumberFormat("en-US", { style: "currency", currency }).format(n);
 }
 

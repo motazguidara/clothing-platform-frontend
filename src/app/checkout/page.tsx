@@ -392,7 +392,7 @@ export default function CheckoutPage() {
                   <div className="text-gray-600">Qty: {item.quantity}</div>
                 </div>
                 <div className="font-medium">
-                  {formatPrice((item.price || 0) * (item.quantity || 1), "USD")}
+                  {formatPrice((item.price || 0) * (item.quantity || 1), "TND")}
                 </div>
               </div>
             ))}
@@ -400,19 +400,19 @@ export default function CheckoutPage() {
           <div className="border-t mt-4 pt-4 space-y-2">
             <div className="flex justify-between text-sm">
               <span>Subtotal</span>
-              <span>{formatPrice(subtotal, "USD")}</span>
+              <span>{formatPrice(subtotal, "TND")}</span>
             </div>
             <div className="flex justify-between text-sm">
               <span>Shipping</span>
-              <span>{shipping === 0 ? "Free" : formatPrice(shipping, "USD")}</span>
+              <span>{shipping === 0 ? "Free" : formatPrice(shipping, "TND")}</span>
             </div>
             <div className="flex justify-between text-sm">
               <span>Tax</span>
-              <span>{formatPrice(tax, "USD")}</span>
+              <span>{formatPrice(tax, "TND")}</span>
             </div>
             <div className="flex justify-between font-semibold text-lg border-t pt-2">
               <span>Total</span>
-              <span>{formatPrice(total, "USD")}</span>
+              <span>{formatPrice(total, "TND")}</span>
             </div>
           </div>
         </div>
@@ -420,6 +420,7 @@ export default function CheckoutPage() {
     </div>
   );
 }
+
 
 
 

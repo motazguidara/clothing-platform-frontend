@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState, useCallback, useTransition, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
@@ -49,7 +49,7 @@ export function ProductClient({ product, selectedVariant }: ProductClientProps) 
       // Show success toast or feedback
       if (typeof window !== 'undefined' && window.gtag) {
         window.gtag('event', 'add_to_cart', {
-          currency: 'USD',
+          currency: 'TND',
           value: product.price * quantity,
           items: [{
             item_id: product.id.toString(),

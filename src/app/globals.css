@@ -157,3 +157,9 @@ button:not(:disabled),
 [role="button"],
 a.underline-link,
 label { cursor: pointer; }
+
+/* Reduce oversized XL grid gap utility globally */
+@media (min-width: 80rem) {
+  /* Tailwind utility override: shrink xl:gap-12 from ~3rem */
+  .xl\:gap-12 { gap: 2rem !important; }
+}

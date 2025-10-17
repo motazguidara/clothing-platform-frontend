@@ -1,4 +1,4 @@
-import { z } from 'zod';
+﻿import { z } from 'zod';
 
 // Base schemas
 export const ErrorSchema = z.object({
@@ -118,7 +118,7 @@ export const NotificationPreferencesSchema = z.object({
 
 export const UserPreferencesSchema = z.object({
   language: z.string().default('en'),
-  currency: z.string().default('USD'),
+  currency: z.string().default('TND'),
   timezone: z.string().default('UTC'),
   notifications: NotificationPreferencesSchema,
 });

@@ -1,4 +1,4 @@
-// app/products/[slug]/page.tsx
+﻿// app/products/[slug]/page.tsx
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
@@ -43,7 +43,7 @@ const toNum = (v: number | string | null | undefined): number | null => {
   return Number.isFinite(n) ? n : null;
 };
 
-const toMoney = (v: number | string | null | undefined, currency = "USD") => {
+const toMoney = (v: number | string | null | undefined, currency = "TND") => {
   const n = toNum(v);
   if (n === null) return "";
   return new Intl.NumberFormat("en-US", { style: "currency", currency }).format(n);
@@ -210,7 +210,7 @@ export default async function ProductPage({ params, searchParams }: ProductPageP
         ? {
             "@type": "Offer",
             price,
-            priceCurrency: "USD",
+            priceCurrency: "TND",
             availability: product.in_stock
               ? "https://schema.org/InStock"
               : "https://schema.org/OutOfStock",

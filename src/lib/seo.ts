@@ -1,4 +1,4 @@
-// SEO and accessibility utilities
+﻿// SEO and accessibility utilities
 
 import type { Metadata } from 'next/types';
 
@@ -31,7 +31,7 @@ export class SEOManager {
       ogImage,
       ogType = 'website',
       price,
-      currency = 'USD',
+      currency = 'TND',
       availability,
       brand,
       category,
@@ -102,7 +102,7 @@ export class SEOManager {
           offers: {
             '@type': 'Offer',
             price: data.price,
-            priceCurrency: data.currency || 'USD',
+            priceCurrency: data.currency || 'TND',
             availability: `https://schema.org/${data.availability === 'in_stock' ? 'InStock' : 'OutOfStock'}`,
             seller: {
               '@type': 'Organization',

@@ -102,7 +102,7 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
           offers: {
             '@type': 'Offer',
             price: product.price,
-            priceCurrency: 'USD',
+            priceCurrency: 'TND',
             availability: product.in_stock ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
           },
         },
