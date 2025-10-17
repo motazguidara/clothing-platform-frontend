@@ -5,6 +5,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import Link from "next/link";
 import { toast } from "sonner";
+import { SecurityManager } from "@/lib/security";
+import { PasswordField } from "@/components/ui";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -57,8 +59,11 @@ export default function RegisterPage() {
     
     if (!formData.password) {
       newErrors['password'] = 'Password is required';
-    } else if (formData.password.length < 8) {
-      newErrors['password'] = 'Password must be at least 8 characters';
+    } else {
+      const { isValid } = SecurityManager.validatePasswordStrength(formData.password);
+      if (!isValid) {
+        newErrors['password'] = 'Password must be at least 8 characters long and include uppercase, lowercase, number, and symbol.';
+      }
     }
     
     if (formData.password !== formData.confirm) {
@@ -207,57 +212,33 @@ export default function RegisterPage() {
           </div>
         
           <div>
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-              Password <span className="text-red-500">*</span>
-            </label>
-            <div className="mt-1">
-              <input
-                id="password"
-                name="password"
-                type="password"
-                autoComplete="new-password"
-                value={formData.password}
-                onChange={handleChange}
-                required
-                className={`appearance-none block w-full px-3 py-2 border ${errors['password'] ? 'border-red-300' : 'border-gray-300'} rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm`}
-                aria-invalid={!!errors['password']}
-                aria-describedby={errors['password'] ? 'password-error' : undefined}
-              />
-            </div>
-            {errors['password'] ? (
-              <p id="password-error" className="mt-1 text-sm text-red-600">
-                {errors['password']}
-              </p>
-            ) : (
-              <p className="mt-1 text-xs text-gray-500">
-                Must be at least 8 characters long
-              </p>
+            <PasswordField
+              id="password"
+              name="password"
+              label={"Password"}
+              value={formData.password}
+              onChange={(v) => setFormData((p) => ({ ...p, password: v }))}
+              required
+              showRules
+              error={errors['password']}
+            />
+            {!errors['password'] && (
+              <p className="mt-1 text-xs text-gray-500">Must be at least 8 characters long and include uppercase, lowercase, number, and symbol.</p>
             )}
           </div>
         
           <div>
-            <label htmlFor="confirm" className="block text-sm font-medium text-gray-700">
-              Confirm password <span className="text-red-500">*</span>
-            </label>
-            <div className="mt-1">
-              <input
-                id="confirm"
-                name="confirm"
-                type="password"
-                autoComplete="new-password"
-                value={formData.confirm}
-                onChange={handleChange}
-                required
-                className={`appearance-none block w-full px-3 py-2 border ${errors['confirm'] ? 'border-red-300' : 'border-gray-300'} rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm`}
-                aria-invalid={!!errors['confirm']}
-                aria-describedby={errors['confirm'] ? 'confirm-error' : undefined}
-              />
-            </div>
-            {errors['confirm'] && (
-              <p id="confirm-error" className="mt-1 text-sm text-red-600">
-                {errors['confirm']}
-              </p>
-            )}
+            <PasswordField
+              id="confirm"
+              name="confirm"
+              label={"Confirm password"}
+              value={formData.confirm}
+              onChange={(v) => setFormData((p) => ({ ...p, confirm: v }))}
+              required
+              showRules={false}
+              disablePaste
+              error={errors['confirm']}
+            />
           </div>
         
           <div className="space-y-4 pt-2">

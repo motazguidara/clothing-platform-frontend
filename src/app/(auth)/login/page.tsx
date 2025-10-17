@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import Link from "next/link";
 import { toast } from "sonner";
+import { PasswordField } from "@/components/ui";
 
 // This is a client component that handles the login form
 // It uses the useAuth hook to manage authentication state
@@ -102,14 +103,14 @@ export default function LoginPage() {
           />
         </div>
         <div>
-          <label className="block text-sm font-medium" htmlFor="password">Password</label>
-          <input
+          <PasswordField
             id="password"
-            type="password"
+            name="password"
+            label="Password"
             value={password}
-            onChange={(e) => setPassword(e.target.value)}
+            onChange={setPassword}
             required
-            className="mt-1 block w-full border border-border rounded-md px-3 py-2"
+            showRules={false}
           />
         </div>
         {error && <p className="text-sm text-red-600" role="alert" aria-live="assertive">{error}</p>}

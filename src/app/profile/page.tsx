@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { authService } from "@/lib/api/services/auth";
 import type { UserProfile } from "@/lib/api/schemas";
 import { useProtectedRoute } from "@/hooks/useAuth";
+import { PasswordField } from "@/components/ui";
 
 const LANGUAGE_OPTIONS = [
   { value: "en-US", label: "English (United States)" },
@@ -164,6 +165,11 @@ export default function ProfilePage() {
     }
     if (newPassword !== confirmPassword) {
       toast.error("Passwords do not match");
+      return;
+    }
+    const { isValid } = (await import("@/lib/security")).SecurityManager.validatePasswordStrength(newPassword);
+    if (!isValid) {
+      toast.error("Password must be at least 8 characters long and include uppercase, lowercase, number, and symbol.");
       return;
     }
     setIsUpdatingPassword(true);
@@ -343,17 +349,16 @@ export default function ProfilePage() {
                     autoComplete="email"
                   />
                 </label>
-                <label className="flex flex-col gap-1 text-sm">
-                  <span className="font-medium text-gray-700">Current password</span>
-                  <input
-                    type="password"
+                <div>
+                  <PasswordField
+                    id="email_current_password"
+                    name="current"
+                    label="Current password"
                     value={emailPassword}
-                    onChange={(e) => setEmailPassword(e.target.value)}
-                    className="rounded-lg border border-gray-200 px-3 py-2 focus:border-black focus:outline-none"
-                    placeholder="Enter your current password"
-                    autoComplete="current-password"
+                    onChange={setEmailPassword}
+                    showRules={false}
                   />
-                </label>
+                </div>
                 <div className="flex justify-end">
                   <button
                     type="submit"
@@ -373,39 +378,33 @@ export default function ProfilePage() {
                   </p>
                 </div>
                 <div className="grid gap-4 sm:grid-cols-3">
-                  <label className="flex flex-col gap-1 text-sm">
-                    <span className="font-medium text-gray-700">Current password</span>
-                    <input
-                      type="password"
-                      value={oldPassword}
-                      onChange={(e) => setOldPassword(e.target.value)}
-                      className="rounded-lg border border-gray-200 px-3 py-2 focus:border-black focus:outline-none"
-                      placeholder="Current password"
-                      autoComplete="current-password"
-                    />
-                  </label>
-                  <label className="flex flex-col gap-1 text-sm">
-                    <span className="font-medium text-gray-700">New password</span>
-                    <input
-                      type="password"
-                      value={newPassword}
-                      onChange={(e) => setNewPassword(e.target.value)}
-                      className="rounded-lg border border-gray-200 px-3 py-2 focus:border-black focus:outline-none"
-                      placeholder="New password"
-                      autoComplete="new-password"
-                    />
-                  </label>
-                  <label className="flex flex-col gap-1 text-sm">
-                    <span className="font-medium text-gray-700">Confirm new password</span>
-                    <input
-                      type="password"
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                      className="rounded-lg border border-gray-200 px-3 py-2 focus:border-black focus:outline-none"
-                      placeholder="Repeat new password"
-                      autoComplete="new-password"
-                    />
-                  </label>
+                  <PasswordField
+                    id="current_password"
+                    name="current"
+                    label="Current password"
+                    value={oldPassword}
+                    onChange={setOldPassword}
+                    showRules={false}
+                  />
+                  <PasswordField
+                    id="new_password"
+                    name="new"
+                    label="New password"
+                    value={newPassword}
+                    onChange={setNewPassword}
+                    required
+                    showRules
+                  />
+                  <PasswordField
+                    id="confirm_new_password"
+                    name="confirm"
+                    label="Confirm new password"
+                    value={confirmPassword}
+                    onChange={setConfirmPassword}
+                    required
+                    showRules={false}
+                    disablePaste
+                  />
                 </div>
                 <div className="flex justify-end">
                   <button
