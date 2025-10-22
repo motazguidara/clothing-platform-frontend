@@ -1,6 +1,7 @@
 // src/hooks/use-query.ts
-import { UseQueryOptions, useQuery as useBaseQuery } from '@tanstack/react-query';
-import { useToast } from './use-toast';
+import type { UseQueryOptions } from '@tanstack/react-query';
+import { useQuery as useBaseQuery } from '@tanstack/react-query';
+import { useToast } from '@/providers/toast-provider';
 
 export function useQuery<
   TQueryFnData = unknown,
@@ -24,15 +25,15 @@ export function useQuery<
 
   return useBaseQuery<TQueryFnData, TError, TData, TQueryKey>({
     ...options,
-    onError: (error) => {
+    onError: (error: TError) => {
       if (showErrorToast) {
         toast({
           title: options.errorMessage || 'An error occurred',
-          description: error.message,
+          description: error instanceof Error ? error.message : undefined,
           variant: 'destructive',
         });
       }
       options.onError?.(error);
     },
-  });
+  } as UseQueryOptions<TQueryFnData, TError, TData, TQueryKey>);
 }

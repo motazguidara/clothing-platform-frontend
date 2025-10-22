@@ -32,8 +32,8 @@ type Product = {
 };
 
 interface ProductPageProps {
-  params: Promise<{ slug: string }> | { slug: string };
-  searchParams: Promise<{ variant?: string }> | { variant?: string };
+  params: Promise<{ slug: string }>;
+  searchParams: Promise<{ variant?: string }>;
 }
 
 /** ---------------- Helpers ---------------- */
@@ -97,7 +97,7 @@ async function getProduct(slug: string): Promise<Product | null> {
 export async function generateMetadata(
   { params }: ProductPageProps
 ): Promise<Metadata> {
-  const { slug } = params instanceof Promise ? await params : params;
+  const { slug } = await params;
   const product = await getProduct(slug);
 
   if (!product) {
@@ -178,7 +178,8 @@ export async function generateStaticParams() {
 
 /** ---------------- Page ---------------- */
 export default async function ProductPage({ params, searchParams }: ProductPageProps) {
-  const { slug } = params instanceof Promise ? await params : params;
+  const { slug } = await params;
+  const resolvedSearchParams = (await searchParams) ?? {};
   const product = await getProduct(slug);
 
   if (!product) {
@@ -320,8 +321,7 @@ export default async function ProductPage({ params, searchParams }: ProductPageP
             {/* Interactive (client) */}
             <Suspense fallback={<ProductSkeleton />}>
               {(() => {
-                const sp = (searchParams instanceof Promise) ? undefined : searchParams;
-                const sel = sp?.variant ?? undefined;
+                const sel = resolvedSearchParams?.variant ?? undefined;
                 const normalizedProduct = { ...product, description: product.description ?? '' } as any;
                 return (
                   <ProductClient

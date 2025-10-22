@@ -220,7 +220,7 @@ export default function RegisterPage() {
               onChange={(v) => setFormData((p) => ({ ...p, password: v }))}
               required
               showRules
-              error={errors['password']}
+              error={errors['password'] ?? null}
             />
             {!errors['password'] && (
               <p className="mt-1 text-xs text-gray-500">Must be at least 8 characters long and include uppercase, lowercase, number, and symbol.</p>
@@ -237,7 +237,7 @@ export default function RegisterPage() {
               required
               showRules={false}
               disablePaste
-              error={errors['confirm']}
+              error={errors['confirm'] ?? null}
             />
           </div>
         

@@ -26,7 +26,7 @@ export default function CheckoutPage() {
   const router = useRouter();
   const checkout = useCheckout();
   const { data: cart, isLoading: cartLoading } = useCart();
-  const { show } = useToast();
+  const { toast } = useToast();
   const [step, setStep] = React.useState<"shipping" | "payment" | "review">("shipping");
   const [form, setForm] = React.useState<CheckoutForm>({
     email: "",
@@ -62,24 +62,21 @@ export default function CheckoutPage() {
 
   const handleSubmit = async () => {
     if (!validateShipping() || !validatePayment()) {
-      show({ title: "Please fill in all required fields", variant: "error" });
+      toast({ title: "Please fill in all required fields", variant: "destructive" });
       return;
     }
 
     try {
       const order = await checkout.mutateAsync();
       const orderId = (order as any)?.id;
-      show({ title: "Order placed successfully!", variant: "success" });
+      toast({ title: "Order placed successfully!", variant: "success" });
       if (orderId) {
         router.push(`/orders/${orderId}`);
       } else {
         router.push("/orders");
       }
     } catch (error: any) {
-      show({ 
-        title: error?.message || "Failed to place order", 
-        variant: "error" 
-      });
+      toast({ title: error?.message || "Failed to place order", variant: "destructive" });
     }
   };
 
@@ -231,7 +228,7 @@ export default function CheckoutPage() {
                 </div>
               </div>
               <button
-                onClick={() => validateShipping() ? setStep("payment") : show({ title: "Please fill in all shipping fields", variant: "error" })}
+                onClick={() => validateShipping() ? setStep("payment") : toast({ title: "Please fill in all shipping fields", variant: "destructive" })}
                 className="mt-6 w-full bg-black text-white px-6 py-3 rounded-md hover:bg-gray-800 transition"
               >
                 Continue to Payment
@@ -333,7 +330,7 @@ export default function CheckoutPage() {
                   Back
                 </button>
                 <button
-                  onClick={() => validatePayment() ? setStep("review") : show({ title: "Please complete payment information", variant: "error" })}
+                  onClick={() => validatePayment() ? setStep("review") : toast({ title: "Please complete payment information", variant: "destructive" })}
                   className="flex-1 bg-black text-white px-6 py-3 rounded-md hover:bg-gray-800 transition"
                 >
                   Review Order

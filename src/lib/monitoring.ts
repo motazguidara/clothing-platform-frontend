@@ -48,7 +48,7 @@ class MonitoringService {
         url: window.location.href,
         userAgent: navigator.userAgent,
         timestamp: new Date().toISOString(),
-        buildVersion: process.env.NEXT_PUBLIC_BUILD_VERSION || 'unknown',
+        buildVersion: process.env["NEXT_PUBLIC_BUILD_VERSION"] || 'unknown',
         environment: process.env.NODE_ENV,
         sessionId: this.generateSessionId(),
       };
@@ -268,7 +268,7 @@ class MonitoringService {
       value,
       unit,
       timestamp: Date.now(),
-      context,
+      ...(context ? { context } : {}),
     });
   }
 

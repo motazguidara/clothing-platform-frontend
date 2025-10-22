@@ -11,6 +11,9 @@ export interface Product {
   sale_price?: number | null;
   is_on_sale?: boolean;
   is_featured?: boolean;
+  status?: string | null;
+  is_active?: boolean;
+  is_published?: boolean;
   in_stock: boolean;
   stock_quantity?: number;
   sku?: string;
@@ -322,3 +325,5 @@ export type ProductList = {
     href: string;
   } | null;
 };
+
+export type { NavigationMenu, NavigationMenuItem, NavigationBadgeVariant } from './navigation';

@@ -55,21 +55,23 @@ export class ErrorReporter {
   ): Promise<string> {
     const errorId = this.generateErrorId();
     
+    const url = typeof window !== 'undefined' ? window.location.href : undefined;
+    const userAgent = typeof window !== 'undefined' ? navigator.userAgent : undefined;
     const errorReport: ErrorReport = {
       error: {
         message: error.message,
-        stack: error.stack,
         name: error.name,
+        ...(error.stack ? { stack: error.stack } : {}),
       },
       context: {
         type: 'manual_report',
-        url: typeof window !== 'undefined' ? window.location.href : undefined,
-        userAgent: typeof window !== 'undefined' ? navigator.userAgent : undefined,
         timestamp: new Date().toISOString(),
         severity: 'medium',
-        buildVersion: process.env.NEXT_PUBLIC_BUILD_VERSION || 'unknown',
-        userId: this.userId,
-        sessionId: this.sessionId,
+        buildVersion: process.env["NEXT_PUBLIC_BUILD_VERSION"] || 'unknown',
+        ...(url ? { url } : {}),
+        ...(userAgent ? { userAgent } : {}),
+        ...(this.userId ? { userId: this.userId } : {}),
+        ...(this.sessionId ? { sessionId: this.sessionId } : {}),
         ...context,
       },
       errorId,
@@ -156,7 +158,9 @@ export class ErrorReporter {
       // Remove successfully sent reports
       const stillFailedReports = failedReports.filter((_: any, index: number) => {
         const result = results[index];
-        return result.status === 'rejected' || result.value === null;
+        if (!result) return true;
+        if (result.status === 'rejected') return true;
+        return result.value === null;
       });
 
       localStorage.setItem('failed_error_reports', JSON.stringify(stillFailedReports));

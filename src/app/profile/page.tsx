@@ -113,13 +113,13 @@ export default function ProfilePage() {
     setFirstName(data.first_name?.trim() || first);
     setLastName(data.last_name?.trim() || last);
     setPhone((data.phone as string | null) ?? "");
-    setPreferredLanguage(data.preferred_language ?? data.locale ?? "en-US");
+    setPreferredLanguage(data.preferred_language ?? ((data as Record<string, unknown>)?.["locale"] as string | undefined) ?? "en-US");
     setPreferredCountry((data.preferred_country ?? "US").toUpperCase());
     setMarketingConsent(Boolean((data as any).marketing_consent));
     setNewEmail(data.email ?? "");
   }, [data]);
 
-  const emailVerified = Boolean(data?.is_email_confirmed);
+  const emailVerified = Boolean((data as any)?.is_email_confirmed ?? data?.is_verified);
   const isSavingProfile = updateMutation.isPending;
 
   async function onSave(e: React.FormEvent) {

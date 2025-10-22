@@ -39,20 +39,22 @@ export default function FormField({
   const errorId = error ? `${fieldId}-error` : undefined;
 
   // Clone child to inject accessible attributes
-  const control = React.cloneElement(children, {
-    id: children.props.id ?? fieldId,
-    'aria-invalid': Boolean(error) || children.props['aria-invalid'] || undefined,
+  const childElement = children as React.ReactElement<Record<string, unknown>>;
+  const injectedProps: Record<string, unknown> = {
+    id: childElement.props?.["id"] ?? fieldId,
+    'aria-invalid': Boolean(error) || (childElement.props?.['aria-invalid'] as unknown) || undefined,
     'aria-describedby': [
-      children.props['aria-describedby'],
+      childElement.props?.['aria-describedby'] as string | undefined,
       error ? errorId : undefined,
       !error && hint ? hintId : undefined,
     ]
       .filter(Boolean)
       .join(' ')
       .trim() || undefined,
-    required: required ?? children.props.required,
-    name: children.props.name || fieldId,
-  });
+    required: required ?? (childElement.props?.["required"] as boolean | undefined),
+    name: (childElement.props?.["name"] as string | undefined) || fieldId,
+  };
+  const control = React.cloneElement(childElement, injectedProps);
 
   return (
     <div className={cn("w-full", className)}>

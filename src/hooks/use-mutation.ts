@@ -1,7 +1,7 @@
 // src/hooks/use-mutation.ts
 import type { UseMutationOptions } from '@tanstack/react-query';
 import { useMutation as useBaseMutation } from '@tanstack/react-query';
-import { useToast } from './use-toast';
+import { useToast } from '@/providers/toast-provider';
 
 type MutationOptions<TData, TError, TVariables, TContext> = Omit<
   UseMutationOptions<TData, TError, TVariables, TContext>,

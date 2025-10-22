@@ -32,7 +32,7 @@ export function CartDrawer() {
   const { data, isLoading, error } = useCart();
   const { mutate: removeItem, isPending: isRemoving } = useRemoveFromCart();
   const { addItem: addToWishlist, removeItem: removeFromWishlist, hasItem: isInWishlist } = useWishlist();
-  const { show } = useToast();
+  const { toast } = useToast();
   const { mutate: updateQuantity } = useUpdateCartItem();
   const items = React.useMemo(() => data?.items ?? [], [data?.items]);
   const normalizedItems = React.useMemo(() => {
@@ -66,10 +66,10 @@ export function CartDrawer() {
   const handleRemoveItem = (itemId: number) => {
     removeItem(itemId, {
       onSuccess: () => {
-        show({ title: "Item removed from cart", variant: "success" });
+        toast({ title: "Item removed from cart", variant: "success" });
       },
       onError: () => {
-        show({ title: "Failed to remove item", variant: "error" });
+        toast({ title: "Failed to remove item", variant: "destructive" });
       }
     });
   };
@@ -79,13 +79,13 @@ export function CartDrawer() {
       const productId = item.product_id;
       if (isInWishlist(productId)) {
         await removeFromWishlist(productId);
-        show({ title: "Removed from wishlist", variant: "success" });
+        toast({ title: "Removed from wishlist", variant: "success" });
       } else {
         await addToWishlist(productId);
-        show({ title: "Added to wishlist", variant: "success" });
+        toast({ title: "Added to wishlist", variant: "success" });
       }
     } catch (error) {
-      show({ title: "Failed to update wishlist", variant: "error" });
+      toast({ title: "Failed to update wishlist", variant: "destructive" });
     }
   };
 
@@ -104,7 +104,7 @@ export function CartDrawer() {
             ...prev,
             [item.id]: getQty(item.id, item.quantity)
           }));
-          show({ title: "Failed to update quantity", variant: "error" });
+          toast({ title: "Failed to update quantity", variant: "destructive" });
         }
       }
     );

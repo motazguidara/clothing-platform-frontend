@@ -22,7 +22,11 @@ type DateFieldProps = {
 
 function isValidIsoDate(date: string): boolean {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return false;
-  const [y, m, d] = date.split("-").map((n) => parseInt(n, 10));
+  const parts = date.split("-").map((n) => Number.parseInt(n, 10));
+  if (parts.length !== 3 || parts.some((part) => Number.isNaN(part))) {
+    return false;
+  }
+  const [y, m, d] = parts as [number, number, number];
   const dt = new Date(Date.UTC(y, m - 1, d));
   return dt.getUTCFullYear() === y && dt.getUTCMonth() === m - 1 && dt.getUTCDate() === d;
 }
@@ -74,11 +78,15 @@ export function DateField({
       if (next > max) msg = `Date cannot be later than ${max}.`;
     }
     if (!msg && next && validateDob13) {
-      const [y, m, d] = next.split("-").map((n) => parseInt(n, 10));
-      const thirteen = new Date();
-      thirteen.setFullYear(thirteen.getFullYear() - 13);
-      const compare = new Date(y, m - 1, d);
-      if (compare > thirteen) msg = "You must be at least 13 years old.";
+      const parts = next.split("-").map((n) => Number.parseInt(n, 10));
+      if (parts.length === 3 && !parts.some((part) => Number.isNaN(part))) {
+        const [y, m, d] = parts as [number, number, number];
+        const thirteen = new Date();
+        thirteen.setFullYear(thirteen.getFullYear() - 13);
+        const compare = new Date(y, m - 1, d);
+        if (compare > thirteen) msg = "You must be at least 13 years old.";
+      }
+
     }
     setLocalError(msg);
   }

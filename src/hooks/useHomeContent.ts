@@ -6,7 +6,7 @@ export function useHomeContent(initialData?: HomePayload | null) {
   return useQuery<HomePayload, Error>({
     queryKey: ["home", "content"],
     queryFn: fetchHome,
-    initialData: initialData ?? undefined,
+    ...(initialData ? { initialData } : {}),
     staleTime: 1000 * 30,
     gcTime: 1000 * 60 * 5,
     refetchOnWindowFocus: false,

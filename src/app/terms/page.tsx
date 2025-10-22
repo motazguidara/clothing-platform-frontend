@@ -172,7 +172,7 @@ const sections: Array<{
   },
 ];
 
-export default function TermsPage(): JSX.Element {
+export default function TermsPage() {
   return (
     <main className="mx-auto max-w-4xl px-6 py-16">
       <header className="mb-12 space-y-3">

@@ -8,9 +8,9 @@ import React, {
   useMemo,
   Suspense,
   forwardRef,
-  lazy,
-  ComponentType
+  lazy
 } from 'react';
+import type { ComponentType } from 'react';
 
 // Debounce hook with proper cleanup
 export function useDebounce<T>(value: T, delay: number): T {
@@ -367,6 +367,7 @@ export function useOptimizedList<T>(
       window.addEventListener('resize', updateHeight);
       return () => window.removeEventListener('resize', updateHeight);
     }
+    return undefined;
   }, []); // Empty dependency array since we only want to run once on mount
 
   return {

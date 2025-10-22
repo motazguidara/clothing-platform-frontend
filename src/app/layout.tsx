@@ -44,7 +44,7 @@ export const metadata: Metadata = {
     address: false,
     telephone: false,
   },
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://yourstore.com'),
+  metadataBase: new URL(process.env["NEXT_PUBLIC_SITE_URL"] || 'https://yourstore.com'),
   alternates: {
     canonical: "/",
   },
@@ -84,9 +84,9 @@ export const metadata: Metadata = {
     },
   },
   verification: {
-    google: process.env.GOOGLE_SITE_VERIFICATION,
-    yandex: process.env.YANDEX_VERIFICATION,
-    yahoo: process.env.YAHOO_VERIFICATION,
+    google: process.env["GOOGLE_SITE_VERIFICATION"],
+    yandex: process.env["YANDEX_VERIFICATION"],
+    yahoo: process.env["YAHOO_VERIFICATION"],
   },
 };
 
@@ -131,7 +131,7 @@ export default function RootLayout({
                 window.dataLayer = window.dataLayer || [];
                 function gtag(){dataLayer.push(arguments);}
                 gtag('js', new Date());
-                gtag('config', '${process.env.NEXT_PUBLIC_GA_ID}', {
+                gtag('config', '${process.env["NEXT_PUBLIC_GA_ID"]}', {
                   page_title: document.title,
                   page_location: window.location.href
                 });

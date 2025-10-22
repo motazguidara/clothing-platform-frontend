@@ -1,4 +1,4 @@
-import { apiClient } from '../client';
+import { apiClient, ApiError } from '../client';
 import * as schemas from '../schemas';
 
 export class CatalogService {
@@ -31,9 +31,20 @@ export class CatalogService {
     }
 
     const endpoint = `/catalog/products/${searchParams.toString() ? `?${searchParams.toString()}` : ''}`;
-    
-    // Allow backend to evolve without breaking the frontend rails; skip strict validation here
-    return apiClient.get<schemas.PaginatedProductList>(endpoint);
+
+    try {
+      return await apiClient.get<schemas.PaginatedProductList>(endpoint);
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 401) {
+        return {
+          count: 0,
+          next: null,
+          previous: null,
+          results: [],
+        } as schemas.PaginatedProductList;
+      }
+      throw error;
+    }
   }
 
   async getProduct(id: number): Promise<schemas.Product> {
@@ -86,7 +97,18 @@ export class CatalogService {
     categories: schemas.Category[];
     brands: schemas.Brand[];
   }> {
-    return apiClient.get('/catalog/home/');
+    try {
+      return await apiClient.get('/catalog/home/');
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 401) {
+        return {
+          featured_products: [],
+          categories: [],
+          brands: [],
+        };
+      }
+      throw error;
+    }
   }
 
   // Coupons
@@ -108,3 +130,4 @@ export class CatalogService {
 }
 
 export const catalogService = new CatalogService();
+

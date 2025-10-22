@@ -2,12 +2,10 @@
 
 import * as React from "react";
 import Image from "next/image";
-import { v4 as uuid } from "uuid";
 import { apiClient } from "@/lib/api-client";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Label } from "@/components/ui/label";
 
 export interface UploadedImage {
   url: string;
@@ -26,7 +24,7 @@ interface UploadItem {
   previewUrl: string;
   status: UploadStatus;
   progress: number;
-  error?: string;
+  error?: string | undefined;
   response?: UploadedImage;
   isExisting?: boolean;
 }
@@ -173,7 +171,7 @@ export function ImageUploadField({
 
   return (
     <div className="space-y-3">
-      {label ? <Label className="text-sm font-medium text-gray-900">{label}</Label> : null}
+      {label ? <label className="text-sm font-medium text-gray-900">{label}</label> : null}
       <div>
         <input
           ref={fileInputRef}
@@ -244,7 +242,7 @@ export function ImageUploadField({
                         ? "default"
                         : item.status === "error"
                         ? "destructive"
-                        : "secondary"
+                        : "accent"
                     }
                   >
                     {item.status === "success" && "Uploaded"}
@@ -255,7 +253,7 @@ export function ImageUploadField({
 
                   {item.response?.width && item.response?.height ? (
                     <span>
-                      {item.response.width}×{item.response.height}
+                      {item.response.width}{item.response.height}
                     </span>
                   ) : null}
 

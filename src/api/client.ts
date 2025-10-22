@@ -1,7 +1,7 @@
 import axios from "axios";
 import { getAccessToken, getRefreshToken, setTokens } from "@/auth/tokenStore";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "";
+const API_BASE = process.env["NEXT_PUBLIC_API_URL"] || "";
 const api = axios.create({
   baseURL: API_BASE,
   withCredentials: false,

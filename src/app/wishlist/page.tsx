@@ -23,7 +23,7 @@ function WishlistEntry({ item }: { item: WishlistItem }) {
   const product = (item.product as any) ?? data;
   const add = useAddToCart();
   const openCart = useUIStore((s) => s.openCart);
-  const { show } = useToast();
+  const { toast } = useToast();
 
   if (!product) {
     if (isLoading) {
@@ -45,11 +45,11 @@ function WishlistEntry({ item }: { item: WishlistItem }) {
               { product_id: productId, delta_qty: 1 },
               {
                 onSuccess: () => {
-                  show({ title: "Added to bag", variant: "success" });
+                  toast({ title: "Added to bag", variant: "success" });
                   openCart();
                 },
                 onError: () => {
-                  show({ title: "Failed to add to bag", variant: "error" });
+                  toast({ title: "Failed to add to bag", variant: "destructive" });
                 },
               }
             );
@@ -60,7 +60,7 @@ function WishlistEntry({ item }: { item: WishlistItem }) {
         <button
           type="button"
           className="px-3 py-2 border rounded-md text-sm text-red-600 hover:bg-red-50 transition-colors"
-          onClick={() => toggleWishlist.mutate({ product_id: productId, variant_id: item.variantId })}
+          onClick={() => toggleWishlist.mutate({ product_id: productId, ...(item.variantId != null ? { variant_id: item.variantId } : {}) })}
         >
           Remove
         </button>

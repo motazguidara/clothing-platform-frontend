@@ -35,7 +35,7 @@ export default function GlobalError({ error, reset }: GlobalErrorProps) {
           userAgent: navigator.userAgent,
           timestamp: new Date().toISOString(),
           severity: 'critical', // Global errors are critical
-          buildVersion: process.env.NEXT_PUBLIC_BUILD_VERSION || 'unknown',
+          buildVersion: process.env["NEXT_PUBLIC_BUILD_VERSION"] || 'unknown',
         },
       };
 
@@ -56,7 +56,7 @@ export default function GlobalError({ error, reset }: GlobalErrorProps) {
       });
 
       // Also try to send to external services if configured
-      if (process.env.NEXT_PUBLIC_SENTRY_DSN) {
+      if (process.env["NEXT_PUBLIC_SENTRY_DSN"]) {
         // Example: Send to Sentry or other error tracking service
         // This would be implemented based on your error tracking service
       }

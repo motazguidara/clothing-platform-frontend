@@ -1,6 +1,6 @@
 "use client";
 
-import { Variants } from "framer-motion";
+import type { Variants } from "framer-motion";
 
 export const fadeInUp: Variants = {
   hidden: { opacity: 0, y: 16 },

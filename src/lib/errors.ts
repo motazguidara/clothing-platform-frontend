@@ -1,6 +1,6 @@
 // src/lib/errors.ts
-import { ApiError, NetworkError, ValidationError } from './api/client-enhanced';
-import { ErrorResponse } from './api/contracts';
+import { ApiError, NetworkError, ValidationError } from '@/lib/api/client';
+import type { ErrorResponse } from '@/lib/api/contracts';
 
 export class AppError extends Error {
   constructor(
@@ -99,7 +99,7 @@ export async function retryWithBackoff<T>(
       }
 
       // Don't retry on client errors (4xx)
-      if (error instanceof ApiError && error.status >= 400 && error.status < 500) {
+      if (error instanceof ApiError && typeof error.status === "number" && error.status >= 400 && error.status < 500) {
         throw error;
       }
 

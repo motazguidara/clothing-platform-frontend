@@ -133,7 +133,7 @@ export default function ProductCard({ product }: Props) {
   const { hasItem, toggleItem } = useWishlist();
   const [mounted, setMounted] = React.useState(false);
   const isWished = mounted ? hasItem(product.id) : false;
-  const { show } = useToast();
+  const { toast } = useToast();
   const [currentImageIndex, setCurrentImageIndex] = React.useState(0);
   const [previewImage, setPreviewImage] = React.useState<string | null>(null);
   const [lockedPreview, setLockedPreview] = React.useState<string | null>(null);
@@ -196,11 +196,12 @@ export default function ProductCard({ product }: Props) {
       const key = label.trim().toLowerCase();
       if (!key || map.has(key)) continue;
       const preview = sanitizeImageSource(resolveVariantImage(variant));
+      const swatchColor = getColorHex(variant);
       map.set(key, {
         key,
         label,
-        preview: preview ?? undefined,
-        swatchColor: getColorHex(variant),
+        ...(preview ? { preview } : {}),
+        ...(swatchColor ? { swatchColor } : {}),
       });
     }
 
@@ -210,7 +211,7 @@ export default function ProductCard({ product }: Props) {
         const label = String(color);
         const key = label.trim().toLowerCase();
         if (!key || map.has(key)) continue;
-        map.set(key, { key, label, preview: undefined, swatchColor: undefined });
+        map.set(key, { key, label });
       }
     }
 
@@ -341,11 +342,11 @@ export default function ProductCard({ product }: Props) {
           toggleItem(product.id)
             .then(() => {
               const nowWished = !isWished;
-              show({ title: nowWished ? "Added to wishlist" : "Removed from wishlist", variant: nowWished ? "success" : "default" });
+              toast({ title: nowWished ? "Added to wishlist" : "Removed from wishlist", variant: nowWished ? "success" : "default" });
             })
             .catch((error: unknown) => {
               const message = error instanceof Error ? error.message : "Wishlist update failed";
-              show({ title: message, variant: "error" });
+              toast({ title: message, variant: "destructive" });
             });
         }}
           className={`absolute top-2 right-2 rounded-full px-2 py-1 text-xs font-semibold focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-black ${isWished ? "bg-foreground text-white" : "bg-white/90"}`}

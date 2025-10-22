@@ -26,9 +26,12 @@ export function HomeHighlights({ initialData }: HomeHighlightsProps) {
     return null;
   }
 
-  const hasHero = Boolean(home.hero);
-  const hasPromotions = Array.isArray(home.promotions) && home.promotions.length > 0;
-  const hasFeaturedCategories = Array.isArray(home.featured_categories) && home.featured_categories.length > 0;
+  const resolvedHome = home as HomePayload;
+
+  const hasHero = Boolean(resolvedHome.hero);
+  const hasPromotions = Array.isArray(resolvedHome.promotions) && resolvedHome.promotions.length > 0;
+  const hasFeaturedCategories = Array.isArray(resolvedHome.featured_categories) && resolvedHome.featured_categories.length > 0;
+
 
   if (!hasHero && !hasPromotions && !hasFeaturedCategories) {
     return null;
@@ -36,10 +39,10 @@ export function HomeHighlights({ initialData }: HomeHighlightsProps) {
 
   return (
     <div className="space-y-12">
-      {hasHero ? <HomeHero hero={home.hero!} /> : null}
-      {hasPromotions ? <Promotions items={home.promotions} /> : null}
+      {hasHero ? <HomeHero hero={resolvedHome.hero!} /> : null}
+      {hasPromotions ? <Promotions items={resolvedHome.promotions} /> : null}
       {hasFeaturedCategories ? (
-        <FeaturedCategories items={home.featured_categories} />
+        <FeaturedCategories items={resolvedHome.featured_categories} />
       ) : null}
       {isFetching ? (
         <div className="mx-auto max-w-7xl px-6 text-xs text-muted">
