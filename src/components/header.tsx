@@ -5,7 +5,7 @@ import Link from "next/link";
 import { IconButton } from "@/components/ui/icon-button";
 import { WishlistLink } from "@/components/ui/wishlist-link";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { UserRound, ChevronDown, X } from "lucide-react";
+import { UserRound, ChevronDown, ChevronRight, Heart, ShoppingBag, TicketPercent, Search, X } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useUIStore } from "@/store/ui";
 import { useCart } from "@/hooks/useCart";
@@ -24,8 +24,14 @@ const STATIC_NAVIGATION_MENUS: NavigationMenu[] = [
     hero_title: "New Season Essentials",
     hero_subtitle: "Discover versatile layers and polished looks for every day.",
     hero_link: "/catalog?gender=women&ordering=-created_at",
-    hero_image: null,
     entry_url: "/women",
+    hero_image: null,
+    hero_links: [
+      { href: "/women", label: "Women overview" },
+      { href: "/catalog?gender=women&ordering=-created_at", label: "New in", badge_text: "New", badge_variant: "new" },
+      { href: "/catalog?gender=women&category=cashmere", label: "Cashmere" },
+      { href: "/catalog?sale=1&gender=women", label: "Sale", badge_text: "%", badge_variant: "sale" },
+    ],
     items: [
       { id: -101, label: "Women overview", url: "/women", category_slug: null, badge_text: null, badge_variant: "default" },
       { id: -102, label: "New in", url: "/catalog?gender=women&ordering=-created_at", category_slug: null, badge_text: "New", badge_variant: "new" },
@@ -44,8 +50,14 @@ const STATIC_NAVIGATION_MENUS: NavigationMenu[] = [
     hero_title: "Built For Everyday",
     hero_subtitle: "Tailored staples and easy layers to refresh his wardrobe.",
     hero_link: "/catalog?gender=men&ordering=-created_at",
-    hero_image: null,
     entry_url: "/men",
+    hero_image: null,
+    hero_links: [
+      { href: "/men", label: "Men overview" },
+      { href: "/catalog?gender=men&ordering=-created_at", label: "New in", badge_text: "New", badge_variant: "new" },
+      { href: "/catalog?gender=men&category=outerwear", label: "Coats & Jackets" },
+      { href: "/catalog?sale=1&gender=men", label: "Sale", badge_text: "%", badge_variant: "sale" },
+    ],
     items: [
       { id: -201, label: "Men overview", url: "/men", category_slug: null, badge_text: null, badge_variant: "default" },
       { id: -202, label: "New in", url: "/catalog?gender=men&ordering=-created_at", category_slug: null, badge_text: "New", badge_variant: "new" },
@@ -63,8 +75,14 @@ const STATIC_NAVIGATION_MENUS: NavigationMenu[] = [
     hero_title: "Play Ready Styles",
     hero_subtitle: "Soft fabrics and durable pieces for every adventure.",
     hero_link: "/catalog?gender=kids&ordering=-created_at",
-    hero_image: null,
     entry_url: "/kids",
+    hero_image: null,
+    hero_links: [
+      { href: "/kids", label: "Kids overview" },
+      { href: "/catalog?gender=kids&ordering=-created_at", label: "New in", badge_text: "New", badge_variant: "new" },
+      { href: "/catalog?gender=kids&category=girls", label: "Girls" },
+      { href: "/catalog?gender=kids&category=boys", label: "Boys" },
+    ],
     items: [
       { id: -301, label: "Kids overview", url: "/kids", category_slug: null, badge_text: null, badge_variant: "default" },
       { id: -302, label: "New in", url: "/catalog?gender=kids&ordering=-created_at", category_slug: null, badge_text: "New", badge_variant: "new" },
@@ -82,8 +100,14 @@ const STATIC_NAVIGATION_MENUS: NavigationMenu[] = [
     hero_title: "Limited Time Offers",
     hero_subtitle: "Save on best-selling styles while stock lasts.",
     hero_link: "/catalog?sale=1",
-    hero_image: null,
     entry_url: "/catalog?sale=1",
+    hero_image: null,
+    hero_links: [
+      { href: "/catalog?sale=1", label: "All sale", badge_text: "%", badge_variant: "sale" },
+      { href: "/catalog?sale=1&gender=women", label: "Women Sale" },
+      { href: "/catalog?sale=1&gender=men", label: "Men Sale" },
+      { href: "/catalog?sale=1&gender=kids", label: "Kids Sale" },
+    ],
     items: [
       { id: -401, label: "All Sale", url: "/catalog?sale=1", category_slug: null, badge_text: "%", badge_variant: "sale" },
       { id: -402, label: "Women Sale", url: "/catalog?sale=1&gender=women", category_slug: null, badge_text: null, badge_variant: "sale" },
@@ -126,6 +150,10 @@ export default function Header() {
   const headerHeight = scrolled ? 56 : 80;
   const closeMegaMenu = React.useCallback(() => {
     setActiveMegaMenuKey(null);
+  }, []);
+  const openMegaMenu = React.useCallback((key: string) => {
+    setIsSearchOpen(false);
+    setActiveMegaMenuKey(key);
   }, []);
   const toggleMegaMenu = React.useCallback(
     (key: string) => {
@@ -451,102 +479,115 @@ export default function Header() {
       {/* Search Overlay (only navigates to /search on submit) */}
       {activeMegaMenu && (
         <div className="fixed inset-0 z-40 hidden md:flex" role="dialog" aria-label={`${activeMegaMenu.title} menu`}>
-          <div className="relative flex h-full w-full">
-            <div className="relative flex h-full w-[35vw] min-w-[320px] max-w-4xl flex-col border-r border-border bg-white shadow-2xl">
-              <button
-                type="button"
-                onClick={closeMegaMenu}
-                className="absolute right-6 top-6 text-gray-500 transition-colors hover:text-gray-900"
-                aria-label="Close navigation panel"
-              >
-                <X className="h-5 w-5" aria-hidden="true" />
-              </button>
+          <div className="flex h-full w-full justify-start">
+            <div className="relative flex h-full w-[360px] max-w-[90vw] flex-col border-r border-border bg-white shadow-2xl">
+              <div className="flex items-center justify-between gap-6 px-6 pt-6">
+                <div className="flex items-center gap-4 text-gray-700">
+                  <Link href="/promotions" className="inline-flex h-9 w-9 items-center justify-center rounded-full transition-colors hover:bg-gray-100" aria-label="Promotions" onClick={closeMegaMenu}>
+                    <TicketPercent className="h-4 w-4" aria-hidden="true" />
+                  </Link>
+                  <Link href="/wishlist" className="relative inline-flex h-9 w-9 items-center justify-center rounded-full transition-colors hover:bg-gray-100" aria-label="Wishlist" onClick={closeMegaMenu}>
+                    <Heart className="h-4 w-4" aria-hidden="true" />
+                  </Link>
+                  <Link href={isAuthenticated ? "/profile" : "/login"} className="inline-flex h-9 w-9 items-center justify-center rounded-full transition-colors hover:bg-gray-100" aria-label="Account" onClick={closeMegaMenu}>
+                    <UserRound className="h-4 w-4" aria-hidden="true" />
+                  </Link>
+                  <Link
+                    href="/cart"
+                    className="relative inline-flex h-9 w-9 items-center justify-center rounded-full transition-colors hover:bg-gray-100"
+                    aria-label="Go to cart"
+                    onClick={closeMegaMenu}
+                  >
+                    <ShoppingBag className="h-4 w-4" aria-hidden="true" />
+                    {displayCartCount > 0 ? (
+                      <span className="absolute -right-1 -top-1 inline-flex h-4 min-w-[16px] items-center justify-center rounded-full bg-black px-1 text-[10px] font-semibold text-white">
+                        {Math.min(displayCartCount, 9)}
+                        {displayCartCount > 9 ? "+" : ""}
+                      </span>
+                    ) : null}
+                  </Link>
+                </div>
+                <button
+                  type="button"
+                  onClick={closeMegaMenu}
+                  className="h-9 w-9 inline-flex items-center justify-center rounded-full transition-colors hover:bg-gray-100 text-gray-600"
+                  aria-label="Close navigation panel"
+                >
+                  <X className="h-5 w-5" aria-hidden="true" />
+                </button>
+              </div>
 
-              <div className="mt-16 flex-1 overflow-y-auto px-8 pb-10">
-                <div className="grid gap-10 md:grid-cols-[minmax(200px,1fr)_minmax(160px,0.9fr)]">
-                  <div className="space-y-2">
-                    {activeMegaMenu.items.length > 0 ? (
-                      activeMegaMenu.items.map((item) => (
-                        <Link
-                          key={item.id}
-                          href={item.url}
-                          onClick={closeMegaMenu}
-                          className="flex items-center justify-between py-2 text-lg font-medium text-gray-900 transition-colors hover:text-black"
-                        >
-                          <span>{item.label}</span>
-                          {item.badge_text ? (
-                            <span className={resolveBadgeClass(item.badge_variant)}>
-                              {item.badge_text}
-                            </span>
-                          ) : null}
-                        </Link>
-                      ))
-                    ) : (
-                      <p className="py-2 text-sm text-gray-500">
-                        Navigation items for this section are not configured yet.
-                      </p>
-                    )}
+              <div className="px-6 mt-6">
+                <label htmlFor="mega-menu-search" className="sr-only">
+                  Search
+                </label>
+                <div className="relative">
+                  <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" aria-hidden="true" />
+                  <input
+                    id="mega-menu-search"
+                    type="search"
+                    placeholder="Search"
+                    autoComplete="off"
+                    className="w-full rounded-md border border-gray-200 bg-white pl-10 pr-3 py-2 text-sm text-gray-900 placeholder:text-gray-500 focus:border-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-900/10"
+                  />
+                </div>
+              </div>
 
-                    <div className="pt-8 text-sm text-gray-600">
-                      <Link
-                        href={activeMegaMenu.entry_url}
-                        onClick={closeMegaMenu}
-                        className="underline-link transition-soft"
+              <div className="px-6 mt-6 border-b border-gray-200">
+                <div className="flex items-center gap-6 overflow-x-auto pb-2 text-sm font-semibold">
+                  {STATIC_NAVIGATION_MENUS.map((menu) => {
+                    const isActive = activeMegaMenu?.key === menu.key;
+                    return (
+                      <button
+                        key={menu.key}
+                        type="button"
+                        onClick={() => openMegaMenu(menu.key)}
+                        className={`pb-2 transition-colors ${isActive ? "border-b-2 border-gray-900 text-gray-900" : "border-b-2 border-transparent text-gray-500 hover:text-gray-900"}`}
+                        aria-current={isActive ? "true" : undefined}
                       >
-                        Explore {activeMegaMenu.title}
-                      </Link>
-                    </div>
+                        {menu.title}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
 
-                    <div className="mt-8 space-y-4 text-sm text-gray-600">
-                      <Link href="/profile" className="flex items-center gap-2 hover:text-gray-900" onClick={closeMegaMenu}>
-                        <span className="font-medium">My Account</span>
+              <div className="flex-1 overflow-y-auto px-6 pb-10">
+                <nav className="space-y-1 text-sm">
+                  {activeMegaMenu.items.length > 0 ? (
+                    activeMegaMenu.items.map((item) => (
+                      <Link
+                        key={item.id}
+                        href={item.url}
+                        onClick={closeMegaMenu}
+                        className="flex items-center justify-between rounded-lg border border-transparent px-3 py-2 text-gray-900 transition hover:border-gray-200 hover:bg-gray-50"
+                      >
+                        <span className="flex items-center gap-2">
+                          {item.label}
+                          {item.badge_text ? (
+                            <span className={resolveBadgeClass(item.badge_variant)}>{item.badge_text}</span>
+                          ) : null}
+                        </span>
+                        <ChevronRight className="h-4 w-4 text-gray-400" aria-hidden="true" />
                       </Link>
-                      <Link href="/support" className="flex items-center gap-2 hover:text-gray-900" onClick={closeMegaMenu}>
-                        <span>Customer service</span>
-                      </Link>
-                      <Link href="/app" className="flex items-center gap-2 hover:text-gray-900" onClick={closeMegaMenu}>
-                        <span>App</span>
-                      </Link>
-                    </div>
-                  </div>
+                    ))
+                  ) : (
+                    <p className="py-2 text-sm text-gray-500">
+                      Navigation items for this section are not configured yet.
+                    </p>
+                  )}
+                </nav>
 
-                  <div className="flex flex-col justify-between space-y-4">
-                    <div className="relative aspect-[3/4] w-full overflow-hidden rounded-xl bg-neutral-100">
-                      {activeMegaMenu.hero_image ? (
-                        <img
-                          src={activeMegaMenu.hero_image}
-                          alt={activeMegaMenu.hero_title ?? activeMegaMenu.title}
-                          className="absolute inset-0 h-full w-full object-cover"
-                        />
-                      ) : (
-                        <div className="absolute inset-0 bg-gradient-to-br from-neutral-100 via-neutral-200 to-neutral-100" />
-                      )}
-                      <div className="absolute inset-0 flex flex-col justify-end bg-gradient-to-t from-black/60 via-black/10 to-transparent p-6 text-white">
-                        <h3 className="text-xl font-semibold">
-                          {activeMegaMenu.hero_title ?? activeMegaMenu.title}
-                        </h3>
-                        {activeMegaMenu.hero_subtitle ? (
-                          <p className="mt-2 text-sm text-white/85">
-                            {activeMegaMenu.hero_subtitle}
-                          </p>
-                        ) : null}
-                        <div className="mt-4">
-                          <Link
-                            href={activeMegaMenu.hero_link || activeMegaMenu.entry_url}
-                            onClick={closeMegaMenu}
-                            className="inline-flex items-center gap-2 rounded-full bg-white/90 px-4 py-2 text-sm font-semibold text-gray-900 transition-colors hover:bg-white"
-                          >
-                            Shop now
-                          </Link>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="rounded-lg border border-gray-200 p-4 text-sm text-gray-600">
-                      <p className="font-semibold text-gray-900">Need help?</p>
-                      <p className="mt-1">Call us at +216 76 432 000 or email support@clothing.com</p>
-                    </div>
-                  </div>
+                <div className="mt-8 space-y-3 text-sm text-gray-600">
+                  <Link href="/profile" className="flex items-center gap-2 hover:text-gray-900" onClick={closeMegaMenu}>
+                    <span className="font-medium">My Account</span>
+                  </Link>
+                  <Link href="/support" className="flex items-center gap-2 hover:text-gray-900" onClick={closeMegaMenu}>
+                    <span>Customer service</span>
+                  </Link>
+                  <Link href="/app" className="flex items-center gap-2 hover:text-gray-900" onClick={closeMegaMenu}>
+                    <span>App</span>
+                  </Link>
                 </div>
               </div>
             </div>
@@ -554,13 +595,12 @@ export default function Header() {
             <button
               type="button"
               className="flex-1 bg-black/30 transition-opacity hover:bg-black/40"
-              aria-hidden="true"
+              aria-label="Close mega menu"
               onClick={closeMegaMenu}
             />
           </div>
         </div>
       )}
-
       <SearchOverlay isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} />
 
       {/* Mobile Menu Overlay */}

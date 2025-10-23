@@ -19,5 +19,11 @@ export interface NavigationMenu {
   hero_link?: string | null;
   hero_image?: string | null;
   entry_url: string;
+  hero_links?: Array<{
+    href: string;
+    label: string;
+    badge_text?: string | null;
+    badge_variant?: NavigationBadgeVariant;
+  }>;
   items: NavigationMenuItem[];
 }
