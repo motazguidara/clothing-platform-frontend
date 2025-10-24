@@ -2,21 +2,12 @@ import { apiClient, ApiError } from '../client';
 import * as schemas from '../schemas';
 import type { CatalogFacetsResponse } from '@/types';
 
+type Primitive = string | number | boolean;
+type CatalogProductRequest = Record<string, Primitive>;
+
 export class CatalogService {
   // Products
-  async getProducts(params?: {
-    page?: number;
-    page_size?: number;
-    search?: string;
-    category?: string;
-    brand?: string;
-    gender?: 'men' | 'women' | 'kids' | 'unisex';
-    min_price?: number;
-    max_price?: number;
-    featured?: boolean;
-    on_sale?: boolean;
-    ordering?: string;
-  }): Promise<schemas.PaginatedProductList> {
+  async getProducts(params?: CatalogProductRequest): Promise<schemas.PaginatedProductList> {
     const searchParams = new URLSearchParams();
     
     if (params) {
