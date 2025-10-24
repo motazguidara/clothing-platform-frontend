@@ -284,9 +284,9 @@ export default function ProductCard({ product }: Props) {
   }, [product.image, product.images]);
 
   return (
-    <article className="w-full p-2 select-none card-hover">
+    <article className="w-full p-2 select-none card-hover rounded">
       <div
-        className="relative h-80 rounded-md overflow-hidden group hover-shine"
+        className="relative h-80 rounded overflow-hidden group hover-shine"
         onMouseEnter={() => {
           setCurrentImageIndex(0);
         }}

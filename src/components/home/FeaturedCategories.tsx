@@ -13,7 +13,7 @@ export default function FeaturedCategories({ items }: { items: CategoryCard[] })
       </div>
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-6">
         {items.map((c) => (
-          <Link key={c.id} href={`/catalog?category=${encodeURIComponent(c.slug)}`} className="group block card-hover rounded-md overflow-hidden">
+          <Link key={c.id} href={`/catalog?category=${encodeURIComponent(c.slug)}`} className="group block card-hover rounded overflow-hidden">
             <div className="relative h-36 bg-subtle">
               {c.image && (
                 <Image

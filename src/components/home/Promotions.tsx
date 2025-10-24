@@ -10,7 +10,7 @@ export default function Promotions({ items }: { items: HomePromotion[] }) {
     <section className="mx-auto max-w-7xl px-6 py-10">
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
         {items.map((p, i) => (
-          <Link key={i} href={p.href} className="group relative rounded-lg overflow-hidden card-hover block">
+          <Link key={i} href={p.href} className="group relative rounded overflow-hidden card-hover block">
             {p.image && (
               <Image
                 src={p.image}

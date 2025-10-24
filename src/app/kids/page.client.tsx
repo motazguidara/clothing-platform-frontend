@@ -2,9 +2,10 @@
 
 import React from "react";
 import { useSearchParams } from "next/navigation";
-import { useProducts } from "@/hooks/useCatalog";
+import { useProducts, useCatalogFacets } from "@/hooks/useCatalog";
 import ProductCard from "@/components/product-card";
 import { FilterSidebar, SortSelect } from "@/components/filters/filter-sidebar";
+import { buildDefaultFilters } from "@/components/filters/default-filter-presets";
 
 type AllowedKey =
   | "category"
@@ -67,6 +68,50 @@ export function KidsPageClient({ initialSearchParams }: KidsPageClientProps) {
   }, [effectiveSearchParams]);
 
   const { data, isLoading, isError } = useProducts(requestParams);
+  const { data: facets, isLoading: facetsLoading, isError: facetsError } = useCatalogFacets(requestParams);
+
+  const serializedParams = effectiveSearchParams.toString();
+
+  const fallbackFilters = React.useMemo(() => {
+    const sp = new URLSearchParams(serializedParams);
+    return buildDefaultFilters({
+      gender: "kids",
+      price_min: sp.get("price_min") ?? undefined,
+      price_max: sp.get("price_max") ?? undefined,
+      size: sp.get("size") ?? undefined,
+      color: sp.get("color") ?? undefined,
+      sale: sp.get("sale") ?? undefined,
+      in_stock: sp.get("in_stock") ?? undefined,
+    });
+  }, [serializedParams]);
+
+  const createFilterHref = React.useCallback(
+    (overrides: Record<string, string | null | undefined>) => {
+      const sp = new URLSearchParams(serializedParams);
+      sp.delete("page");
+      Object.entries(overrides).forEach(([key, value]) => {
+        if (value == null || value === "") {
+          sp.delete(key);
+        } else {
+          sp.set(key, value);
+        }
+      });
+      const query = sp.toString();
+      return `/kids${query ? `?${query}` : ""}`;
+    },
+    [serializedParams]
+  );
+
+  const quickFilters = React.useMemo(
+    () => [
+      { label: "New Arrivals", href: createFilterHref({ ordering: "-created_at" }) },
+      { label: "Best Sellers", href: createFilterHref({ ordering: "-bestseller" }) },
+      { label: "Under $50", href: createFilterHref({ price_max: "50", price_min: null }) },
+      { label: "On Sale", href: createFilterHref({ sale: "1" }) },
+      { label: "In Stock", href: createFilterHref({ in_stock: "1" }) },
+    ],
+    [createFilterHref]
+  );
 
   const makeHref = React.useCallback(
     (page: number) => {
@@ -88,10 +133,29 @@ export function KidsPageClient({ initialSearchParams }: KidsPageClientProps) {
         <SortSelect />
       </div>
 
+      {quickFilters.length > 0 && (
+        <div className="mt-6 flex flex-wrap gap-2">
+          {quickFilters.map((filter) => (
+            <a
+              key={filter.label}
+              href={filter.href}
+              className="px-3 py-1.5 border border-gray-200 rounded-full text-sm hover:bg-gray-100 transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-black"
+            >
+              {filter.label}
+            </a>
+          ))}
+        </div>
+      )}
+
       <div className="mt-8 grid grid-cols-1 lg:grid-cols-12 gap-8">
         <div className="lg:col-span-3 lg:sticky lg:top-24 lg:self-start max-lg:order-2">
           <div className="lg:max-h-[calc(100vh-7rem)] lg:overflow-y-auto pr-1">
-            <FilterSidebar />
+            <FilterSidebar
+              filters={facets?.filters}
+              isLoading={facetsLoading}
+              error={facetsError ?? false}
+              fallbackFilters={fallbackFilters}
+            />
           </div>
         </div>
         <div className="lg:col-span-9 min-h-[50vh]">
@@ -160,3 +224,4 @@ export function KidsPageClient({ initialSearchParams }: KidsPageClientProps) {
     </section>
   );
 }
+

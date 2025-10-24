@@ -111,7 +111,7 @@ export default function CollectionRail({ title, params = {}, href }: Props) {
           {isLoading && (
             <div className="grid grid-flow-col auto-cols-[16rem] gap-4">
               {Array.from({ length: 6 }).map((_, i) => (
-                <div key={i} className="w-64 h-80 rounded-md bg-subtle animate-pulse" />
+                <div key={i} className="w-64 h-80 rounded bg-subtle animate-pulse" />
               ))}
             </div>
           )}

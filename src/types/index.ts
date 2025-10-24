@@ -105,6 +105,67 @@ export interface Brand {
   is_active: boolean;
 }
 
+export interface CatalogBreadcrumb {
+  id: number;
+  name: string;
+  slug: string | null;
+}
+
+export interface CatalogSubcategory {
+  id: number;
+  name: string;
+  slug: string | null;
+  product_count?: number;
+}
+
+export interface CatalogSummary {
+  title: string;
+  count: number;
+  subtitle?: string;
+  search_term?: string | null;
+  category?: {
+    id: number;
+    name: string;
+    slug: string | null;
+    description?: string | null;
+    image?: string | null;
+  } | null;
+  breadcrumbs: CatalogBreadcrumb[];
+  subcategories: CatalogSubcategory[];
+}
+
+export interface CatalogFilterOption {
+  value: string;
+  label: string;
+  count?: number;
+  min?: number | null;
+  max?: number | null;
+  slug?: string | null;
+}
+
+export interface CatalogFilterRange {
+  min?: number | null;
+  max?: number | null;
+  avg?: number | null;
+  active_min?: number | null;
+  active_max?: number | null;
+}
+
+export interface CatalogFilterGroup {
+  id: string;
+  label: string;
+  param: string;
+  selection: 'single' | 'multi' | 'toggle' | 'range';
+  options: CatalogFilterOption[];
+  selected?: string[];
+  range?: CatalogFilterRange;
+}
+
+export interface CatalogFacetsResponse {
+  summary: CatalogSummary;
+  filters: CatalogFilterGroup[];
+}
+
 export interface User {
   id: string;
   username: string;

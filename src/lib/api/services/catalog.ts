@@ -1,5 +1,6 @@
 import { apiClient, ApiError } from '../client';
 import * as schemas from '../schemas';
+import type { CatalogFacetsResponse } from '@/types';
 
 export class CatalogService {
   // Products
@@ -51,6 +52,24 @@ export class CatalogService {
     return apiClient.get<schemas.Product>(`/catalog/products/${id}/`, {
       responseSchema: schemas.ProductSchema,
     });
+  }
+
+  async getCatalogFacets(params?: Record<string, unknown>): Promise<CatalogFacetsResponse> {
+    const searchParams = new URLSearchParams();
+
+    if (params) {
+      Object.entries(params).forEach(([key, value]) => {
+        if (value === undefined || value === null) return;
+        if (Array.isArray(value)) {
+          value.forEach((entry) => searchParams.append(key, String(entry)));
+        } else {
+          searchParams.append(key, String(value));
+        }
+      });
+    }
+
+    const endpoint = `/catalog/products/facets/${searchParams.toString() ? `?${searchParams.toString()}` : ''}`;
+    return apiClient.get<CatalogFacetsResponse>(endpoint);
   }
 
   // Categories

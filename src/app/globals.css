@@ -121,6 +121,7 @@ body {
 /* Product card hover effects */
 .card-hover {
   transition: transform 200ms ease, box-shadow 200ms ease;
+  border-radius: 4px;
 }
 .card-hover:hover {
   transform: translateY(-4px);

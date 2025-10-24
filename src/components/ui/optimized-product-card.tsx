@@ -129,7 +129,7 @@ const OptimizedProductCard = React.memo<OptimizedProductCardProps>(({
     return (
       <div
         ref={cardRef}
-        className={cn("aspect-[3/4] bg-gray-100 rounded-lg animate-pulse", className)}
+        className={cn("aspect-[3/4] bg-gray-100 rounded animate-pulse", className)}
         aria-hidden="true"
       />
     );
@@ -139,7 +139,7 @@ const OptimizedProductCard = React.memo<OptimizedProductCardProps>(({
     <div
       ref={cardRef}
       className={cn(
-        "group relative bg-white rounded-lg shadow-sm hover:shadow-lg transition-all duration-300",
+        "group relative bg-white rounded shadow-sm hover:shadow-lg transition-all duration-300",
         "border border-gray-200 hover:border-gray-300",
         "transform hover:-translate-y-1",
         className
@@ -149,7 +149,7 @@ const OptimizedProductCard = React.memo<OptimizedProductCardProps>(({
     >
       <Link href={`/products/${product.slug || product.id}`} className="block">
         {/* Image Container */}
-        <div className="relative aspect-[3/4] overflow-hidden rounded-t-lg bg-gray-100">
+        <div className="relative aspect-[3/4] overflow-hidden rounded-t bg-gray-100">
           {/* Main Product Image */}
           <Image
             {...imageProps}

@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { catalogService } from "@/lib/api/services/catalog";
 import { apiClient } from "@/lib/api/client";
-import type { Product, ProductList, Category } from "@/types";
+import type { Product, ProductList, Category, CatalogFacetsResponse } from "@/types";
 
 export interface Coupon {
   code: string;
@@ -210,6 +210,21 @@ export function useProducts(params?: Record<string, unknown>) {
         ...(heroCta ? { heroCta } : {}),
       };
     },
+  });
+}
+
+export function useCatalogFacets(params?: Record<string, unknown>) {
+  return useQuery({
+    queryKey: ["catalog-facets", params ?? {}],
+    queryFn: async (): Promise<CatalogFacetsResponse> => {
+      const p: Record<string, unknown> = { ...(params ?? {}) };
+      if ((p as any)["limit"] != null) {
+        (p as any)["page_size"] = (p as any)["limit"];
+        delete (p as any)["limit"];
+      }
+      return catalogService.getCatalogFacets(p);
+    },
+    staleTime: 5 * 60 * 1000,
   });
 }
 
