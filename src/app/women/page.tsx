@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React from "react";
 import { useProducts, useCatalogFacets } from "@/hooks/useCatalog";
@@ -59,7 +59,7 @@ export default function WomenPage() {
       { label: "Best Sellers", href: createFilterHref({ ordering: "-bestseller" }) },
       { label: "On Sale", href: createFilterHref({ sale: "1" }) },
       { label: "In Stock", href: createFilterHref({ in_stock: "1" }) },
-      { label: "Under $100", href: createFilterHref({ price_max: "100", price_min: null }) },
+      { label: "Under 300 TND", href: createFilterHref({ price_max: "300", price_min: null }) },
       { label: "Black Styles", href: createFilterHref({ color: "black" }) },
     ],
     [createFilterHref]
@@ -166,4 +166,5 @@ export default function WomenPage() {
     </section>
   );
 }
+
 

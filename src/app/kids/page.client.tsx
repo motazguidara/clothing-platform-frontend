@@ -106,7 +106,7 @@ export function KidsPageClient({ initialSearchParams }: KidsPageClientProps) {
     () => [
       { label: "New Arrivals", href: createFilterHref({ ordering: "-created_at" }) },
       { label: "Best Sellers", href: createFilterHref({ ordering: "-bestseller" }) },
-      { label: "Under $50", href: createFilterHref({ price_max: "50", price_min: null }) },
+      { label: "Under 150 TND", href: createFilterHref({ price_max: "150", price_min: null }) },
       { label: "On Sale", href: createFilterHref({ sale: "1" }) },
       { label: "In Stock", href: createFilterHref({ in_stock: "1" }) },
     ],
@@ -224,4 +224,5 @@ export function KidsPageClient({ initialSearchParams }: KidsPageClientProps) {
     </section>
   );
 }
+
 

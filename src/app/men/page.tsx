@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React from "react";
 import { useProducts, useCatalogFacets } from "@/hooks/useCatalog";
@@ -59,7 +59,7 @@ export default function MenPage() {
       { label: "Best Sellers", href: createFilterHref({ ordering: "-bestseller" }) },
       { label: "On Sale", href: createFilterHref({ sale: "1" }) },
       { label: "In Stock", href: createFilterHref({ in_stock: "1" }) },
-      { label: "Under $50", href: createFilterHref({ price_max: "50", price_min: null }) },
+      { label: "Under 150 TND", href: createFilterHref({ price_max: "150", price_min: null }) },
     ],
     [createFilterHref]
   );
@@ -165,4 +165,5 @@ export default function MenPage() {
     </section>
   );
 }
+
 

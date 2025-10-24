@@ -112,7 +112,7 @@ export function CategoryPageClient({ category, initialSearchParams }: CategoryPa
       { label: "Best Sellers", href: createFilterHref({ ordering: "-bestseller" }) },
       { label: "On Sale", href: createFilterHref({ sale: "1" }) },
       { label: "In Stock", href: createFilterHref({ in_stock: "1" }) },
-      { label: "Under $100", href: createFilterHref({ price_max: "100", price_min: null }) },
+      { label: "Under 300 TND", href: createFilterHref({ price_max: "300", price_min: null }) },
     ],
     [createFilterHref]
   );
@@ -180,4 +180,5 @@ export function CategoryPageClient({ category, initialSearchParams }: CategoryPa
     </section>
   );
 }
+
 

@@ -50,6 +50,7 @@ type FilterSidebarProps = {
   isLoading?: boolean;
   error?: boolean;
   fallbackFilters?: CatalogFilterGroup[];
+  defaultOpen?: boolean;
 };
 
 function formatCountLabel(label: string, count: number) {
@@ -63,9 +64,11 @@ export function FilterSidebar({
   isLoading = false,
   error = false,
   fallbackFilters = [],
+  defaultOpen = false,
 }: FilterSidebarProps) {
   const { sp, setParam, setParams } = useUrl();
   const [show, setShow] = React.useState(true);
+  const [openState, setOpenState] = React.useState<Record<string, boolean>>({});
 
   const safeFilters = React.useMemo(
     () => (Array.isArray(filters) ? filters : []),
@@ -128,6 +131,36 @@ export function FilterSidebar({
     (group) => group.options.length > 0 || group.selection === "range"
   );
 
+  const filtersSignature = React.useMemo(
+    () => filtersToRender.map((group) => group.id).join("|"),
+    [filtersToRender]
+  );
+
+  React.useEffect(() => {
+    setOpenState((prev) => {
+      const next: Record<string, boolean> = {};
+      let changed = Object.keys(prev).length !== filtersToRender.length;
+
+      filtersToRender.forEach((group) => {
+        const hadPrev = Object.prototype.hasOwnProperty.call(prev, group.id);
+        const prevValue = hadPrev ? prev[group.id] : defaultOpen;
+        next[group.id] = prevValue;
+        if (!hadPrev) {
+          changed = true;
+        }
+      });
+
+      return changed ? next : prev;
+    });
+  }, [filtersSignature, filtersToRender, defaultOpen]);
+
+  const toggleGroup = React.useCallback((id: string) => {
+    setOpenState((prev) => ({
+      ...prev,
+      [id]: !(prev[id] ?? false),
+    }));
+  }, []);
+
   return (
     <aside className={`${className}`}>
       <div className="mb-4 flex items-center justify-between">
@@ -168,105 +201,97 @@ export function FilterSidebar({
             <p className="text-sm text-red-600">Unable to load filters right now.</p>
           )}
 
-          {filtersToRender.map((group) => {
+          {filtersToRender.map((group, groupIndex) => {
             const label = renderGroupLabel(group.label, group);
+            const isOpen = openState[group.id] ?? false;
+            let content: React.ReactNode = null;
+
             if (group.id === "gender") {
-              return (
-                <div key={group.id}>
-                  <div className="font-medium mb-2">{label}</div>
-                  <div className="space-y-1">
-                    {group.options.map((option) => {
-                      const isChecked = group.selected?.includes(option.value) ?? false;
-                      return (
-                        <label key={option.value} className="flex items-center gap-2 text-sm">
-                          <input
-                            type="radio"
-                            name="gender"
-                            checked={isChecked}
-                            onChange={() => setParam("gender", option.value)}
-                          />
-                          <span>
-                            {option.count != null
-                              ? formatCountLabel(option.label, option.count)
-                              : option.label}
-                          </span>
-                        </label>
-                      );
-                    })}
-                    {(group.selected?.length ?? 0) > 0 && (
-                      <button
-                        className="text-xs text-gray-600 hover:underline mt-1"
-                        onClick={() => setParam("gender", undefined)}
-                      >
-                        Clear
-                      </button>
-                    )}
-                  </div>
+              content = (
+                <div className="space-y-1">
+                  {group.options.map((option) => {
+                    const isChecked = group.selected?.includes(option.value) ?? false;
+                    return (
+                      <label key={option.value} className="flex items-center gap-2 text-sm">
+                        <input
+                          type="radio"
+                          name="gender"
+                          checked={isChecked}
+                          onChange={() => setParam("gender", option.value)}
+                        />
+                        <span>
+                          {option.count != null
+                            ? formatCountLabel(option.label, option.count)
+                            : option.label}
+                        </span>
+                      </label>
+                    );
+                  })}
+                  {(group.selected?.length ?? 0) > 0 && (
+                    <button
+                      className="text-xs text-gray-600 hover:underline mt-1"
+                      onClick={() => setParam("gender", undefined)}
+                    >
+                      Clear
+                    </button>
+                  )}
                 </div>
               );
-            }
-
-            if (group.id === "price" && priceGroup) {
-              return (
-                <div key={group.id}>
-                  <div className="font-medium mb-2">{label}</div>
-                  <div className="space-y-1">
-                    {group.options.map((option) => (
-                      <button
-                        key={option.value ?? option.label}
-                        className={`block w-full text-left text-sm ${
-                          isPresetActive(option.min, option.max)
-                            ? "font-semibold text-gray-900"
-                            : "hover:underline"
-                        }`}
-                        onClick={() => handlePresetClick(option.min, option.max)}
-                      >
-                        {option.label}
-                        {option.count != null ? ` (${option.count})` : ""}
-                      </button>
-                    ))}
-                    <div className="mt-2 flex items-center gap-2">
-                      <input
-                        placeholder="Min"
-                        defaultValue={activePriceMin}
-                        className="w-20 px-2 py-1 border rounded"
-                        onBlur={(e) =>
-                          setParam("price_min", e.target.value ? e.target.value : undefined)
-                        }
-                      />
-                      <span className="text-gray-500">-</span>
-                      <input
-                        placeholder="Max"
-                        defaultValue={activePriceMax}
-                        className="w-20 px-2 py-1 border rounded"
-                        onBlur={(e) =>
-                          setParam("price_max", e.target.value ? e.target.value : undefined)
-                        }
-                      />
-                    </div>
-                    {(activePriceMin || activePriceMax) && (
-                      <button
-                        className="text-xs text-gray-600 hover:underline mt-1"
-                        onClick={() =>
-                          setParams([
-                            { key: "price_min", value: undefined },
-                            { key: "price_max", value: undefined },
-                          ])
-                        }
-                      >
-                        Clear
-                      </button>
-                    )}
+            } else if (group.id === "price" && priceGroup) {
+              content = (
+                <div className="space-y-1">
+                  {group.options.map((option) => (
+                    <button
+                      key={option.value ?? option.label}
+                      className={`block w-full text-left text-sm ${
+                        isPresetActive(option.min, option.max)
+                          ? "font-semibold text-gray-900"
+                          : "hover:underline"
+                      }`}
+                      onClick={() => handlePresetClick(option.min, option.max)}
+                    >
+                      {option.label}
+                      {option.count != null ? ` (${option.count})` : ""}
+                    </button>
+                  ))}
+                  <div className="mt-2 flex items-center gap-2">
+                    <input
+                      placeholder="Min"
+                      defaultValue={activePriceMin}
+                      className="w-20 px-2 py-1 border rounded"
+                      onBlur={(e) =>
+                        setParam("price_min", e.target.value ? e.target.value : undefined)
+                      }
+                    />
+                    <span className="text-gray-500">-</span>
+                    <input
+                      placeholder="Max"
+                      defaultValue={activePriceMax}
+                      className="w-20 px-2 py-1 border rounded"
+                      onBlur={(e) =>
+                        setParam("price_max", e.target.value ? e.target.value : undefined)
+                      }
+                    />
                   </div>
+                  {(activePriceMin || activePriceMax) && (
+                    <button
+                      className="text-xs text-gray-600 hover:underline mt-1"
+                      onClick={() =>
+                        setParams([
+                          { key: "price_min", value: undefined },
+                          { key: "price_max", value: undefined },
+                        ])
+                      }
+                    >
+                      Clear
+                    </button>
+                  )}
                 </div>
               );
-            }
-
-            if (group.selection === "toggle") {
+            } else if (group.selection === "toggle") {
               const paramKey = group.param;
-              return (
-                <div key={group.id}>
-                  <div className="font-medium mb-2">{label}</div>
+              content = (
+                <>
                   {group.options.map((option) => {
                     const isChecked = group.selected?.includes(option.value) ?? false;
                     return (
@@ -286,15 +311,12 @@ export function FilterSidebar({
                       </label>
                     );
                   })}
-                </div>
+                </>
               );
-            }
-
-            if (group.id === "size") {
+            } else if (group.id === "size") {
               const current = group.selected?.[0];
-              return (
-                <div key={group.id}>
-                  <div className="font-medium mb-2">{label}</div>
+              content = (
+                <>
                   <div className="flex flex-wrap gap-2">
                     {group.options.map((option) => {
                       const isActive = current === option.value;
@@ -321,15 +343,12 @@ export function FilterSidebar({
                       Clear
                     </button>
                   )}
-                </div>
+                </>
               );
-            }
-
-            if (group.id === "color") {
+            } else if (group.id === "color") {
               const current = group.selected?.[0];
-              return (
-                <div key={group.id}>
-                  <div className="font-medium mb-2">{label}</div>
+              content = (
+                <>
                   <div className="flex flex-wrap gap-2">
                     {group.options.map((option) => {
                       const isActive = current === option.value;
@@ -356,15 +375,12 @@ export function FilterSidebar({
                       Clear
                     </button>
                   )}
-                </div>
+                </>
               );
-            }
-
-            if (group.id === "brand") {
+            } else if (group.id === "brand") {
               const current = group.selected?.[0];
-              return (
-                <div key={group.id}>
-                  <div className="font-medium mb-2">{label}</div>
+              content = (
+                <>
                   <div className="space-y-1">
                     {group.options.map((option) => {
                       const value = (option.slug ?? option.value) ?? "";
@@ -391,14 +407,10 @@ export function FilterSidebar({
                       Clear
                     </button>
                   )}
-                </div>
+                </>
               );
-            }
-
-            // Fallback: render as list of toggle buttons
-            return (
-              <div key={group.id}>
-                <div className="font-medium mb-2">{label}</div>
+            } else {
+              content = (
                 <div className="flex flex-wrap gap-2">
                   {group.options.map((option) => {
                     const isActive = group.selected?.includes(option.value) ?? false;
@@ -417,6 +429,38 @@ export function FilterSidebar({
                     );
                   })}
                 </div>
+              );
+            }
+
+            return (
+              <div
+                key={group.id}
+                className={`border-t border-gray-200 ${groupIndex === 0 ? "pt-0 border-t-0" : "pt-4"}`}
+              >
+                <button
+                  type="button"
+                  onClick={() => toggleGroup(group.id)}
+                  className="flex w-full items-center justify-between text-left"
+                >
+                  <span className="font-medium">{label}</span>
+                  <svg
+                    className={`h-4 w-4 text-gray-600 transition-transform ${
+                      isOpen ? "rotate-180" : ""
+                    }`}
+                    viewBox="0 0 20 20"
+                    fill="none"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      d="M6 8L10 12L14 8"
+                      stroke="currentColor"
+                      strokeWidth="1.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                </button>
+                {isOpen && <div className="mt-3">{content}</div>}
               </div>
             );
           })}

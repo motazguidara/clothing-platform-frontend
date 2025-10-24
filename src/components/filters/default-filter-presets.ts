@@ -8,10 +8,10 @@ const genderOptions = [
 ];
 
 const pricePresets = [
-  { value: "under_50", label: "Under $50", min: null, max: 50 },
-  { value: "50_to_100", label: "$50 - $100", min: 50, max: 100 },
-  { value: "100_to_200", label: "$100 - $200", min: 100, max: 200 },
-  { value: "200_plus", label: "$200+", min: 200, max: null },
+  { value: "under_150", label: "Under 150 TND", min: null, max: 150 },
+  { value: "150_to_300", label: "150 - 300 TND", min: 150, max: 300 },
+  { value: "300_to_600", label: "300 - 600 TND", min: 300, max: 600 },
+  { value: "600_plus", label: "600 TND+", min: 600, max: null },
 ];
 
 const sizeOptions = [
