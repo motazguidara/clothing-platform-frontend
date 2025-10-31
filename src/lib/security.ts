@@ -48,14 +48,10 @@ export class SecurityManager {
       const now = Date.now();
       const windowStart = now - windowMs;
       
-      if (!requests.has(identifier)) {
-        requests.set(identifier, []);
-      }
-
-      const userRequests = requests.get(identifier)!;
-      
-      // Remove old requests outside the window
-      const validRequests = userRequests.filter(time => time > windowStart);
+    const existingRequests = requests.get(identifier) ?? [];
+    
+    // Remove old requests outside the window
+    const validRequests = existingRequests.filter(time => time > windowStart);
       
       if (validRequests.length >= maxRequests) {
         return false; // Rate limit exceeded
@@ -309,7 +305,7 @@ export const apiSecurity = {
     if (typeof process === 'undefined' || !process.env) {
       return false;
     }
-    const validApiKeys = (process.env['VALID_API_KEYS'] || '').split(',').filter(Boolean);
+    const validApiKeys = (process.env['VALID_API_KEYS'] ?? '').split(',').filter(Boolean);
     return validApiKeys.includes(apiKey);
   },
 

@@ -1,7 +1,7 @@
 import axios from "axios";
 import { getAccessToken, getRefreshToken, setTokens } from "@/auth/tokenStore";
 
-const API_BASE = process.env["NEXT_PUBLIC_API_URL"] || "";
+const API_BASE = process.env["NEXT_PUBLIC_API_URL"] ?? "";
 const api = axios.create({
   baseURL: API_BASE,
   withCredentials: false,
@@ -21,7 +21,7 @@ let isRefreshing = false;
 api.interceptors.response.use(
   (res) => res,
   async (error) => {
-    const original = error.config || {};
+    const original = error.config ?? {};
     if (error.response?.status === 401 && !original._retry) {
       original._retry = true;
       if (isRefreshing) return Promise.reject(error);
@@ -33,10 +33,10 @@ api.interceptors.response.use(
         const newAccess = r.data?.access;
         if (!newAccess) throw new Error("No new access token");
         setTokens(newAccess, undefined);
-        original.headers = original.headers || {};
+        original.headers = original.headers ?? {};
         original.headers.Authorization = `Bearer ${newAccess}`;
         return api(original);
-      } catch (e) {
+      } catch {
         return Promise.reject(error);
       } finally {
         isRefreshing = false;

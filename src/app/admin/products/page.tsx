@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState, type ChangeEvent } from "react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { useProducts } from "@/hooks/useCatalog";
 import { toast } from "@/components/ui/use-toast";
 import { Button } from "@/components/ui/button";
@@ -15,7 +15,7 @@ import {
 import { 
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue 
 } from "@/components/ui/select";
-import { 
+import {
   Search as IconSearch,
   X as IconX,
   Package as IconPackage,
@@ -25,26 +25,10 @@ import {
   EyeOff as IconEyeOff,
   Trash as IconTrash,
 } from "lucide-react";
-import type { Product } from "@/types";
 import Image from "next/image";
 
 // Extend Product type to include admin-specific fields
-interface AdminProduct extends Omit<Product, 'category'> {
-  status?: 'active' | 'inactive' | 'low_stock';
-  stock_quantity?: number;
-  images?: string[];
-  // Category is optional in the admin interface
-  category?: string;
-}
-
 // Type for the API response
-interface ProductsResponse {
-  results: AdminProduct[];
-  count: number;
-  next: string | null;
-  previous: string | null;
-}
-
 // Debounce hook
 function useDebounce<T>(value: T, delay: number): T {
   const [debouncedValue, setDebouncedValue] = useState<T>(value);
@@ -70,7 +54,7 @@ const StatusBadge = ({ status }: { status: string }) => {
     low_stock: { label: 'Low Stock', variant: 'destructive' as const },
   };
 
-  const { label, variant } = statusMap[status as keyof typeof statusMap] || {
+  const { label, variant } = statusMap[status as keyof typeof statusMap] ?? {
     label: status,
     variant: 'default' as const,
   };
@@ -78,15 +62,21 @@ const StatusBadge = ({ status }: { status: string }) => {
   return <Badge variant={variant} className="capitalize">{label}</Badge>;
 };
 
+const textWithFallback = (value: string | null | undefined, fallback: string): string => {
+  const trimmed = value?.trim();
+  return trimmed && trimmed.length > 0 ? trimmed : fallback;
+};
+
+const SKELETON_ROW_KEYS = ["loading-0", "loading-1", "loading-2", "loading-3", "loading-4"];
+
 export default function AdminProductsPage() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   
   // State for filters and pagination
-  const [searchQuery, setSearchQuery] = useState(searchParams.get("q") || "");
-  const [category, setCategory] = useState(searchParams.get("category") || "");
-  const [status, setStatus] = useState(searchParams.get("status") || "");
-  const [page, setPage] = useState(parseInt(searchParams.get("page") || "1"));
+  const [searchQuery, setSearchQuery] = useState(() => searchParams.get("q") ?? "");
+  const [category, setCategory] = useState(() => searchParams.get("category") ?? "");
+  const [status, setStatus] = useState(() => searchParams.get("status") ?? "");
+  const [page, setPage] = useState(() => parseInt(searchParams.get("page") ?? "1", 10));
   const [selectedProducts, setSelectedProducts] = useState<number[]>([]);
   const [isBulkActionLoading, setIsBulkActionLoading] = useState(false);
   
@@ -108,8 +98,7 @@ export default function AdminProductsPage() {
   // Fetch products with current filters
   const { 
     data: productsData, 
-    isLoading: isLoadingProducts, 
-    isError: isProductsError 
+    isLoading: isLoadingProducts 
   } = useProducts(buildParams());
 
   // (debouncedSearchQuery defined above)
@@ -128,7 +117,7 @@ export default function AdminProductsPage() {
         ? prev.filter(id => id !== productId)
         : [...prev, productId]
     );
-  }, [productsData?.results]);
+  }, [setSelectedProducts]);
   
   // Handle bulk actions
   const handleBulkAction = useCallback(async (action: 'delete' | 'activate' | 'deactivate') => {
@@ -160,12 +149,7 @@ export default function AdminProductsPage() {
     } finally {
       setIsBulkActionLoading(false);
     }
-  }, [selectedProducts.length, setIsBulkActionLoading]);
-  
-  // Handle edit product
-  const handleEditProduct = useCallback((productId: number) => {
-    router.push(`/admin/products/${productId}/edit`);
-  }, [router]);
+  }, [selectedProducts]);
   
   const handleDeleteProduct = async (productId: number) => {
     if (!confirm('Are you sure you want to delete this product?')) return;
@@ -178,9 +162,9 @@ export default function AdminProductsPage() {
     if (selectedProducts.length === productsData?.results?.length) {
       setSelectedProducts([]);
     } else {
-      setSelectedProducts(productsData?.results?.map((product) => product.id) || []);
+      setSelectedProducts(productsData?.results?.map((product) => product.id) ?? []);
     }
-  }, [productsData?.results, selectedProducts.length]);
+  }, [productsData, selectedProducts]);
 
   const heroImages = useMemo(() => {
     const provided = Array.isArray(productsData?.heroImages)
@@ -194,9 +178,12 @@ export default function AdminProductsPage() {
     const fallback =
       productsData?.results
         ?.map((product) => {
+          const galleryImage = Array.isArray(product.images)
+            ? product.images.find((src) => typeof src === "string" && src.trim().length > 0)
+            : undefined;
           const primaryImage =
-            (Array.isArray(product.images) && product.images.find((src) => typeof src === "string" && src.trim().length > 0)) ||
-            (typeof product.image === "string" ? product.image : null);
+            galleryImage ??
+            (typeof product.image === "string" && product.image.trim().length > 0 ? product.image : null);
           return typeof primaryImage === "string" ? primaryImage.trim() : null;
         })
         .filter((src): src is string => typeof src === "string" && src.length > 0) ?? [];
@@ -211,6 +198,11 @@ export default function AdminProductsPage() {
       ? `${productsData.count.toLocaleString("en-US")} products currently available`
       : "Stay on top of your product catalog and highlight what matters.");
   const heroCta = productsData?.heroCta ?? { label: "Add product", href: "/admin/products/new" };
+
+  const heroImageEntries = useMemo(
+    () => heroImages.map((src, idx) => ({ key: `${idx}-${src}`, src, index: idx })),
+    [heroImages]
+  );
 
   const [currentHeroIndex, setCurrentHeroIndex] = useState(0);
 
@@ -260,9 +252,9 @@ export default function AdminProductsPage() {
           <section className="mb-8">
             <div className="relative overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
               <div className="relative h-60 sm:h-72 lg:h-80">
-                {heroImages.map((src, index) => (
+                {heroImageEntries.map(({ key, src, index }) => (
                   <div
-                    key={`${src}-${index}`}
+                    key={key}
                     className="absolute inset-0 transition-opacity duration-700 ease-out"
                     style={{ opacity: currentHeroIndex === index ? 1 : 0 }}
                     aria-hidden={currentHeroIndex !== index}
@@ -296,9 +288,9 @@ export default function AdminProductsPage() {
                   ) : null}
                   {heroImages.length > 1 && (
                     <div className="flex items-center gap-2">
-                      {heroImages.map((_, index) => (
+                      {heroImageEntries.map(({ key, index }) => (
                         <button
-                          key={`dot-${index}`}
+                          key={`dot-${key}`}
                           type="button"
                           onClick={() => setCurrentHeroIndex(index)}
                           className={`h-2.5 w-2.5 rounded-full transition ${
@@ -324,7 +316,7 @@ export default function AdminProductsPage() {
                 <Input
                   type="text"
                   value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onChange={handleSearch}
                   placeholder="Search products by name, SKU..."
                   className="w-full pl-8"
                 />
@@ -461,8 +453,8 @@ export default function AdminProductsPage() {
               </TableHeader>
               <TableBody>
                 {isLoadingProducts ? (
-                  Array.from({ length: 5 }).map((_, i) => (
-                    <TableRow key={i}>
+                  SKELETON_ROW_KEYS.map((rowKey) => (
+                    <TableRow key={rowKey}>
                       <TableCell><div className="h-4 bg-muted rounded animate-pulse"></div></TableCell>
                       <TableCell><div className="h-4 bg-muted rounded animate-pulse"></div></TableCell>
                       <TableCell><div className="h-4 bg-muted rounded animate-pulse"></div></TableCell>
@@ -481,7 +473,7 @@ export default function AdminProductsPage() {
                         <IconPackage className="h-12 w-12 text-muted-foreground mb-2" />
                         <h3 className="text-lg font-medium">No products found</h3>
                         <p className="text-sm text-muted-foreground">
-                          Try adjusting your search or filter to find what you're looking for.
+                          Try adjusting your search or filter to find what you&apos;re looking for.
                         </p>
                         <Button variant="secondary" className="mt-4" onClick={() => {
                           setSearchQuery('');
@@ -507,10 +499,12 @@ export default function AdminProductsPage() {
                       </TableCell>
                       <TableCell className="font-medium">
                         <div className="flex items-center gap-3">
-                          {product.images?.[0] ? (
-                            <img
+                          {typeof product.images?.[0] === "string" ? (
+                            <Image
                               src={product.images[0]}
                               alt={product.name}
+                              width={40}
+                              height={40}
                               className="h-10 w-10 rounded-md object-cover"
                             />
                           ) : (
@@ -520,15 +514,15 @@ export default function AdminProductsPage() {
                           )}
                           <div>
                             <div className="font-medium text-foreground">{product.name}</div>
-                            <div className="text-sm text-muted-foreground">SKU: {product.sku || 'N/A'}</div>
+                            <div className="text-sm text-muted-foreground">SKU: {textWithFallback(product.sku, 'N/A')}</div>
                           </div>
                         </div>
                       </TableCell>
                       <TableCell className="capitalize">
-                        {product.category || 'Uncategorized'}
+                        {textWithFallback(product.category, 'Uncategorized')}
                       </TableCell>
                       <TableCell>
-                        ${product.price?.toFixed(2) || '0.00'}
+                        ${Number.isFinite(product.price) ? product.price.toFixed(2) : '0.00'}
                       </TableCell>
                       <TableCell>
                         {product.stock_quantity !== undefined ? (
@@ -543,7 +537,7 @@ export default function AdminProductsPage() {
                         )}
                       </TableCell>
                       <TableCell>
-                        <StatusBadge status={product.status || 'inactive'} />
+                        <StatusBadge status={textWithFallback(product.status ?? undefined, 'inactive')} />
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-3">

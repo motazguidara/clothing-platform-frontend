@@ -38,15 +38,15 @@ function setCorsHeaders(response: NextResponse, origin?: string) {
 
 // Handle preflight requests
 export async function OPTIONS(request: NextRequest) {
-  const origin = request.headers.get('origin');
+  const origin = request.headers.get('origin') ?? undefined;
   const response = new NextResponse(null, { status: 200 });
   
-  return setCorsHeaders(response, origin || undefined);
+  return setCorsHeaders(response, origin);
 }
 
 // Error reporting endpoint
 export async function POST(request: NextRequest) {
-  const origin = request.headers.get('origin');
+  const origin = request.headers.get('origin') ?? undefined;
   
   try {
     // Validate request
@@ -56,7 +56,7 @@ export async function POST(request: NextRequest) {
         { error: 'Content-Type must be application/json' },
         { status: 400 }
       );
-      return setCorsHeaders(response, origin || undefined);
+      return setCorsHeaders(response, origin);
     }
 
     // Parse request body
@@ -69,26 +69,26 @@ export async function POST(request: NextRequest) {
         { error: 'Missing error data' },
         { status: 400 }
       );
-      return setCorsHeaders(response, origin || undefined);
+      return setCorsHeaders(response, origin);
     }
 
     // Get request metadata
-    const headersList = await headers();
-    const userAgent = headersList.get('user-agent') || 'unknown';
-    const requestId = headersList.get('x-request-id') || `req_${Date.now()}`;
+    const headersList = headers();
+    const userAgent = headersList.get('user-agent') ?? 'unknown';
+    const requestId = headersList.get('x-request-id') ?? `req_${Date.now()}`;
     
     // Process errors
-    const errorList = errors || [{ error, errorInfo, errorId, timestamp, manual }];
+    const errorList = errors ?? [{ error, errorInfo, errorId, timestamp, manual }];
     
     for (const errorData of errorList) {
       // Log error (in production, send to monitoring service)
       const logEntry = {
-        timestamp: errorData.timestamp || new Date().toISOString(),
-        errorId: errorData.errorId || `error_${Date.now()}`,
+        timestamp: errorData.timestamp ?? new Date().toISOString(),
+        errorId: errorData.errorId ?? `error_${Date.now()}`,
         error: {
-          message: errorData.error?.message || errorData.message,
-          stack: errorData.error?.stack || errorData.stack,
-          name: errorData.error?.name || errorData.name || 'Error',
+          message: errorData.error?.message ?? errorData.message,
+          stack: errorData.error?.stack ?? errorData.stack,
+          name: errorData.error?.name ?? errorData.name ?? 'Error',
         },
         context: {
           ...errorData.context,
@@ -96,7 +96,7 @@ export async function POST(request: NextRequest) {
           userAgent,
           origin,
           requestId,
-          manual: errorData.manual || false,
+          manual: errorData.manual ?? false,
         },
       };
 
@@ -124,7 +124,7 @@ export async function POST(request: NextRequest) {
       { status: 200 }
     );
     
-    return setCorsHeaders(response, origin || undefined);
+    return setCorsHeaders(response, origin);
 
   } catch (error) {
     console.error('Error processing error report:', error);
@@ -137,13 +137,13 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
     
-    return setCorsHeaders(response, origin || undefined);
+    return setCorsHeaders(response, origin);
   }
 }
 
 // Health check endpoint
 export async function GET(request: NextRequest) {
-  const origin = request.headers.get('origin');
+  const origin = request.headers.get('origin') ?? undefined;
   
   const response = NextResponse.json(
     { 
@@ -154,5 +154,5 @@ export async function GET(request: NextRequest) {
     { status: 200 }
   );
   
-  return setCorsHeaders(response, origin || undefined);
+  return setCorsHeaders(response, origin);
 }

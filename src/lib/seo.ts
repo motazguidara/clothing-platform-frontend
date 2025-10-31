@@ -2,6 +2,14 @@
 
 import type { Metadata } from 'next/types';
 
+const getNonEmptyString = (value: string | null | undefined, fallback: string): string => {
+  if (typeof value !== 'string') {
+    return fallback;
+  }
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : fallback;
+};
+
 export interface SEOConfig {
   title: string;
   description: string;
@@ -17,8 +25,48 @@ export interface SEOConfig {
   sku?: string;
 }
 
+type ProductStructuredDataInput = {
+  name: string;
+  description: string;
+  images?: string[];
+  brand?: string;
+  price?: number;
+  currency?: string;
+  availability?: 'in_stock' | 'out_of_stock' | 'preorder';
+  rating?: { average: number; count: number };
+  sku?: string;
+  category?: string;
+};
+
+type OrganizationStructuredDataInput = {
+  url?: string;
+  logo?: string;
+  sameAs?: string[];
+};
+
+type BreadcrumbStructuredDataInput = {
+  items: Array<{ name: string; url: string }>;
+};
+
+type StructuredDataInputMap = {
+  product: ProductStructuredDataInput;
+  organization: OrganizationStructuredDataInput;
+  breadcrumb: BreadcrumbStructuredDataInput;
+};
+
 export class SEOManager {
-  private static baseUrl = (typeof process !== 'undefined' && process.env ? process.env['NEXT_PUBLIC_BASE_URL'] : null) || 'https://clothing-platform.com';
+  private static baseUrl = (() => {
+  if (typeof process !== 'undefined' && process.env) {
+    const envValue = process.env['NEXT_PUBLIC_BASE_URL'];
+    if (typeof envValue === 'string') {
+      const trimmed = envValue.trim();
+      if (trimmed.length > 0) {
+        return trimmed;
+      }
+    }
+  }
+  return 'https://clothing-platform.com';
+})();
   private static siteName = 'Clothing Platform';
   private static defaultImage = '/images/og-default.jpg';
 
@@ -43,15 +91,15 @@ export class SEOManager {
       description,
       keywords: keywords.join(', '),
       metadataBase: new URL(SEOManager.baseUrl),
-      ...(canonical && { alternates: { canonical } }),
+      ...(canonical ? { alternates: { canonical } } : {}),
       openGraph: {
         title,
         description,
-        url: canonical || SEOManager.baseUrl,
+        url: canonical ?? SEOManager.baseUrl,
         siteName: SEOManager.siteName,
         images: [
           {
-            url: ogImage || SEOManager.defaultImage,
+            url: getNonEmptyString(ogImage, SEOManager.defaultImage),
             width: 1200,
             height: 630,
             alt: title,
@@ -63,21 +111,40 @@ export class SEOManager {
         card: 'summary_large_image',
         title,
         description,
-        images: [ogImage || SEOManager.defaultImage],
+        images: [getNonEmptyString(ogImage, SEOManager.defaultImage)],
       },
     };
 
     // Add product-specific metadata
-    if (ogType === 'website' && (price || brand || category || sku)) {
+    const hasProductMetadata =
+      typeof price === 'number' ||
+      (typeof brand === 'string' && brand.trim().length > 0) ||
+      (typeof category === 'string' && category.trim().length > 0) ||
+      (typeof sku === 'string' && sku.trim().length > 0);
+
+    if (ogType === 'website' && hasProductMetadata) {
       const other: Record<string, string> = {};
-      
-      if (price) other['product:price:amount'] = price.toString();
-      if (currency) other['product:price:currency'] = currency;
-      if (availability) other['product:availability'] = availability;
-      if (brand) other['product:brand'] = brand;
-      if (category) other['product:category'] = category;
-      if (sku) other['product:retailer_item_id'] = sku;
-      
+
+      if (typeof price === 'number') {
+        other['product:price:amount'] = price.toString();
+      }
+      const resolvedCurrency = getNonEmptyString(currency, '');
+      if (resolvedCurrency) {
+        other['product:price:currency'] = resolvedCurrency;
+      }
+      if (availability) {
+        other['product:availability'] = availability;
+      }
+      if (brand && brand.trim().length > 0) {
+        other['product:brand'] = brand.trim();
+      }
+      if (category && category.trim().length > 0) {
+        other['product:category'] = category.trim();
+      }
+      if (sku && sku.trim().length > 0) {
+        other['product:retailer_item_id'] = sku.trim();
+      }
+
       if (Object.keys(other).length > 0) {
         metadata.other = other;
       }
@@ -86,67 +153,100 @@ export class SEOManager {
     return metadata;
   }
 
-  static generateStructuredData(type: 'product' | 'organization' | 'breadcrumb', data: any) {
+  static generateStructuredData<T extends keyof StructuredDataInputMap>(type: T, data: StructuredDataInputMap[T]) {
     switch (type) {
-      case 'product':
-        return {
+      case 'product': {
+        const imageUrls = Array.isArray(data.images)
+          ? data.images
+              .map((img) => getNonEmptyString(img, ''))
+              .filter((img) => img.length > 0)
+              .map((img) => (img.startsWith('http') ? img : `${this.baseUrl}${img.startsWith('/') ? img : `/${img}`}`))
+          : undefined;
+
+        const availabilityMap: Record<ProductStructuredDataInput['availability'] | undefined, string> = {
+          in_stock: 'InStock',
+          out_of_stock: 'OutOfStock',
+          preorder: 'PreOrder',
+          undefined: 'InStock',
+        };
+
+        const offers: Record<string, unknown> = {
+          '@type': 'Offer',
+          seller: {
+            '@type': 'Organization',
+            name: this.siteName,
+          },
+          availability: `https://schema.org/${availabilityMap[data.availability]}`,
+        };
+
+        if (typeof data.price === 'number') {
+          offers.price = data.price;
+        }
+        offers.priceCurrency = getNonEmptyString(data.currency, 'TND');
+
+        const structured: Record<string, unknown> = {
           '@context': 'https://schema.org',
           '@type': 'Product',
           name: data.name,
           description: data.description,
-          image: data.images?.map((img: string) => `${this.baseUrl}${img}`),
           brand: {
             '@type': 'Brand',
-            name: data.brand || this.siteName,
+            name: getNonEmptyString(data.brand, this.siteName),
           },
-          offers: {
-            '@type': 'Offer',
-            price: data.price,
-            priceCurrency: data.currency || 'TND',
-            availability: `https://schema.org/${data.availability === 'in_stock' ? 'InStock' : 'OutOfStock'}`,
-            seller: {
-              '@type': 'Organization',
-              name: this.siteName,
-            },
-          },
-          aggregateRating: data.rating ? {
-            '@type': 'AggregateRating',
-            ratingValue: data.rating.average,
-            reviewCount: data.rating.count,
-          } : undefined,
+          offers,
           sku: data.sku,
           category: data.category,
         };
 
-      case 'organization':
-        return {
+        if (imageUrls && imageUrls.length > 0) {
+          structured.image = imageUrls;
+        }
+
+        if (data.rating && typeof data.rating.average === 'number' && typeof data.rating.count === 'number') {
+          structured.aggregateRating = {
+            '@type': 'AggregateRating',
+            ratingValue: data.rating.average,
+            reviewCount: data.rating.count,
+          };
+        }
+
+        return structured;
+      }
+
+      case 'organization': {
+        const sameAsLinks =
+          Array.isArray(data.sameAs) && data.sameAs.length > 0
+            ? data.sameAs.filter((url) => typeof url === 'string' && url.trim().length > 0)
+            : undefined;
+
+        const organization: Record<string, unknown> = {
           '@context': 'https://schema.org',
           '@type': 'Organization',
           name: this.siteName,
-          url: this.baseUrl,
-          logo: `${this.baseUrl}/images/logo.png`,
-          sameAs: [
-            'https://facebook.com/clothingplatform',
-            'https://twitter.com/clothingplatform',
-            'https://instagram.com/clothingplatform',
-          ],
-          contactPoint: {
-            '@type': 'ContactPoint',
-            telephone: '+1-555-123-4567',
-            contactType: 'customer service',
-          },
+          url: getNonEmptyString(data.url, this.baseUrl),
+          logo: getNonEmptyString(data.logo, `${this.baseUrl}/images/logo.png`),
         };
+
+        if (sameAsLinks && sameAsLinks.length > 0) {
+          organization.sameAs = sameAsLinks;
+        }
+
+        return organization;
+      }
 
       case 'breadcrumb':
         return {
           '@context': 'https://schema.org',
           '@type': 'BreadcrumbList',
-          itemListElement: data.items.map((item: any, index: number) => ({
-            '@type': 'ListItem',
-            position: index + 1,
-            name: item.name,
-            item: `${this.baseUrl}${item.url}`,
-          })),
+          itemListElement: data.items.map((item, index) => {
+            const itemUrl = item.url.startsWith('http') ? item.url : `${this.baseUrl}${item.url}`;
+            return {
+              '@type': 'ListItem',
+              position: index + 1,
+              name: item.name,
+              item: itemUrl,
+            };
+          }),
         };
 
       default:
@@ -160,8 +260,8 @@ export class SEOManager {
 ${pages.map(page => `
   <url>
     <loc>${this.baseUrl}${page.url}</loc>
-    <lastmod>${(page.lastModified || new Date()).toISOString()}</lastmod>
-    <priority>${page.priority || 0.5}</priority>
+    <lastmod>${(page.lastModified ?? new Date()).toISOString()}</lastmod>
+    <priority>${page.priority ?? 0.5}</priority>
   </url>
 `).join('')}
 </urlset>`;
@@ -501,7 +601,7 @@ export const validateAccessibility: AccessibilityValidator = {
     
     const errors: string[] = [];
     const tagName = element.tagName.toLowerCase();
-    const elementId = element.id || 'unnamed';
+    const elementId = getNonEmptyString(element.id, 'unnamed');
     const hasAriaLabel = element.hasAttribute('aria-label');
     const hasAriaLabelledBy = element.hasAttribute('aria-labelledby');
     const hasTitle = element.hasAttribute('title');
@@ -628,14 +728,20 @@ export const validateAccessibility: AccessibilityValidator = {
       if (!element.labels || element.labels.length === 0) {
         if (!element.hasAttribute('aria-label') && !element.hasAttribute('aria-labelledby')) {
           const elementType = element.tagName.toLowerCase();
-          const elementName = element.getAttribute('name') || element.id || 'unnamed';
-          errors.push(`${elementType} "${elementName}" is missing a label`);
+          const fallbackId = getNonEmptyString(element.id, 'unnamed');
+          const fieldName = getNonEmptyString(
+            element.getAttribute('name'),
+            getNonEmptyString(element.name, fallbackId)
+          );
+          errors.push(`${elementType} "${fieldName}" is missing a label`);
         }
       }
       
       // Check required fields
       if (element.required && !element.hasAttribute('aria-required')) {
-        errors.push(`Required field "${element.name || 'unnamed'}" is missing aria-required`);
+        const fallbackId = getNonEmptyString(element.id, 'unnamed');
+        const fieldName = getNonEmptyString(element.name, fallbackId);
+        errors.push(`Required field "${fieldName}" is missing aria-required`);
       }
       
       // Check for error messages on invalid fields
@@ -643,11 +749,13 @@ export const validateAccessibility: AccessibilityValidator = {
         const errorId = `${element.id}-error`;
         const errorMessage = document.getElementById(errorId);
         
+        const fallbackId = getNonEmptyString(element.id, 'unnamed');
+        const fieldName = getNonEmptyString(element.name, fallbackId);
         if (!errorMessage) {
-          errors.push(`Missing error message for invalid field: ${element.name || 'unnamed'}`);
+          errors.push(`Missing error message for invalid field: ${fieldName}`);
         } else if (!element.hasAttribute('aria-describedby') || 
                   !element.getAttribute('aria-describedby')?.includes(errorId)) {
-          errors.push(`Field "${element.name || 'unnamed'}" is not associated with its error message`);
+          errors.push(`Field "${fieldName}" is not associated with its error message`);
         }
       }
     }
@@ -658,3 +766,8 @@ export const validateAccessibility: AccessibilityValidator = {
     };
   }
 }; // Closing brace for validateAccessibility object
+
+
+
+
+

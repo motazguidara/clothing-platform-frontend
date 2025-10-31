@@ -23,6 +23,7 @@ export class AuthService {
 
   clearAuth(): void {
     tokenStore.clear();
+    this.clearStoredUser();
   }
 
   isAuthenticated(): boolean {
@@ -67,6 +68,9 @@ export class AuthService {
       }
     );
     
+    if ((response as any)?.user) {
+      this.storeUser((response as any).user);
+    }
     return response;
   }
 
@@ -88,6 +92,10 @@ export class AuthService {
       if (asAny?.access) this.setAccessToken(asAny.access);
       if (asAny?.refresh) this.setRefreshToken(asAny.refresh);
     }
+    const loginUser = (response as any)?.user;
+    if (loginUser) {
+      this.storeUser(loginUser);
+    }
     
     return response;
   }
@@ -98,6 +106,7 @@ export class AuthService {
     } finally {
       // Always clear tokens, even if logout request fails
       this.clearAuth();
+      this.clearStoredUser();
     }
   }
 
@@ -128,9 +137,11 @@ export class AuthService {
     date_joined: string;
     last_login: string | null;
   }> {
-    return apiClient.get('/accounts/auth/me/', {
+    const profile = await apiClient.get('/accounts/auth/me/', {
       responseSchema: schemas.UserSchema,
     });
+    this.storeUser(profile);
+    return profile;
   }
 
   async getUserProfile(): Promise<schemas.UserProfile> {
@@ -232,28 +243,35 @@ export class AuthService {
 
   // User data management
   getStoredUser(): schemas.User | null {
+    if (typeof window === 'undefined') {
+      return null;
+    }
     try {
-      const userData = localStorage.getItem('user');
-      if (userData) {
-        return JSON.parse(userData);
-      }
+      const userData = window.localStorage.getItem('user');
+      return userData ? JSON.parse(userData) : null;
     } catch (error) {
       console.warn('Failed to parse stored user data:', error);
+      return null;
     }
-    return null;
   }
 
   storeUser(user: schemas.User): void {
+    if (typeof window === 'undefined') {
+      return;
+    }
     try {
-      localStorage.setItem('user', JSON.stringify(user));
+      window.localStorage.setItem('user', JSON.stringify(user));
     } catch (error) {
       console.warn('Failed to store user data:', error);
     }
   }
 
   clearStoredUser(): void {
+    if (typeof window === 'undefined') {
+      return;
+    }
     try {
-      localStorage.removeItem('user');
+      window.localStorage.removeItem('user');
     } catch (error) {
       console.warn('Failed to clear stored user data:', error);
     }
@@ -261,3 +279,5 @@ export class AuthService {
 }
 
 export const authService = new AuthService();
+
+

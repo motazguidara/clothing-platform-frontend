@@ -4,6 +4,7 @@ import React from "react";
 import { useSearchParams } from "next/navigation";
 import ProductCard from "@/components/product-card";
 import { useProducts, useCatalogFacets } from "@/hooks/useCatalog";
+import type { Product } from "@/types";
 import { FilterSidebar, SortSelect } from "@/components/filters/filter-sidebar";
 import { buildDefaultFilters } from "@/components/filters/default-filter-presets";
 
@@ -34,6 +35,8 @@ const allowedFilters: AllowedFilter[] = [
   "in_stock",
   "gender",
 ];
+
+const SKELETON_CARD_KEYS = Array.from({ length: 8 }, (_, idx) => `catalog-skeleton-${idx}`);
 
 function buildInitialParams(initial?: Record<string, string | string[] | undefined>) {
   const params = new URLSearchParams();
@@ -74,6 +77,7 @@ export function CategoryPageClient({ category, initialSearchParams }: CategoryPa
   const { data, isLoading, isError } = useProducts(productParams);
   const { data: facets, isLoading: facetsLoading, isError: facetsError } = useCatalogFacets(requestFilters);
 
+  const products: Product[] = data?.results ?? [];
   const serializedSearch = effectiveSearchParams.toString();
 
   const fallbackFilters = React.useMemo(() => {
@@ -159,18 +163,18 @@ export function CategoryPageClient({ category, initialSearchParams }: CategoryPa
 
           {isLoading && (
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-10 xl:gap-12">
-              {Array.from({ length: 8 }).map((_, i) => (
-                <div key={i} className="h-80 rounded-md bg-subtle animate-pulse" />
+              {SKELETON_CARD_KEYS.map((skeletonKey) => (
+                <div key={skeletonKey} className="h-80 rounded-md bg-subtle animate-pulse" />
               ))}
             </div>
           )}
 
           {!isLoading && !isError && (
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-10 xl:gap-12">
-              {data?.results?.map((product: any) => (
+              {products.map((product) => (
                 <ProductCard key={product.id} product={product} />
               ))}
-              {(!data || data.results?.length === 0) && (
+              {products.length === 0 && (
                 <div className="col-span-full text-sm text-muted">No products found.</div>
               )}
             </div>

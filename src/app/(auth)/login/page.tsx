@@ -13,7 +13,7 @@ import { PasswordField } from "@/components/ui";
 export default function LoginPage() {
   const router = useRouter();
   const sp = useSearchParams();
-  const redirectTo = sp.get("next") || sp.get("redirectTo") || "/";
+  const redirectTo = sp.get("next") ?? sp.get("redirectTo") ?? "/";
   const auth = useAuth();
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -65,16 +65,19 @@ export default function LoginPage() {
 
       // Redirect to target
       router.replace(redirectTo);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Login error:", err);
       
       // Handle different types of errors
       let errorMessage = "Failed to log in. Please check your credentials and try again.";
       
-      if (err?.response?.data?.detail) {
-        errorMessage = err.response.data.detail;
-      } else if (err?.message) {
-        errorMessage = err.message;
+      if (typeof err === "object" && err !== null) {
+        const responseDetail = (err as { response?: { data?: { detail?: unknown } } }).response?.data?.detail;
+        if (typeof responseDetail === "string") {
+          errorMessage = responseDetail;
+        } else if ("message" in err && typeof (err as { message?: unknown }).message === "string") {
+          errorMessage = (err as { message: string }).message;
+        }
       }
       
       setError(errorMessage);

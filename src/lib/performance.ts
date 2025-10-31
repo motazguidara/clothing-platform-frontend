@@ -148,7 +148,7 @@ export class PerformanceMonitor {
 
     // Log to console in development
     if (process.env.NODE_ENV === 'development') {
-      console.table(metricsData);
+      console.warn('[performance] metrics', metricsData);
     }
   }
 }
@@ -236,7 +236,7 @@ export const memoryOptimization = {
   },
 
   // Debounce function
-  debounce<T extends (...args: any[]) => any>(
+  debounce<T extends (...args: unknown[]) => unknown>(
     func: T,
     wait: number
   ): (...args: Parameters<T>) => void {
@@ -248,7 +248,7 @@ export const memoryOptimization = {
   },
 
   // Throttle function
-  throttle<T extends (...args: any[]) => any>(
+  throttle<T extends (...args: unknown[]) => unknown>(
     func: T,
     limit: number
   ): (...args: Parameters<T>) => void {
@@ -271,27 +271,34 @@ export const cacheOptimization = {
   staleWhileRevalidate: 'stale-while-revalidate',
 
   // Local storage with expiration
-  setWithExpiry(key: string, value: any, ttl: number) {
-    const now = new Date();
+  setWithExpiry<T>(key: string, value: T, ttl: number) {
     const item = {
-      value: value,
-      expiry: now.getTime() + ttl,
+      value,
+      expiry: Date.now() + ttl,
     };
     localStorage.setItem(key, JSON.stringify(item));
   },
 
-  getWithExpiry(key: string) {
+  getWithExpiry<T>(key: string): T | null {
     const itemStr = localStorage.getItem(key);
     if (!itemStr) {
       return null;
     }
-    const item = JSON.parse(itemStr);
-    const now = new Date();
-    if (now.getTime() > item.expiry) {
+    try {
+      const item = JSON.parse(itemStr) as { value?: T; expiry?: number };
+      if (typeof item?.expiry !== 'number') {
+        localStorage.removeItem(key);
+        return null;
+      }
+      if (Date.now() > item.expiry) {
+        localStorage.removeItem(key);
+        return null;
+      }
+      return item.value ?? null;
+    } catch {
       localStorage.removeItem(key);
       return null;
     }
-    return item.value;
   },
 };
 

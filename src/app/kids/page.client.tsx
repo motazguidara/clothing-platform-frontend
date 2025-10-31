@@ -3,6 +3,7 @@
 import React from "react";
 import { useSearchParams } from "next/navigation";
 import { useProducts, useCatalogFacets } from "@/hooks/useCatalog";
+import type { Product } from "@/types";
 import ProductCard from "@/components/product-card";
 import { FilterSidebar, SortSelect } from "@/components/filters/filter-sidebar";
 import { buildDefaultFilters } from "@/components/filters/default-filter-presets";
@@ -33,6 +34,8 @@ const allowedKeys: AllowedKey[] = [
   "sale",
   "in_stock",
 ];
+
+const SKELETON_CARD_KEYS = Array.from({ length: 8 }, (_, idx) => `kids-skeleton-${idx}`);
 
 function buildInitialSearchParams(initial?: Record<string, string | string[] | undefined>) {
   const params = new URLSearchParams();
@@ -71,6 +74,8 @@ export function KidsPageClient({ initialSearchParams }: KidsPageClientProps) {
   const { data: facets, isLoading: facetsLoading, isError: facetsError } = useCatalogFacets(requestParams);
 
   const serializedParams = effectiveSearchParams.toString();
+  const products: Product[] = data?.results ?? [];
+  const productCount = data?.count ?? 0;
 
   const fallbackFilters = React.useMemo(() => {
     const sp = new URLSearchParams(serializedParams);
@@ -162,24 +167,24 @@ export function KidsPageClient({ initialSearchParams }: KidsPageClientProps) {
           {isError && <p className="text-sm text-red-600">Failed to load products.</p>}
           {isLoading && (
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6 md:gap-6">
-              {Array.from({ length: 8 }).map((_, index) => (
-                <div key={index} className="h-80 rounded-md bg-gray-200 animate-pulse" />
+              {SKELETON_CARD_KEYS.map((skeletonKey) => (
+                <div key={skeletonKey} className="h-80 rounded-md bg-gray-200 animate-pulse" />
               ))}
             </div>
           )}
-          {!isLoading && data && (
+          {!isLoading && products.length > 0 && (
             <>
               <div className="mb-4 text-sm text-gray-600">
-                {data.count} products found
+                {productCount} products found
               </div>
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6 md:gap-4">
-                {data.results.map((product: any) => (
+                {products.map((product) => (
                   <ProductCard key={product.id} product={product} />
                 ))}
               </div>
             </>
           )}
-          {!isLoading && data && data.results.length === 0 && (
+          {!isLoading && products.length === 0 && (
             <div className="text-center py-12">
               <p className="text-gray-500">No products found matching your criteria.</p>
               <a href="/kids" className="mt-2 inline-block text-blue-600 hover:underline">
@@ -190,11 +195,13 @@ export function KidsPageClient({ initialSearchParams }: KidsPageClientProps) {
         </div>
       </div>
 
-      {!isLoading && data && data.count > 20 && (
+      {!isLoading && productCount > 20 && (
         <div className="mt-10 flex items-center justify-center gap-2">
           {(() => {
-            const totalPages = Math.max(1, Math.ceil((data.count || 0) / 20));
-            const currentPage = Number(effectiveSearchParams.get("page") || 1);
+            const totalPages = Math.max(1, Math.ceil(productCount / 20));
+            const pageParam = effectiveSearchParams.get("page");
+            const parsedPage = Number.parseInt(pageParam ?? "1", 10);
+            const currentPage = Number.isNaN(parsedPage) ? 1 : Math.max(1, parsedPage);
             return (
               <>
                 <a

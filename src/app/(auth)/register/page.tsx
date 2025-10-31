@@ -11,7 +11,7 @@ import { PasswordField } from "@/components/ui";
 export default function RegisterPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const redirectTo = searchParams.get("redirectTo") || "/";
+  const redirectTo = searchParams.get("redirectTo") ?? "/";
   const auth = useAuth({ fetchProfile: false });
   
   const [formData, setFormData] = useState({
@@ -111,16 +111,19 @@ export default function RegisterPage() {
       
       toast.success('Account created successfully!');
       router.push(redirectTo);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Registration error:', err);
       
       let errorMessage = 'Registration failed. Please try again.';
-      if (err?.response?.data?.email) {
-        errorMessage = err.response.data.email[0];
-      } else if (err?.response?.data?.detail) {
-        errorMessage = err.response.data.detail;
-      } else if (err?.message) {
-        errorMessage = err.message;
+      if (typeof err === "object" && err !== null) {
+        const responseData = (err as { response?: { data?: { email?: unknown; detail?: unknown } } }).response?.data;
+        if (Array.isArray(responseData?.email) && typeof responseData.email[0] === "string") {
+          errorMessage = responseData.email[0];
+        } else if (typeof responseData?.detail === "string") {
+          errorMessage = responseData.detail;
+        } else if ("message" in err && typeof (err as { message?: unknown }).message === "string") {
+          errorMessage = (err as { message: string }).message;
+        }
       }
       
       toast.error(errorMessage);

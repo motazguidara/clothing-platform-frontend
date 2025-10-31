@@ -210,13 +210,20 @@ export function useClearCart() {
 }
 
 // Minimal checkout hook used by checkout page
+const generateClientReferenceId = () => {
+  if (typeof window !== "undefined" && window.crypto?.randomUUID) {
+    return window.crypto.randomUUID();
+  }
+  return `ref_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+};
+
 export function useCheckout() {
   return useMutation<any, Error, void>({
     mutationFn: async () => {
-      // If your backend expects specific payload, wire it here.
-      // This minimal call assumes the backend uses the current cart/session to create an order.
+      const clientReferenceId = generateClientReferenceId();
       const response = await apiClient.request<any>('/orders/checkout/', {
         method: 'POST',
+        body: { client_reference_id: clientReferenceId },
       });
       return response;
     },

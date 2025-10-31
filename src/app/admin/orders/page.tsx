@@ -129,7 +129,7 @@ export default function AdminOrdersPage() {
   };
 
   const handleBulkStatusUpdate = (newStatus: string) => {
-    console.log(`Updating orders ${selectedOrders.join(", ")} to status: ${newStatus}`);
+    console.warn(`Updating orders ${selectedOrders.join(", ")} to status: ${newStatus}`);
     // Here you would implement the actual bulk status update
     setSelectedOrders([]);
   };

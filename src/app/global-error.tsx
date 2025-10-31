@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React from 'react';
 import { OptimizedButton } from '@/components/ui/optimized-button';
@@ -13,11 +13,11 @@ export default function GlobalError({ error, reset }: GlobalErrorProps) {
   React.useEffect(() => {
     // Only log in development to avoid console spam in production
     if (process.env.NODE_ENV === 'development') {
-      console.group('🚨 Global Application Error');
-      console.error('Error:', error);
-      console.error('Digest:', error.digest);
-      console.error('Stack:', error.stack);
-      console.groupEnd();
+      console.warn('[global-error] Application error', {
+        message: error.message,
+        digest: error.digest,
+        stack: error.stack,
+      });
     }
     
     // Report to monitoring service
@@ -35,7 +35,7 @@ export default function GlobalError({ error, reset }: GlobalErrorProps) {
           userAgent: navigator.userAgent,
           timestamp: new Date().toISOString(),
           severity: 'critical', // Global errors are critical
-          buildVersion: process.env["NEXT_PUBLIC_BUILD_VERSION"] || 'unknown',
+          buildVersion: process.env["NEXT_PUBLIC_BUILD_VERSION"] ?? 'unknown',
         },
       };
 
@@ -79,7 +79,7 @@ export default function GlobalError({ error, reset }: GlobalErrorProps) {
             </h1>
             
             <p className="text-gray-600 mb-8 leading-relaxed">
-              We're sorry, but something went wrong with the application. 
+              We&apos;re sorry, but something went wrong with the application. 
               Our team has been notified and is working on a fix.
             </p>
 
@@ -101,7 +101,7 @@ export default function GlobalError({ error, reset }: GlobalErrorProps) {
             </div>
 
             <p className="mt-8 text-xs text-gray-400">
-              Error ID: {error.digest || 'N/A'}
+              Error ID: {error.digest ?? 'N/A'}
             </p>
           </div>
         </div>
@@ -109,3 +109,4 @@ export default function GlobalError({ error, reset }: GlobalErrorProps) {
     </html>
   );
 }
+

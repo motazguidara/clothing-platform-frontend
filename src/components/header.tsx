@@ -128,6 +128,11 @@ export default function Header() {
   const { data: cart } = useCart();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const searchParamsString = React.useMemo(
+    () => (searchParams ? searchParams.toString() : ""),
+    [searchParams]
+  );
+  const lastLocationRef = React.useRef<string | null>(null);
   const cartCount = React.useMemo(() => {
     const items: CartItem[] = Array.isArray(cart?.items) ? (cart?.items as CartItem[]) : [];
     return items.reduce((sum: number, item) => {
@@ -219,11 +224,17 @@ export default function Header() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  // Close search overlay on route or query changes to ensure it never remains open after navigation
+  // Close overlays when navigation actually changes
   React.useEffect(() => {
-    if (isSearchOpen) setIsSearchOpen(false);
-    closeMegaMenu();
-  }, [pathname, searchParams?.toString(), isSearchOpen, closeMegaMenu]);
+    const currentLocation = `${pathname ?? ""}?${searchParamsString}`;
+
+    if (lastLocationRef.current && lastLocationRef.current !== currentLocation) {
+      setIsSearchOpen(false);
+      closeMegaMenu();
+    }
+
+    lastLocationRef.current = currentLocation;
+  }, [pathname, searchParamsString, closeMegaMenu, setIsSearchOpen]);
 
   // Set mounted state after component mounts
   React.useEffect(() => {

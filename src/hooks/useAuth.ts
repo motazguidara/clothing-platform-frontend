@@ -1,127 +1,152 @@
+'use client';
+
+import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { UseMutationResult } from "@tanstack/react-query";
-import { authService } from "@/lib/api/services/auth";
-import { useRouter } from "next/navigation";
-import { useEffect } from "react";
 import { toast } from "sonner";
+import { useRouter } from "next/navigation";
+
+import { authService } from "@/lib/api/services/auth";
 import type { User } from "@/lib/api/schemas";
 import { clientConfig } from "@/lib/client-env";
+import { ApiError } from "@/lib/api/client";
 
-// Re-export the User type from schemas
 export type { User } from "@/lib/api/schemas";
 
-interface AuthTokens {
-  access: string;
-  refresh: string;
-  user: User;
-}
+type Credentials = { email: string; password: string };
 
-// Auth hooks
+type RegisterInput = {
+  email: string;
+  password: string;
+  first_name?: string;
+  last_name?: string;
+  marketing_consent?: boolean;
+  terms_consent?: boolean;
+};
+
+const AUTH_PROFILE_QUERY_KEY = ["auth", "profile"] as const;
+
 export function useAuth(options?: { fetchProfile?: boolean }) {
   const qc = useQueryClient();
   const router = useRouter();
 
-  // Check if user is authenticated
   const tokenAuthenticated = authService.isAuthenticated();
   const cookieSession = clientConfig.featureCookieJwt;
-
-  // Get current user profile
   const shouldFetchProfile =
     (options?.fetchProfile ?? true) && (tokenAuthenticated || cookieSession);
-  const { data: user, isLoading, error } = useQuery({
-    queryKey: ["auth", "profile"],
-    queryFn: () => authService.getCurrentUser(),
-    enabled: shouldFetchProfile, // prevent 401 spam when not logged in
+
+  const [storedUser, setStoredUser] = useState<User | undefined>(() =>
+    authService.getStoredUser() ?? undefined
+  );
+  const effectiveStoredUser = shouldFetchProfile ? storedUser : undefined;
+
+  const {
+    data: user,
+    isLoading: profileLoading,
+    error,
+  } = useQuery<User | undefined>({
+    queryKey: AUTH_PROFILE_QUERY_KEY,
+    enabled: shouldFetchProfile,
+    initialData: effectiveStoredUser,
+    placeholderData: effectiveStoredUser,
+    queryFn: async () => authService.getCurrentUser(),
     refetchOnWindowFocus: false,
     staleTime: 30 * 1000,
-    gcTime: 10 * 60 * 1000, // 10 minutes
+    gcTime: 10 * 60 * 1000,
     retry: 0,
+    onSuccess(profile) {
+      if (profile) {
+        authService.storeUser(profile);
+        setStoredUser(profile);
+      }
+    },
+    onError(err) {
+      if (err instanceof ApiError && err.status === 401) {
+        authService.clearAuth();
+      }
+      authService.clearStoredUser();
+      setStoredUser(undefined);
+    },
   });
 
-  // Debug: log auth state in development
   useEffect(() => {
-    if (process.env.NODE_ENV === 'development') {
-      // Raw token flag vs. profile availability
-      // eslint-disable-next-line no-console
-      console.log('[useAuth] state', {
-        hasToken: tokenAuthenticated,
-        hasProfile: !!user,
-        loading: isLoading,
-        error: error ? (error as any)?.status || (error as any)?.message : null,
-      });
+    if (!error) return;
+    if (error instanceof ApiError && error.status === 401) {
+      qc.removeQueries({ queryKey: AUTH_PROFILE_QUERY_KEY, exact: true });
     }
-  }, [tokenAuthenticated, user, isLoading, error]);
+  }, [error, qc]);
 
-  // Handle login
   const login = useMutation({
-    mutationFn: async (credentials: { email: string; password: string }) => {
+    mutationFn: async (credentials: Credentials) => {
       const response = await authService.login(credentials);
-      // Normalize to user object
-      const user = (response as any)?.user || null;
-      return user;
+      return (response as { user?: User }).user;
     },
-    onSuccess: (user) => {
-      qc.invalidateQueries({ queryKey: ["auth"] });
-      qc.setQueryData(['auth', 'user'], user);
-      // Ensure server-side cart merge is surfaced
+    onSuccess: (loggedInUser) => {
+      if (loggedInUser) {
+        authService.storeUser(loggedInUser);
+        setStoredUser(loggedInUser);
+        qc.setQueryData(AUTH_PROFILE_QUERY_KEY, loggedInUser);
+      }
+      qc.invalidateQueries({ queryKey: AUTH_PROFILE_QUERY_KEY });
       qc.invalidateQueries({ queryKey: ["cart"] });
     },
-    onError: (error: any) => {
-      console.error('Login error:', error);
-      const errorMessage = error?.response?.data?.detail || 'Failed to log in. Please try again.';
+    onError: (err: unknown) => {
+      const apiError = err as ApiError & {
+        response?: { data?: { detail?: string } };
+      };
+      const errorMessage =
+        apiError?.response?.data?.detail ??
+        apiError?.message ??
+        "Failed to log in. Please try again.";
       toast.error(errorMessage);
-    }
+    },
   });
 
-  // Handle registration
   const register = useMutation({
-    mutationFn: async (data: {
-      email: string;
-      password: string;
-      first_name?: string;
-      last_name?: string;
-      marketing_consent?: boolean;
-      terms_consent?: boolean;
-    }) => {
-      const payload: {
-        email: string;
-        password: string;
-        password_confirm: string;
-        marketing_consent: boolean;
-        terms_consent: boolean;
-        first_name?: string;
-        last_name?: string;
-      } = {
+    mutationFn: async (data: RegisterInput) => {
+      const payload = {
         email: data.email,
         password: data.password,
         password_confirm: data.password,
         marketing_consent: data.marketing_consent ?? false,
         terms_consent: data.terms_consent ?? true,
+        first_name:
+          typeof data.first_name === "string" && data.first_name.length > 0
+            ? data.first_name
+            : undefined,
+        last_name:
+          typeof data.last_name === "string" && data.last_name.length > 0
+            ? data.last_name
+            : undefined,
       };
-
-      if (typeof data.first_name === 'string' && data.first_name.length > 0) {
-        payload.first_name = data.first_name;
-      }
-      if (typeof data.last_name === 'string' && data.last_name.length > 0) {
-        payload.last_name = data.last_name;
-      }
-
-      const response = await authService.register(payload);
-      return (response as any)?.user || response;
+      return authService.register(payload);
     },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["auth"] });
+    onSuccess: (result) => {
+      const newUser = (result as { user?: User }).user;
+      if (newUser) {
+        authService.storeUser(newUser);
+        setStoredUser(newUser);
+        qc.setQueryData(AUTH_PROFILE_QUERY_KEY, newUser);
+      }
+      qc.invalidateQueries({ queryKey: AUTH_PROFILE_QUERY_KEY });
+    },
+    onError: (err: unknown) => {
+      const apiError = err as ApiError & {
+        response?: { data?: { detail?: string } };
+      };
+      const errorMessage =
+        apiError?.response?.data?.detail ??
+        apiError?.message ??
+        "Registration failed. Please try again.";
+      toast.error(errorMessage);
     },
   });
 
-  // Handle logout
   const logout = useMutation({
-    mutationFn: async () => {
-      await authService.logout();
-    },
+    mutationFn: authService.logout.bind(authService),
     onSuccess: () => {
-      // Invalidate key resources
-      qc.invalidateQueries({ queryKey: ["auth"] });
+      authService.clearStoredUser();
+      setStoredUser(undefined);
+      qc.removeQueries({ queryKey: AUTH_PROFILE_QUERY_KEY, exact: true });
       qc.invalidateQueries({ queryKey: ["cart"] });
       qc.invalidateQueries({ queryKey: ["orders"] });
       qc.invalidateQueries({ queryKey: ["wishlist"] });
@@ -129,34 +154,29 @@ export function useAuth(options?: { fetchProfile?: boolean }) {
     },
   });
 
-  // Handle token refresh
-  useEffect(() => {
-    if (error && (error as any)?.status === 401) {
-      // If we get a 401, try to refresh the token
-      authService.refreshToken().catch(() => {
-        // If refresh fails, clear auth state
-        authService.clearAuth();
-        qc.clear();
-      });
-    }
-  }, [error, qc]);
+  const isAuthenticated =
+    tokenAuthenticated ||
+    Boolean(user) ||
+    (cookieSession && Boolean(storedUser));
 
   return {
     user,
-    isLoading: isLoading || login.isPending || register.isPending || logout.isPending,
-    // Expose raw token-based auth to avoid false negatives before profile loads
-    isAuthenticated: tokenAuthenticated || (cookieSession ? !!user : false),
-    hasProfile: !!user,
+    isLoading:
+      profileLoading ||
+      login.isPending ||
+      register.isPending ||
+      logout.isPending,
+    isAuthenticated,
+    hasProfile: Boolean(user),
     login: login.mutate,
     loginAsync: login.mutateAsync,
     register: register.mutate,
     registerAsync: register.mutateAsync,
     logout: logout.mutate,
-    error: login.error || register.error || logout.error,
+    error: login.error ?? register.error ?? logout.error ?? error,
   } as const;
 }
 
-// Protected route hook
 export function useProtectedRoute(redirectTo = "/login") {
   const { isLoading, isAuthenticated } = useAuth();
   const router = useRouter();
@@ -167,6 +187,5 @@ export function useProtectedRoute(redirectTo = "/login") {
     }
   }, [isLoading, isAuthenticated, router, redirectTo]);
 
-  return { isLoading, isAuthenticated };
+  return { isLoading, isAuthenticated } as const;
 }
-

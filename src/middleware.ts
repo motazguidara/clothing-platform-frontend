@@ -51,7 +51,7 @@ function rateLimit(ip: string, limit = 100, windowMs = 60000): boolean {
   const now = Date.now();
   const key = `${ip}:${Math.floor(now / windowMs)}`;
   
-  const current = rateLimitStore.get(key) || { count: 0, resetTime: now + windowMs };
+  const current = rateLimitStore.get(key) ?? { count: 0, resetTime: now + windowMs };
   
   if (now > current.resetTime) {
     rateLimitStore.delete(key);
@@ -94,8 +94,10 @@ function isBot(userAgent: string): boolean {
 
 export function middleware(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
-  const userAgent = request.headers.get('user-agent') || '';
-  const ip = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown';
+  const userAgent = request.headers.get('user-agent') ?? '';
+  const forwardedFor = request.headers.get('x-forwarded-for');
+  const realIp = request.headers.get('x-real-ip');
+  const ip = forwardedFor ?? realIp ?? 'unknown';
   
   // Create response
   const response = NextResponse.next();

@@ -5,7 +5,7 @@
  * returning an empty string instead.
  */
 (() => {
-  const proto = String.prototype as String & {
+  const proto = String.prototype as typeof String.prototype & {
     __patchedSafeRepeat__?: boolean;
   };
 

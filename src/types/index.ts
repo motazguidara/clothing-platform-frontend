@@ -1,4 +1,4 @@
-// Core type definitions for the e-commerce platform
+﻿// Core type definitions for the e-commerce platform
 
 export interface Product {
   id: number;
@@ -305,7 +305,7 @@ export interface PaginationMeta {
   has_previous: boolean;
 }
 
-export interface ApiResponse<T = any> {
+export interface ApiResponse<T = unknown> {
   data: T;
   success: boolean;
   message?: string;
@@ -319,7 +319,7 @@ export interface ApiError {
   message: string;
   status: number;
   code?: string;
-  details?: any;
+  details?: unknown;
 }
 
 // Global window interface extensions
@@ -328,7 +328,7 @@ declare global {
     gtag?: (
       command: 'config' | 'event' | 'js' | 'set',
       targetId: string | Date,
-      config?: any
+      config?: Record<string, unknown>
     ) => void;
   }
 }
@@ -339,7 +339,7 @@ export interface ValidationError {
   message: string;
 }
 
-export interface FormState<T = any> {
+export interface FormState<T = unknown> {
   data: T;
   errors: Record<string, string>;
   isSubmitting: boolean;
@@ -388,3 +388,5 @@ export type ProductList = {
 };
 
 export type { NavigationMenu, NavigationMenuItem, NavigationBadgeVariant } from './navigation';
+
+

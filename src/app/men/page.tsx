@@ -1,30 +1,58 @@
-"use client";
+"use client"
 
 import React from "react";
+import { useSearchParams } from "next/navigation";
 import { useProducts, useCatalogFacets } from "@/hooks/useCatalog";
 import ProductCard from "@/components/product-card";
-import { useSearchParams } from "next/navigation";
 import { FilterSidebar, SortSelect } from "@/components/filters/filter-sidebar";
 import { buildDefaultFilters } from "@/components/filters/default-filter-presets";
+import type { Product } from "@/types";
+
+const ALLOWED_KEYS = [
+  "category",
+  "price_min",
+  "price_max",
+  "size",
+  "color",
+  "ordering",
+  "page",
+  "sale",
+  "in_stock",
+] as const;
+
+const SKELETON_CARD_KEYS = Array.from({ length: 8 }, (_, idx) => `men-skeleton-${idx}`);
+
+const parsePage = (value: string | null): number => {
+  if (value === null) {
+    return 1;
+  }
+  const parsed = Number.parseInt(value, 10);
+  return Number.isNaN(parsed) ? 1 : Math.max(1, parsed);
+};
 
 export default function MenPage() {
   const searchParams = useSearchParams();
-  
-  // Build params with gender filter
-  const params: Record<string, string> = { gender: "men" };
-  const allow = ["category", "price_min", "price_max", "size", "color", "ordering", "page", "sale", "in_stock"];
-  for (const key of allow) {
-    const v = searchParams.get(key);
-    if (v && v.length) params[key] = v;
-  }
-  
-  const { data, isLoading, isError } = useProducts(params);
-  const { data: facets, isLoading: facetsLoading, isError: facetsError } = useCatalogFacets(params);
 
-  const serializedSearch = searchParams.toString();
+  const requestParams = React.useMemo(() => {
+    const params: Record<string, string> = { gender: "men" };
+    ALLOWED_KEYS.forEach((key) => {
+      const value = searchParams.get(key);
+      if (typeof value === "string" && value.length > 0) {
+        params[key] = value;
+      }
+    });
+    return params;
+  }, [searchParams]);
+
+  const { data, isLoading, isError } = useProducts(requestParams);
+  const { data: facets, isLoading: facetsLoading, isError: facetsError } = useCatalogFacets(requestParams);
+
+  const serializedParams = searchParams.toString();
+  const products: Product[] = data?.results ?? [];
+  const productCount = data?.count ?? 0;
 
   const fallbackFilters = React.useMemo(() => {
-    const sp = new URLSearchParams(serializedSearch);
+    const sp = new URLSearchParams(serializedParams);
     return buildDefaultFilters({
       gender: "men",
       price_min: sp.get("price_min") ?? undefined,
@@ -34,14 +62,14 @@ export default function MenPage() {
       sale: sp.get("sale") ?? undefined,
       in_stock: sp.get("in_stock") ?? undefined,
     });
-  }, [serializedSearch]);
+  }, [serializedParams]);
 
   const createFilterHref = React.useCallback(
     (overrides: Record<string, string | null | undefined>) => {
-      const sp = new URLSearchParams(serializedSearch);
+      const sp = new URLSearchParams(serializedParams);
       sp.delete("page");
       Object.entries(overrides).forEach(([key, value]) => {
-        if (value == null || value === "") {
+        if (value === null || value === undefined || value === "") {
           sp.delete(key);
         } else {
           sp.set(key, value);
@@ -50,7 +78,7 @@ export default function MenPage() {
       const query = sp.toString();
       return `/men${query ? `?${query}` : ""}`;
     },
-    [serializedSearch]
+    [serializedParams]
   );
 
   const quickFilters = React.useMemo(
@@ -64,12 +92,25 @@ export default function MenPage() {
     [createFilterHref]
   );
 
+  const currentPage = parsePage(searchParams.get("page"));
+  const totalPages = Math.max(1, Math.ceil(productCount / 20));
+
+  const makePageHref = React.useCallback(
+    (page: number) => {
+      const sp = new URLSearchParams(serializedParams);
+      sp.set("page", String(page));
+      const query = sp.toString();
+      return query ? `/men?${query}` : "/men";
+    },
+    [serializedParams]
+  );
+
   return (
     <section className="max-w-7xl mx-auto px-6 py-16">
       <div className="flex items-end justify-between gap-4">
         <div>
           <h1 className="text-3xl font-semibold tracking-tight uppercase">Men</h1>
-          <p className="text-muted mt-2">Discover our men's collection.</p>
+          <p className="text-muted mt-2">Discover our men&apos;s collection.</p>
         </div>
         <SortSelect />
       </div>
@@ -103,24 +144,24 @@ export default function MenPage() {
           {isError && <p className="text-sm text-red-600">Failed to load products.</p>}
           {isLoading && (
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6 md:gap-4">
-              {Array.from({ length: 8 }).map((_, i) => (
-                <div key={i} className="h-80 rounded-md bg-gray-200 animate-pulse" />
+              {SKELETON_CARD_KEYS.map((key) => (
+                <div key={key} className="h-80 rounded-md bg-gray-200 animate-pulse" />
               ))}
             </div>
           )}
-          {!isLoading && data && (
+          {!isLoading && products.length > 0 && (
             <>
               <div className="mb-4 text-sm text-gray-600">
-                {data.count} products found
+                {productCount} products found
               </div>
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6 md:gap-4">
-                {data.results.map((p: any) => (
-                  <ProductCard key={p.id} product={p} />
+                {products.map((product) => (
+                  <ProductCard key={product.id} product={product} />
                 ))}
               </div>
             </>
           )}
-          {!isLoading && data && data.results.length === 0 && (
+          {!isLoading && products.length === 0 && (
             <div className="text-center py-12">
               <p className="text-gray-500">No products found matching your criteria.</p>
               <a href="/men" className="mt-2 inline-block text-blue-600 hover:underline">
@@ -131,39 +172,26 @@ export default function MenPage() {
         </div>
       </div>
 
-      {/* Pagination */}
-      {!isLoading && data && data.count > 20 && (
+      {!isLoading && productCount > 20 && (
         <div className="mt-10 flex items-center justify-center gap-2">
-          {(() => {
-            const total = Math.max(1, Math.ceil((data.count || 0) / 20));
-            const current = Number(params["page"] || 1);
-            const makeHref = (page: number) => {
-              const url = new URL(window.location.href);
-              url.searchParams.set("page", String(page));
-              return url.toString();
-            };
-            return (
-              <>
-                <a 
-                  className={`px-3 py-2 border rounded-md text-sm ${current <= 1 ? 'pointer-events-none opacity-50' : 'hover:bg-gray-100'}`} 
-                  href={current > 1 ? makeHref(current - 1) : undefined}
-                >
-                  Previous
-                </a>
-                <span className="text-sm px-3">Page {current} of {total}</span>
-                <a 
-                  className={`px-3 py-2 border rounded-md text-sm ${current >= total ? 'pointer-events-none opacity-50' : 'hover:bg-gray-100'}`} 
-                  href={current < total ? makeHref(current + 1) : undefined}
-                >
-                  Next
-                </a>
-              </>
-            );
-          })()}
+          <a
+            className={`px-3 py-2 border rounded-md text-sm ${currentPage <= 1 ? 'pointer-events-none opacity-50' : 'hover:bg-gray-100'}`}
+            href={currentPage > 1 ? makePageHref(currentPage - 1) : undefined}
+          >
+            Previous
+          </a>
+          <span className="text-sm px-3">
+            Page {currentPage} of {totalPages}
+          </span>
+          <a
+            className={`px-3 py-2 border rounded-md text-sm ${currentPage >= totalPages ? 'pointer-events-none opacity-50' : 'hover:bg-gray-100'}`}
+            href={currentPage < totalPages ? makePageHref(currentPage + 1) : undefined}
+          >
+            Next
+          </a>
         </div>
       )}
     </section>
   );
 }
-
 

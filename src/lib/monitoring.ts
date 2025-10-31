@@ -142,8 +142,13 @@ class MonitoringService {
     if (typeof window === 'undefined') return;
 
     // Global error handler
-    window.addEventListener('error', (event) => {
-      this.reportError(event.error || new Error(event.message), {
+    window.addEventListener('error', (event: ErrorEvent) => {
+      const reportedError =
+        event.error instanceof Error
+          ? event.error
+          : new Error(event.message || "Script error");
+
+      this.reportError(reportedError, {
         type: 'unhandled_error',
         filename: event.filename,
         lineno: event.lineno,

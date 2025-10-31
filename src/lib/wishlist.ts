@@ -2,7 +2,6 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
 import { apiClient } from './api/client';
-import { clientEnv } from './env';
 
 // Types
 export interface WishlistItem {
@@ -52,8 +51,25 @@ export interface WishlistActions {
 
 export type WishlistStore = WishlistState & WishlistActions;
 
-// Storage key for anonymous users
-const ANONYMOUS_STORAGE_KEY = 'anonymous_wishlist';
+type WishlistApiProductResponse = {
+  id?: number;
+  product_id?: number;
+  variant_id?: number | null;
+  added_at?: string;
+  name?: string;
+  slug?: string;
+  images?: Array<{ image?: string | null } | string | null>;
+  image?: string | null;
+  current_price?: number;
+  price?: number;
+  brand?: { name?: string | null } | null;
+  product?: unknown;
+};
+
+type WishlistApiResponse = {
+  results?: WishlistApiProductResponse[];
+  count?: number;
+};
 
 // Create the store
 export const useWishlistStore = create<WishlistStore>()(
@@ -250,33 +266,72 @@ export const useWishlistStore = create<WishlistStore>()(
 
         try {
           // Fetch full wishlist products from server
-          const response = await apiClient.get<{ results?: any[]; count?: number }>('/catalog/wishlist/?page_size=200');
-          const results = Array.isArray((response as any)?.results) ? (response as any).results : [];
+          const response = await apiClient.get<WishlistApiResponse>('/catalog/wishlist/?page_size=200');
+          const results = Array.isArray(response?.results) ? response.results : [];
 
           const nowIso = new Date().toISOString();
-          const items: WishlistItem[] = results.map((product: any) => {
-            const primaryImage =
-              Array.isArray(product?.images) && product.images.length > 0
-                ? product.images[0]?.image ?? null
-                : product?.image ?? null;
-            const currentPrice =
-              typeof product?.current_price === 'number'
-                ? product.current_price
-                : typeof product?.price === 'number'
-                ? product.price
-                : undefined;
-            return {
-              id: Number(product?.id) || Date.now() + Math.random(),
-              productId: Number(product?.id),
-              addedAt: product?.added_at || nowIso,
-              name: product?.name,
-              price: currentPrice,
-              image: primaryImage,
-              slug: product?.slug,
-              brandName: product?.brand?.name,
-              product,
-            };
-          });
+          const items: WishlistItem[] = results
+            .map((product) => {
+              if (!product) {
+                return null;
+              }
+
+              const rawProductId = product.product_id ?? product.id;
+              const numericProductId =
+                typeof rawProductId === 'number' ? rawProductId : Number(rawProductId);
+              if (!Number.isFinite(numericProductId)) {
+                return null;
+              }
+
+              const numericId =
+                typeof product.id === 'number' ? product.id : Number(product.id ?? NaN);
+              const safeId = Number.isFinite(numericId) ? numericId : Date.now() + Math.random();
+
+              const galleryImage = Array.isArray(product.images)
+                ? product.images
+                    .map((entry) => {
+                      if (typeof entry === 'string') {
+                        return entry;
+                      }
+                      if (entry && typeof entry === 'object' && 'image' in entry) {
+                        const imageValue = (entry as { image?: string | null }).image;
+                        return typeof imageValue === 'string' ? imageValue : null;
+                      }
+                      return null;
+                    })
+                    .find((src): src is string => typeof src === 'string' && src.trim().length > 0)
+                : null;
+
+              const fallbackImage =
+                typeof product.image === 'string' && product.image.trim().length > 0
+                  ? product.image
+                  : null;
+              const resolvedImage = galleryImage ?? fallbackImage;
+              const primaryImage =
+                typeof resolvedImage === 'string' && resolvedImage.trim().length > 0
+                  ? resolvedImage
+                  : null;
+
+              const currentPrice =
+                typeof product.current_price === 'number'
+                  ? product.current_price
+                  : typeof product.price === 'number'
+                  ? product.price
+                  : undefined;
+
+              return {
+                id: safeId,
+                productId: numericProductId,
+                addedAt: product.added_at ?? nowIso,
+                name: product.name,
+                price: currentPrice,
+                image: primaryImage,
+                slug: product.slug,
+                brandName: product.brand?.name ?? undefined,
+                product: product.product ?? product,
+              };
+            })
+            .filter((item): item is WishlistItem => item !== null);
 
           set((draft) => {
             draft.items = items;
@@ -309,13 +364,18 @@ export const useWishlistStore = create<WishlistStore>()(
         try {
           // Load server wishlist first to avoid removing existing items
           const serverSnapshot = await apiClient
-            .get<{ results?: any[] }>('/catalog/wishlist/?page_size=200')
-            .catch(() => ({ results: [] }));
-          const serverIds = Array.isArray((serverSnapshot as any)?.results)
+            .get<WishlistApiResponse>('/catalog/wishlist/?page_size=200')
+            .catch(() => ({ results: [] } as WishlistApiResponse));
+          const serverIds = Array.isArray(serverSnapshot.results)
             ? new Set(
-                ((serverSnapshot as any).results as any[]).map((product) =>
-                  Number(product?.id)
-                )
+                serverSnapshot.results
+                  .map((product) => {
+                    const idCandidate = product?.id ?? product?.product_id;
+                    const numericId =
+                      typeof idCandidate === 'number' ? idCandidate : Number(idCandidate);
+                    return Number.isFinite(numericId) ? numericId : null;
+                  })
+                  .filter((value): value is number => value !== null)
               )
             : new Set<number>();
 

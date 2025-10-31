@@ -3,9 +3,12 @@
 import React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { Check } from "lucide-react";
 import { useCart, useCheckout } from "@/hooks/useCart";
+import type { CartItem } from "@/hooks/useCart";
 import { useToast } from "@/providers/toast-provider";
 import { formatPrice } from "@/lib/utils";
+import { useCheckoutStore } from "@/store/checkout";
 
 interface CheckoutForm {
   email: string;
@@ -22,13 +25,25 @@ interface CheckoutForm {
   cardName?: string;
 }
 
+type CheckoutCartItem = CartItem & {
+  product_title?: string;
+};
+
+const CHECKOUT_STEPS: Array<{ key: "shipping" | "payment" | "review"; label: string }> = [
+  { key: "shipping", label: "Shipping" },
+  { key: "payment", label: "Payment" },
+  { key: "review", label: "Review" },
+];
+
 export default function CheckoutPage() {
   const router = useRouter();
   const checkout = useCheckout();
   const { data: cart, isLoading: cartLoading } = useCart();
   const { toast } = useToast();
+  const paymentPreference = useCheckoutStore((s) => s.payment);
+  const setPaymentPreference = useCheckoutStore((s) => s.setPayment);
   const [step, setStep] = React.useState<"shipping" | "payment" | "review">("shipping");
-  const [form, setForm] = React.useState<CheckoutForm>({
+  const [form, setForm] = React.useState<CheckoutForm>(() => ({
     email: "",
     firstName: "",
     lastName: "",
@@ -36,17 +51,43 @@ export default function CheckoutPage() {
     city: "",
     postalCode: "",
     phone: "",
-    paymentMethod: "card",
-  });
+    paymentMethod: paymentPreference,
+  }));
+  const [deliveryMethod, setDeliveryMethod] = React.useState<"standard" | "express">("standard");
+  const currentStepIndex = React.useMemo(
+    () => CHECKOUT_STEPS.findIndex((item) => item.key === step),
+    [step]
+  );
 
-  const items = cart?.items || [];
-  const subtotal = items.reduce((sum: number, item: any) => sum + (item.price || 0) * (item.quantity || 1), 0);
-  const shipping = subtotal >= 300 ? 0 : 7; // Free shipping over $300
+  React.useEffect(() => {
+    setForm((prev) =>
+      prev.paymentMethod === paymentPreference
+        ? prev
+        : {
+            ...prev,
+            paymentMethod: paymentPreference,
+          }
+    );
+  }, [paymentPreference]);
+
+  const items: CheckoutCartItem[] = React.useMemo(() => {
+    if (!Array.isArray(cart?.items)) {
+      return [];
+    }
+    return cart.items as CheckoutCartItem[];
+  }, [cart?.items]);
+  const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  const qualifiesForFreeShipping = subtotal >= 300;
+  const shipping =
+    deliveryMethod === "express" ? 18 : qualifiesForFreeShipping ? 0 : 7;
   const tax = subtotal * 0.1; // 10% tax
   const total = subtotal + shipping + tax;
 
   const updateForm = (updates: Partial<CheckoutForm>) => {
-    setForm(prev => ({ ...prev, ...updates }));
+    if (updates.paymentMethod) {
+      setPaymentPreference(updates.paymentMethod);
+    }
+    setForm((prev) => ({ ...prev, ...updates }));
   };
 
   const validateShipping = () => {
@@ -60,6 +101,18 @@ export default function CheckoutPage() {
     return required.every(field => form[field as keyof CheckoutForm]?.toString().trim());
   };
 
+  const handleContinueToNextStep = () => {
+    if (!validateShipping()) {
+      toast({ title: "Please fill in all shipping fields", variant: "destructive" });
+      return;
+    }
+    if (form.paymentMethod === "cod") {
+      setStep("review");
+    } else {
+      setStep("payment");
+    }
+  };
+
   const handleSubmit = async () => {
     if (!validateShipping() || !validatePayment()) {
       toast({ title: "Please fill in all required fields", variant: "destructive" });
@@ -68,15 +121,25 @@ export default function CheckoutPage() {
 
     try {
       const order = await checkout.mutateAsync();
-      const orderId = (order as any)?.id;
+      const orderId =
+        typeof order === "object" &&
+        order !== null &&
+        "id" in order &&
+        (typeof (order as { id?: unknown }).id === "string" || typeof (order as { id?: unknown }).id === "number")
+          ? (order as { id?: number | string }).id
+          : undefined;
       toast({ title: "Order placed successfully!", variant: "success" });
       if (orderId) {
         router.push(`/orders/${orderId}`);
       } else {
         router.push("/orders");
       }
-    } catch (error: any) {
-      toast({ title: error?.message || "Failed to place order", variant: "destructive" });
+    } catch (error: unknown) {
+      const message =
+        typeof error === "object" && error !== null && "message" in error && typeof (error as { message?: unknown }).message === "string"
+          ? (error as { message: string }).message
+          : "Failed to place order";
+      toast({ title: message, variant: "destructive" });
     }
   };
 
@@ -121,24 +184,30 @@ export default function CheckoutPage() {
       {/* Progress Steps */}
       <div className="mb-8">
         <div className="flex items-center justify-between">
-          {[
-            { key: "shipping", label: "Shipping" },
-            { key: "payment", label: "Payment" },
-            { key: "review", label: "Review" }
-          ].map((stepItem, index) => (
-            <div key={stepItem.key} className="flex items-center">
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold ${
-                step === stepItem.key ? "bg-black text-white" : 
-                ["shipping", "payment", "review"].indexOf(step) > index ? "bg-green-500 text-white" : "bg-gray-200 text-gray-600"
-              }`}>
-                {["shipping", "payment", "review"].indexOf(step) > index ? "âœ“" : index + 1}
+          {CHECKOUT_STEPS.map((stepItem, index) => {
+            const isCurrent = index === currentStepIndex;
+            const isCompleted = currentStepIndex > index;
+            const circleClass = isCurrent
+              ? "bg-black text-white"
+              : isCompleted
+                ? "bg-green-500 text-white"
+                : "bg-gray-200 text-gray-600";
+            return (
+              <div key={stepItem.key} className="flex items-center">
+                <div
+                  className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold ${circleClass}`}
+                >
+                  {isCompleted ? <Check className="h-4 w-4" aria-hidden /> : index + 1}
+                </div>
+                <span
+                  className={`ml-2 text-sm ${isCurrent ? "font-semibold text-foreground" : "text-gray-600"}`}
+                >
+                  {stepItem.label}
+                </span>
+                {index < CHECKOUT_STEPS.length - 1 && <div className="flex-1 h-px bg-gray-200 mx-4" />}
               </div>
-              <span className={`ml-2 text-sm ${step === stepItem.key ? "font-semibold" : "text-gray-600"}`}>
-                {stepItem.label}
-              </span>
-              {index < 2 && <div className="flex-1 h-px bg-gray-200 mx-4"></div>}
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
 
@@ -150,7 +219,7 @@ export default function CheckoutPage() {
               <h2 className="text-lg font-semibold mb-4">Shipping Information</h2>
               <div className="space-y-4">
                 <div>
-                  `<label className="block block text-sm font-medium mb-1">Email</label>
+                  <label className="block text-sm font-medium mb-1">Email</label>
                   <input
                     type="email" id="checkout_email" name="email"
                     value={form.email}
@@ -162,7 +231,7 @@ export default function CheckoutPage() {
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    `<label className="block block text-sm font-medium mb-1">First Name</label>
+                    <label className="block text-sm font-medium mb-1">First Name</label>
                     <input
                       type="text"
                       id="checkout_first_name" name="firstName" value={form.firstName}
@@ -172,7 +241,7 @@ export default function CheckoutPage() {
                     />
                   </div>
                   <div>
-                    `<label className="block block text-sm font-medium mb-1">Last Name</label>
+                    <label className="block text-sm font-medium mb-1">Last Name</label>
                     <input
                       type="text"
                       id="checkout_last_name" name="lastName" value={form.lastName}
@@ -183,7 +252,7 @@ export default function CheckoutPage() {
                   </div>
                 </div>
                 <div>
-                  `<label className="block block text-sm font-medium mb-1">Address</label>
+                  <label className="block text-sm font-medium mb-1">Address</label>
                   <input
                     type="text"
                     value={form.address}
@@ -195,7 +264,7 @@ export default function CheckoutPage() {
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    `<label className="block block text-sm font-medium mb-1">City</label>
+                    <label className="block text-sm font-medium mb-1">City</label>
                     <input
                       type="text"
                       id="checkout_city" name="city" value={form.city}
@@ -205,7 +274,7 @@ export default function CheckoutPage() {
                     />
                   </div>
                   <div>
-                    `<label className="block block text-sm font-medium mb-1">Postal Code</label>
+                    <label className="block text-sm font-medium mb-1">Postal Code</label>
                     <input
                       type="text"
                       id="checkout_postal" name="postalCode" value={form.postalCode}
@@ -216,7 +285,7 @@ export default function CheckoutPage() {
                   </div>
                 </div>
                 <div>
-                  `<label className="block block text-sm font-medium mb-1">Phone</label>
+                  <label className="block text-sm font-medium mb-1">Phone</label>
                   <input
                     type="tel" id="checkout_phone" name="phone"
                     value={form.phone}
@@ -227,11 +296,49 @@ export default function CheckoutPage() {
                   />
                 </div>
               </div>
+              <div className="mt-4 rounded-md border border-border bg-gray-50 p-4">
+                <p className="text-sm font-semibold mb-2">Delivery options</p>
+                <div className="space-y-3 text-sm">
+                  <label className="flex items-start gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="deliveryMethod"
+                      value="standard"
+                      checked={deliveryMethod === "standard"}
+                      onChange={() => setDeliveryMethod("standard")}
+                    />
+                    <span>
+                      <span className="block font-medium text-foreground">Standard delivery</span>
+                      <span className="block text-xs text-muted">
+                        {qualifiesForFreeShipping ? "Free" : formatPrice(7, "TND")} - arrives in 2-3 business days.
+                      </span>
+                    </span>
+                  </label>
+                  <label className="flex items-start gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="deliveryMethod"
+                      value="express"
+                      checked={deliveryMethod === "express"}
+                      onChange={() => setDeliveryMethod("express")}
+                    />
+                    <span>
+                      <span className="block font-medium text-foreground">Express delivery</span>
+                      <span className="block text-xs text-muted">
+                        {formatPrice(18, "TND")} - next-day delivery with real-time tracking.
+                      </span>
+                    </span>
+                  </label>
+                </div>
+                <p className="mt-2 text-xs text-muted">
+                  You can change the delivery option later during checkout review.
+                </p>
+              </div>
               <button
-                onClick={() => validateShipping() ? setStep("payment") : toast({ title: "Please fill in all shipping fields", variant: "destructive" })}
+                onClick={handleContinueToNextStep}
                 className="mt-6 w-full bg-black text-white px-6 py-3 rounded-md hover:bg-gray-800 transition"
               >
-                Continue to Payment
+                {form.paymentMethod === "cod" ? "Continue to Review" : "Continue to Payment"}
               </button>
             </div>
           )}
@@ -240,8 +347,8 @@ export default function CheckoutPage() {
             <div className="border rounded-lg p-6">
               <h2 className="text-lg font-semibold mb-4">Payment Method</h2>
               <div className="space-y-4">
-                <div className="flex gap-4">
-                  `<label className="block flex items-center gap-2 cursor-pointer">
+                <div className="flex flex-wrap gap-4">
+                  <label className="flex items-center gap-2 cursor-pointer text-sm">
                     <input
                       type="radio"
                       name="paymentMethod"
@@ -249,9 +356,9 @@ export default function CheckoutPage() {
                       checked={form.paymentMethod === "card"}
                       onChange={(e) => updateForm({ paymentMethod: e.target.value as "card" | "cod" })}
                     />
-                    <span>Credit/Debit Card</span>
+                    <span className="font-medium">Pay with card</span>
                   </label>
-                  `<label className="block flex items-center gap-2 cursor-pointer">
+                  <label className="flex items-center gap-2 cursor-pointer text-sm">
                     <input
                       type="radio"
                       name="paymentMethod"
@@ -259,17 +366,23 @@ export default function CheckoutPage() {
                       checked={form.paymentMethod === "cod"}
                       onChange={(e) => updateForm({ paymentMethod: e.target.value as "card" | "cod" })}
                     />
-                    <span>Cash on Delivery</span>
+                    <span className="font-medium">Pay on delivery</span>
                   </label>
+                  <div className="flex items-center gap-2 text-xs text-muted">
+                    <span>Accepted:</span>
+                    <span className="inline-flex items-center gap-1 font-semibold text-foreground">
+                      Visa | MasterCard | PayPal
+                    </span>
+                  </div>
                 </div>
 
                 {form.paymentMethod === "card" && (
                   <div className="space-y-4 pt-4 border-t">
                     <div>
-                      `<label className="block block text-sm font-medium mb-1">Cardholder Name</label>
+                      <label className="block text-sm font-medium mb-1">Cardholder Name</label>
                       <input
                         type="text"
-                        id="checkout_card_name" name="cardName" value={form.cardName || ""}
+                        id="checkout_card_name" name="cardName" value={form.cardName ?? ""}
                         onChange={(e) => updateForm({ cardName: e.target.value })}
                         className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-black"
                         placeholder="John Doe"
@@ -277,10 +390,10 @@ export default function CheckoutPage() {
                       />
                     </div>
                     <div>
-                      `<label className="block block text-sm font-medium mb-1">Card Number</label>
+                      <label className="block text-sm font-medium mb-1">Card Number</label>
                       <input
                         type="text"
-                        id="checkout_card_number" name="cardNumber" value={form.cardNumber || ""}
+                        id="checkout_card_number" name="cardNumber" value={form.cardNumber ?? ""}
                         onChange={(e) => updateForm({ cardNumber: e.target.value })}
                         className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-black"
                         placeholder="1234 5678 9012 3456"
@@ -289,10 +402,10 @@ export default function CheckoutPage() {
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        `<label className="block block text-sm font-medium mb-1">Expiry Date</label>
+                        <label className="block text-sm font-medium mb-1">Expiry Date</label>
                         <input
                           type="text"
-                          id="checkout_expiry" name="expiryDate" value={form.expiryDate || ""}
+                          id="checkout_expiry" name="expiryDate" value={form.expiryDate ?? ""}
                           onChange={(e) => updateForm({ expiryDate: e.target.value })}
                           className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-black"
                           placeholder="MM/YY"
@@ -300,10 +413,10 @@ export default function CheckoutPage() {
                         />
                       </div>
                       <div>
-                        `<label className="block block text-sm font-medium mb-1">CVV</label>
+                        <label className="block text-sm font-medium mb-1">CVV</label>
                         <input
                           type="text"
-                          id="checkout_cvv" name="cvv" value={form.cvv || ""}
+                          id="checkout_cvv" name="cvv" value={form.cvv ?? ""}
                           onChange={(e) => updateForm({ cvv: e.target.value })}
                           className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-black"
                           placeholder="123"
@@ -311,13 +424,19 @@ export default function CheckoutPage() {
                         />
                       </div>
                     </div>
+                    <div className="rounded-md border border-dashed border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-600">
+                      Secure payment powered by SSL and PCI DSS compliant processors. Your full card details are never stored.
+                    </div>
                   </div>
                 )}
 
                 {form.paymentMethod === "cod" && (
                   <div className="pt-4 border-t">
                     <p className="text-sm text-gray-600">
-                      Pay with cash when your order is delivered. A small COD fee may apply.
+                      Pay the courier with cash or card when the parcel arrives. No upfront payment required.
+                    </p>
+                    <p className="text-xs text-muted mt-2">
+                      Please have the exact amount ready. Couriers can accept card payments on delivery in most regions.
                     </p>
                   </div>
                 )}
@@ -358,10 +477,16 @@ export default function CheckoutPage() {
                     {form.paymentMethod === "card" ? `Card ending in ${form.cardNumber?.slice(-4)}` : "Cash on Delivery"}
                   </p>
                 </div>
+                <div>
+                  <h3 className="font-medium">Delivery Option</h3>
+                  <p className="text-sm text-gray-600">
+                    {deliveryMethod === "express" ? "Express delivery (next day)" : "Standard delivery (2-3 days)"}
+                  </p>
+                </div>
               </div>
               <div className="flex gap-4 mt-6">
                 <button
-                  onClick={() => setStep("payment")}
+                  onClick={() => setStep(form.paymentMethod === "cod" ? "shipping" : "payment")}
                   className="flex-1 border border-gray-300 px-6 py-3 rounded-md hover:bg-gray-50 transition"
                 >
                   Back
@@ -382,14 +507,14 @@ export default function CheckoutPage() {
         <div className="border rounded-lg p-6 h-fit sticky top-4">
           <h2 className="text-lg font-semibold mb-4">Order Summary</h2>
           <div className="space-y-3">
-            {items.map((item: any) => (
-              <div key={item.id} className="flex justify-between text-sm">
+            {items.map((item) => (
+              <div key={item.id ?? item.product_id} className="flex justify-between text-sm">
                 <div>
                   <div className="font-medium">{item.product_title}</div>
                   <div className="text-gray-600">Qty: {item.quantity}</div>
                 </div>
                 <div className="font-medium">
-                  {formatPrice((item.price || 0) * (item.quantity || 1), "TND")}
+                  {formatPrice(item.price * item.quantity, "TND")}
                 </div>
               </div>
             ))}
@@ -400,7 +525,7 @@ export default function CheckoutPage() {
               <span>{formatPrice(subtotal, "TND")}</span>
             </div>
             <div className="flex justify-between text-sm">
-              <span>Shipping</span>
+              <span>Shipping ({deliveryMethod === "express" ? "Express" : "Standard"})</span>
               <span>{shipping === 0 ? "Free" : formatPrice(shipping, "TND")}</span>
             </div>
             <div className="flex justify-between text-sm">
@@ -417,6 +542,8 @@ export default function CheckoutPage() {
     </div>
   );
 }
+
+
 
 
 

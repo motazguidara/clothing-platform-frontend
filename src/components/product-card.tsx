@@ -358,45 +358,51 @@ export default function ProductCard({ product }: Props) {
       {/* Color variant swatches below image (non-blocking) */}
       {swatchesToDisplay.length > 0 && (
         <div className="mt-3 flex items-center gap-2">
-          {swatchesToDisplay.map((swatch) => (
-            <button
-              key={swatch.key}
-              type="button"
-              onClick={(event) => {
-                event.preventDefault();
-                event.stopPropagation();
-                const nextPreview = swatch.preview ?? null;
-                setSelectedColorKey(swatch.key);
-                setLockedPreview(nextPreview);
-                setPreviewImage(nextPreview);
-                setCurrentImageIndex(0);
-              }}
-              onMouseEnter={() => {
-                if (swatch.preview) {
-                  setPreviewImage(swatch.preview);
-                }
-              }}
-              onFocus={() => {
-                if (swatch.preview) {
-                  setPreviewImage(swatch.preview);
-                }
-              }}
-              onMouseLeave={() => {
-                setPreviewImage(lockedPreview);
-              }}
-              onBlur={() => {
-                setPreviewImage(lockedPreview);
-              }}
-              aria-label={`${displayTitle} in ${swatch.label}`}
-              title={swatch.label}
-              className={`w-5 h-5 rounded-full border transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black ${selectedColorKey === swatch.key ? 'ring-2 ring-black' : ''}`}
-              style={{
-                backgroundColor:
-                  swatch.swatchColor ??
-                  (/\s/.test(swatch.label) ? undefined : swatch.label.toLowerCase()),
-              }}
-            />
-          ))}
+          {swatchesToDisplay.map((swatch) => {
+            const isSelected = selectedColorKey === swatch.key;
+            return (
+              <button
+                key={swatch.key}
+                type="button"
+                onClick={(event) => {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  const nextPreview = swatch.preview ?? null;
+                  setSelectedColorKey(swatch.key);
+                  setLockedPreview(nextPreview);
+                  setPreviewImage(nextPreview);
+                  setCurrentImageIndex(0);
+                }}
+                onMouseEnter={() => {
+                  if (swatch.preview) {
+                    setPreviewImage(swatch.preview);
+                  }
+                }}
+                onFocus={() => {
+                  if (swatch.preview) {
+                    setPreviewImage(swatch.preview);
+                  }
+                }}
+                onMouseLeave={() => {
+                  setPreviewImage(lockedPreview);
+                }}
+                onBlur={() => {
+                  setPreviewImage(lockedPreview);
+                }}
+                aria-label={`${displayTitle} in ${swatch.label}`}
+                aria-pressed={isSelected}
+                title={swatch.label}
+                className={`w-5 h-5 rounded-full border transition-transform duration-150 ease-out focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black hover:shadow-sm hover:scale-105 ${
+                  isSelected ? "ring-2 ring-offset-1 ring-black border-black" : "border-gray-300 hover:border-gray-500"
+                }`}
+                style={{
+                  backgroundColor:
+                    swatch.swatchColor ??
+                    (/\s/.test(swatch.label) ? undefined : swatch.label.toLowerCase()),
+                }}
+              />
+            );
+          })}
           {hiddenSwatchCount > 0 && (
             <span className="text-xs text-gray-500">+{hiddenSwatchCount}</span>
           )}

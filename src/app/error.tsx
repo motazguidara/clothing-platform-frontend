@@ -162,7 +162,7 @@ export default function ErrorPage({ error, reset }: ErrorPageProps) {
 
         {/* Error ID for Support */}
         <p className="mt-6 text-xs text-gray-400">
-          Error ID: {error.digest || 'N/A'}
+          Error ID: {error.digest ?? 'N/A'}
         </p>
       </div>
     </div>

@@ -18,7 +18,7 @@ export function estimatePoints(value?: number) {
 }
 
 // Debounce function for search and other inputs
-export function debounce<T extends (...args: any[]) => any>(
+export function debounce<T extends (...args: unknown[]) => unknown>(
   func: T,
   wait: number
 ): (...args: Parameters<T>) => void {
@@ -30,7 +30,7 @@ export function debounce<T extends (...args: any[]) => any>(
 }
 
 // Throttle function for scroll events
-export function throttle<T extends (...args: any[]) => any>(
+export function throttle<T extends (...args: unknown[]) => unknown>(
   func: T,
   limit: number
 ): (...args: Parameters<T>) => void {
@@ -134,14 +134,14 @@ export async function copyToClipboard(text: string): Promise<boolean> {
 // Local storage helpers with error handling
 export const storage = {
   get: <T>(key: string, defaultValue?: T): T | null => {
-    if (typeof window === 'undefined') return defaultValue || null;
+    if (typeof window === 'undefined') return defaultValue ?? null;
     
     try {
       const item = localStorage.getItem(key);
-      return item ? JSON.parse(item) : defaultValue || null;
+      return item ? (JSON.parse(item) as T) : defaultValue ?? null;
     } catch (error) {
       console.error(`Error reading from localStorage key "${key}":`, error);
-      return defaultValue || null;
+      return defaultValue ?? null;
     }
   },
   

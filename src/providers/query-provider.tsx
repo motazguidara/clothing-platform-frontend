@@ -10,18 +10,16 @@ type Props = {
 // Create a singleton QueryClient per browser session
 let browserQueryClient: QueryClient | null = null;
 function getQueryClient(): QueryClient {
-  if (browserQueryClient == null) {
-    browserQueryClient = new QueryClient({
-      defaultOptions: {
-        queries: {
-          staleTime: 1000 * 30,
-          gcTime: 1000 * 60 * 5,
-          refetchOnWindowFocus: false,
-          retry: 1,
-        },
+  browserQueryClient ??= new QueryClient({
+    defaultOptions: {
+      queries: {
+        staleTime: 1000 * 30,
+        gcTime: 1000 * 60 * 5,
+        refetchOnWindowFocus: false,
+        retry: 1,
       },
-    });
-  }
+    },
+  });
   return browserQueryClient;
 }
 

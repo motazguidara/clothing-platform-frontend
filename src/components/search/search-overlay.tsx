@@ -17,6 +17,8 @@ export function SearchOverlay({ isOpen, onClose }: Props) {
   const pathname = usePathname();
   const sp = useSearchParams();
   const prevOverflowRef = React.useRef<string>("");
+  const searchParamsString = React.useMemo(() => sp?.toString() ?? "", [sp]);
+  const lastLocationRef = React.useRef<string>("");
 
   const mockSuggestions = React.useMemo(
     () => [
@@ -65,12 +67,21 @@ export function SearchOverlay({ isOpen, onClose }: Props) {
     };
   }, [isOpen, onClose]);
 
-  // Auto-close on any route or query change (prevents lingering overlay/dim)
+  // Auto-close when navigation occurs while the overlay is open.
   React.useEffect(() => {
-    if (!isOpen) return;
-    onClose();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pathname, sp?.toString()]);
+    const currentLocation = `${pathname ?? ""}?${searchParamsString}`;
+
+    if (!isOpen) {
+      lastLocationRef.current = currentLocation;
+      return;
+    }
+
+    if (lastLocationRef.current && lastLocationRef.current !== currentLocation) {
+      onClose();
+    }
+
+    lastLocationRef.current = currentLocation;
+  }, [isOpen, pathname, searchParamsString, onClose]);
 
   // Outside click closes suggestions (not overlay)
   React.useEffect(() => {
