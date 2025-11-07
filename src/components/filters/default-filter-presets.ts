@@ -14,15 +14,10 @@ const pricePresets = [
   { value: "600_plus", label: "600 TND+", min: 600, max: null },
 ];
 
-const sizeOptions = [
-  "XS",
-  "S",
-  "M",
-  "L",
-  "XL",
-  "XXL",
-  "3XL",
-].map((value) => ({ value, label: value }));
+const sizeOptions = ["XS", "S", "M", "L", "XL", "XXL", "3XL"].map((value) => ({
+  value,
+  label: value,
+}));
 
 const colorOptions = [
   { value: "black", label: "Black" },
@@ -44,17 +39,31 @@ const parseActiveValue = (value?: string) => {
   return numeric;
 };
 
-interface BuildDefaultFiltersOptions {
+export interface BuildDefaultFiltersOptions {
   gender?: string;
   price_min?: string;
   price_max?: string;
-  size?: string;
-  color?: string;
+  size?: string | string[];
+  color?: string | string[];
+  brand?: string | string[];
   sale?: string;
   in_stock?: string;
 }
 
-export function buildDefaultFilters(options: BuildDefaultFiltersOptions): CatalogFilterGroup[] {
+const toSelectedArray = (value?: string | string[]): string[] => {
+  if (!value) return [];
+  if (Array.isArray(value)) {
+    return value
+      .map((entry) => entry.trim())
+      .filter((entry) => entry.length > 0);
+  }
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? [trimmed] : [];
+};
+
+export function buildDefaultFilters(
+  options: BuildDefaultFiltersOptions,
+): CatalogFilterGroup[] {
   const activeMin = parseActiveValue(options.price_min);
   const activeMax = parseActiveValue(options.price_max);
 
@@ -111,17 +120,17 @@ export function buildDefaultFilters(options: BuildDefaultFiltersOptions): Catalo
       id: "size",
       label: "Size",
       param: "size",
-      selection: "single",
+      selection: "multi",
       options: sizeOptions,
-      selected: options.size ? [options.size] : [],
+      selected: toSelectedArray(options.size),
     },
     {
       id: "color",
       label: "Colour",
       param: "color",
-      selection: "single",
+      selection: "multi",
       options: colorOptions,
-      selected: options.color ? [options.color] : [],
+      selected: toSelectedArray(options.color),
     },
   ];
 }

@@ -1,13 +1,41 @@
-type Primitive = string | number | boolean;
+﻿type Primitive = string | number | boolean;
+type PrimitiveOrList = Primitive | Primitive[];
 
 export type CatalogQueryInput = Record<string, unknown>;
 
-export function prepareCatalogQueryParams(params?: CatalogQueryInput): Record<string, Primitive> {
+const normalizePrimitive = (value: unknown): Primitive | undefined => {
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    return trimmed.length > 0 ? trimmed : undefined;
+  }
+  if (typeof value === "number" || typeof value === "boolean") {
+    return value;
+  }
+  return undefined;
+};
+
+const normalizePrimitiveArray = (value: unknown): Primitive[] => {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  const normalized: Primitive[] = [];
+  for (const entry of value) {
+    const primitive = normalizePrimitive(entry);
+    if (primitive !== undefined) {
+      normalized.push(primitive);
+    }
+  }
+  return normalized;
+};
+
+export function prepareCatalogQueryParams(
+  params?: CatalogQueryInput,
+): Record<string, PrimitiveOrList> {
   if (!params) {
     return {};
   }
 
-  const prepared: Record<string, Primitive> = {};
+  const prepared: Record<string, PrimitiveOrList> = {};
 
   for (const [key, rawValue] of Object.entries(params)) {
     if (rawValue === undefined || rawValue === null) {
@@ -17,30 +45,22 @@ export function prepareCatalogQueryParams(params?: CatalogQueryInput): Record<st
     if (key === "limit") {
       const numeric = Number(rawValue);
       if (Number.isFinite(numeric)) {
-        prepared.page_size = numeric;
+        prepared["page_size"] = numeric;
       }
       continue;
     }
 
-    if (Array.isArray(rawValue)) {
-      if (rawValue.length === 0) {
-        continue;
-      }
-      const last = rawValue[rawValue.length - 1];
-      if (typeof last === "string" || typeof last === "number" || typeof last === "boolean") {
-        prepared[key] = last;
-      } else {
-        prepared[key] = String(last);
-      }
+    const normalizedArray = normalizePrimitiveArray(rawValue);
+    if (normalizedArray.length > 0) {
+      prepared[key] = normalizedArray;
       continue;
     }
 
-    if (typeof rawValue === "string" || typeof rawValue === "number" || typeof rawValue === "boolean") {
-      prepared[key] = rawValue;
+    const normalizedValue = normalizePrimitive(rawValue);
+    if (normalizedValue !== undefined) {
+      prepared[key] = normalizedValue;
       continue;
     }
-
-    prepared[key] = String(rawValue);
   }
 
   return prepared;

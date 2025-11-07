@@ -1,23 +1,47 @@
-import type { Metadata } from 'next';
-import Link from 'next/link';
-import ProductCard from '@/components/product-card';
-import { FilterSidebar, SortSelect } from '@/components/filters/filter-sidebar';
-import type { Product, CatalogFacetsResponse } from '@/types';
+import type { Metadata } from "next";
+import Link from "next/link";
+import ProductCard from "@/components/product-card";
+import { FilterSidebar, SortSelect } from "@/components/filters/filter-sidebar";
+import type { Product, CatalogFacetsResponse } from "@/types";
+
+type SearchParamValue = string | string[] | undefined;
 
 // Server Component for SEO and performance
 interface CatalogSearchParams {
-  category?: string;
-  gender?: string;
-  price_min?: string;
-  price_max?: string;
-  size?: string;
-  color?: string;
-  q?: string;
-  ordering?: string;
-  page?: string;
-  sale?: string;
-  in_stock?: string;
+  [key: string]: SearchParamValue;
+  category?: SearchParamValue;
+  gender?: SearchParamValue;
+  price_min?: SearchParamValue;
+  price_max?: SearchParamValue;
+  size?: SearchParamValue;
+  color?: SearchParamValue;
+  brand?: SearchParamValue;
+  q?: SearchParamValue;
+  ordering?: SearchParamValue;
+  page?: SearchParamValue;
+  sale?: SearchParamValue;
+  in_stock?: SearchParamValue;
 }
+
+const normalizeParamArray = (value: SearchParamValue): string[] => {
+  if (Array.isArray(value)) {
+    return value
+      .map((entry) =>
+        (typeof entry === "string" ? entry.trim() : String(entry ?? "")).trim(),
+      )
+      .filter((entry) => entry.length > 0);
+  }
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    return trimmed.length > 0 ? [trimmed] : [];
+  }
+  return [];
+};
+
+const firstParamValue = (value: SearchParamValue): string | undefined => {
+  const values = normalizeParamArray(value);
+  return values.length > 0 ? values[0] : undefined;
+};
 
 type CatalogPageProps = {
   searchParams: Promise<CatalogSearchParams>;
@@ -28,8 +52,8 @@ function buildCatalogParams(sp: CatalogSearchParams) {
   const params = new URLSearchParams();
 
   Object.entries(sp).forEach(([key, value]) => {
-    if (value === undefined || value === null || value === '') return;
-    params.append(key, value);
+    const normalized = normalizeParamArray(value);
+    normalized.forEach((entry) => params.append(key, entry));
   });
 
   return params;
@@ -38,74 +62,86 @@ function buildCatalogParams(sp: CatalogSearchParams) {
 async function getProducts(sp: CatalogSearchParams) {
   const params = buildCatalogParams(sp);
   const query = params.toString();
-  
+
   try {
-    const res = await fetch(`${process.env["NEXT_PUBLIC_API_URL"]}/catalog/products/${query ? `?${query}` : ''}`, {
-      next: { revalidate: 300 }, // Revalidate every 5 minutes
-    });
-    
+    const res = await fetch(
+      `${process.env["NEXT_PUBLIC_API_URL"]}/catalog/products/${query ? `?${query}` : ""}`,
+      {
+        next: { revalidate: 300 }, // Revalidate every 5 minutes
+      },
+    );
+
     if (!res.ok) {
-      throw new Error('Failed to fetch products');
+      throw new Error("Failed to fetch products");
     }
-    
+
     return res.json();
   } catch (error) {
-    console.error('Error fetching products:', error);
+    console.error("Error fetching products:", error);
     return { results: [], count: 0 };
   }
 }
 
-async function getCatalogFacets(sp: CatalogSearchParams): Promise<CatalogFacetsResponse | null> {
+async function getCatalogFacets(
+  sp: CatalogSearchParams,
+): Promise<CatalogFacetsResponse | null> {
   const params = buildCatalogParams(sp);
   const query = params.toString();
 
   try {
-    const res = await fetch(`${process.env["NEXT_PUBLIC_API_URL"]}/catalog/products/facets/${query ? `?${query}` : ''}`, {
-      next: { revalidate: 300 },
-    });
+    const res = await fetch(
+      `${process.env["NEXT_PUBLIC_API_URL"]}/catalog/products/facets/${query ? `?${query}` : ""}`,
+      {
+        next: { revalidate: 300 },
+      },
+    );
     if (!res.ok) {
-      throw new Error('Failed to fetch catalog facets');
+      throw new Error("Failed to fetch catalog facets");
     }
     return res.json();
   } catch (error) {
-    console.error('Error fetching catalog facets:', error);
+    console.error("Error fetching catalog facets:", error);
     return null;
   }
 }
 
 // Generate metadata for SEO
-export async function generateMetadata({ searchParams }: CatalogPageProps): Promise<Metadata> {
+export async function generateMetadata({
+  searchParams,
+}: CatalogPageProps): Promise<Metadata> {
   const sp = await searchParams;
   const facets = await getCatalogFacets(sp);
   const summary = facets?.summary;
-  const { category, q } = sp;
-  
-  let baseTitle = summary?.title ?? 'Catalog';
+  const category = firstParamValue(sp.category);
+  const q = firstParamValue(sp.q);
+
+  let baseTitle = summary?.title ?? "Catalog";
   if (!summary?.title) {
     if (q) {
       baseTitle = `Search results for "${q}"`;
     } else if (category) {
-      baseTitle = `${category.charAt(0).toUpperCase() + category.slice(1).replace(/-/g, ' ')}`;
+      baseTitle = `${category.charAt(0).toUpperCase() + category.slice(1).replace(/-/g, " ")}`;
     }
   }
   const title = `${baseTitle} | Your Store`;
 
   let description =
-    summary?.subtitle ?? 'Explore our latest collection of products.';
-  
+    summary?.subtitle ?? "Explore our latest collection of products.";
+
   if (q) {
-    description = summary?.subtitle ?? `Find products matching "${q}" in our catalog.`;
+    description =
+      summary?.subtitle ?? `Find products matching "${q}" in our catalog.`;
   } else if (category && !summary?.subtitle) {
-    description = `Shop our ${category.replace(/-/g, ' ')} collection.`;
+    description = `Shop our ${category.replace(/-/g, " ")} collection.`;
   }
-  
+
   return {
     title,
     description,
     openGraph: {
       title,
       description,
-      type: 'website',
+      type: "website",
     },
   };
 }
@@ -116,66 +152,92 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
     getProducts(sp),
     getCatalogFacets(sp),
   ]);
-  const results = Array.isArray(data) ? data : (Array.isArray(data?.results) ? data.results : []);
+  const qValue = firstParamValue(sp.q);
+  const categoryValue = firstParamValue(sp.category);
+  const results = Array.isArray(data)
+    ? data
+    : Array.isArray(data?.results)
+      ? data.results
+      : [];
   const products: Product[] = results ?? [];
-  const fallbackCount = typeof data?.count === 'number' ? data.count : products.length;
+  const fallbackCount =
+    typeof data?.count === "number" ? data.count : products.length;
   const summary = facetsData?.summary;
   const filters = facetsData?.filters ?? [];
-  const totalCount = typeof summary?.count === 'number' ? summary.count : fallbackCount;
-  const titleText = summary?.title ?? (sp.q ? `Search results for "${sp.q}"` : 'Catalog');
-  const subtitleText = summary?.subtitle ?? (sp.q ? `${totalCount} products found` : 'Explore our latest selection');
+  const totalCount =
+    typeof summary?.count === "number" ? summary.count : fallbackCount;
+  const titleText =
+    summary?.title ?? (qValue ? `Search results for "${qValue}"` : "Catalog");
+  const subtitleText =
+    summary?.subtitle ??
+    (qValue ? `${totalCount} products found` : "Explore our latest selection");
   const breadcrumbs = summary?.breadcrumbs ?? [];
   const subcategories = summary?.subcategories ?? [];
-  const activeCategorySlug = summary?.category?.slug ?? sp.category ?? null;
+  const activeCategorySlug = summary?.category?.slug ?? categoryValue ?? null;
 
   const structuredData = {
-    '@context': 'https://schema.org',
-    '@type': 'CollectionPage',
+    "@context": "https://schema.org",
+    "@type": "CollectionPage",
     name: titleText,
     description: subtitleText,
     numberOfItems: totalCount,
     mainEntity: {
-      '@type': 'ItemList',
+      "@type": "ItemList",
       numberOfItems: totalCount,
       itemListElement: products.slice(0, 10).map((product, index) => ({
-        '@type': 'ListItem',
+        "@type": "ListItem",
         position: index + 1,
         item: {
-          '@type': 'Product',
+          "@type": "Product",
           name: product.name,
           description: product.description,
           image: product.images?.[0] ?? product.image ?? undefined,
           offers: {
-            '@type': 'Offer',
+            "@type": "Offer",
             price: product.price,
-            priceCurrency: 'TND',
-            availability: product.in_stock ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
+            priceCurrency: "TND",
+            availability: product.in_stock
+              ? "https://schema.org/InStock"
+              : "https://schema.org/OutOfStock",
           },
         },
       })),
     },
   };
 
-  const createHref = (overrides: Record<string, string | null | undefined>) => {
+  const createHref = (
+    overrides: Record<string, SearchParamValue | null | undefined>,
+  ) => {
     const params = new URLSearchParams();
 
-    Object.entries(sp).forEach(([key, value]) => {
-      if (value === undefined || value === null || value === '') return;
-      if (key === 'page') return;
-      params.set(key, value);
-    });
+    const overrideMap = new Map<string, string[] | null>();
 
     Object.entries(overrides).forEach(([key, value]) => {
       if (value === undefined) return;
-      if (value === null || value === '') {
-        params.delete(key);
-      } else {
-        params.set(key, value);
+      if (value === null) {
+        overrideMap.set(key, null);
+        return;
       }
+      const normalized = normalizeParamArray(value);
+      overrideMap.set(key, normalized);
+    });
+
+    Object.entries(sp).forEach(([key, value]) => {
+      if (key === "page") return;
+      if (overrideMap.has(key)) return;
+      const normalized = normalizeParamArray(value);
+      normalized.forEach((entry) => params.append(key, entry));
+    });
+
+    overrideMap.forEach((values, key) => {
+      if (!values || values.length === 0) {
+        return;
+      }
+      values.forEach((entry) => params.append(key, entry));
     });
 
     const query = params.toString();
-    return `/catalog${query ? `?${query}` : ''}`;
+    return `/catalog${query ? `?${query}` : ""}`;
   };
 
   // Generate structured data for SEO
@@ -186,7 +248,7 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
       />
-      
+
       <section className="max-w-7xl mx-auto px-6 py-16">
         <div className="mb-8 space-y-4">
           {breadcrumbs.length > 0 && (
@@ -196,10 +258,16 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
                   Catalog
                 </Link>
                 {breadcrumbs.map((crumb, index) => (
-                  <span key={`${crumb.slug ?? crumb.id ?? index}`} className="flex items-center gap-2">
+                  <span
+                    key={`${crumb.slug ?? crumb.id ?? index}`}
+                    className="flex items-center gap-2"
+                  >
                     <span className="text-gray-300">/</span>
                     {crumb.slug && index !== breadcrumbs.length - 1 ? (
-                      <Link href={createHref({ category: crumb.slug })} className="hover:underline">
+                      <Link
+                        href={createHref({ category: crumb.slug })}
+                        className="hover:underline"
+                      >
                         {crumb.name}
                       </Link>
                     ) : (
@@ -225,16 +293,18 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
             {subcategories.length > 0 && (
               <div className="flex flex-wrap gap-3 text-sm font-medium text-gray-700 lg:hidden">
                 {subcategories.map((subcategory) => {
-                  const slug = subcategory.slug ?? '';
+                  const slug = subcategory.slug ?? "";
                   const isActive = activeCategorySlug === slug;
                   return (
                     <Link
                       key={`${subcategory.id}-${slug}`}
                       href={createHref({ category: slug })}
-                      className={`hover:underline ${isActive ? 'text-gray-900 font-semibold' : ''}`}
+                      className={`hover:underline ${isActive ? "text-gray-900 font-semibold" : ""}`}
                     >
                       {subcategory.name}
-                      {subcategory.product_count != null ? ` (${subcategory.product_count})` : ''}
+                      {subcategory.product_count != null
+                        ? ` (${subcategory.product_count})`
+                        : ""}
                     </Link>
                   );
                 })}
@@ -249,19 +319,23 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
             <div className="lg:max-h-[calc(100vh-7rem)] lg:overflow-y-auto pr-1 space-y-6">
               {subcategories.length > 0 && (
                 <div className="hidden lg:block">
-                  <div className="text-sm font-semibold text-gray-900 mb-3">Shop by Category</div>
+                  <div className="text-sm font-semibold text-gray-900 mb-3">
+                    Shop by Category
+                  </div>
                   <div className="space-y-2 text-sm">
                     {subcategories.map((subcategory) => {
-                      const slug = subcategory.slug ?? '';
+                      const slug = subcategory.slug ?? "";
                       const isActive = activeCategorySlug === slug;
                       return (
                         <Link
                           key={`${subcategory.id}-${slug}`}
                           href={createHref({ category: slug })}
-                          className={`block hover:underline ${isActive ? 'font-semibold text-gray-900' : 'text-gray-700'}`}
+                          className={`block hover:underline ${isActive ? "font-semibold text-gray-900" : "text-gray-700"}`}
                         >
                           {subcategory.name}
-                          {subcategory.product_count != null ? ` (${subcategory.product_count})` : ''}
+                          {subcategory.product_count != null
+                            ? ` (${subcategory.product_count})`
+                            : ""}
                         </Link>
                       );
                     })}
@@ -284,11 +358,20 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
               <div className="text-center py-16">
                 <div className="mx-auto h-12 w-12 text-gray-400 mb-4">
                   <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={1}
+                      d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"
+                    />
                   </svg>
                 </div>
-                <h3 className="text-lg font-medium text-gray-900 mb-2">No products found</h3>
-                <p className="text-gray-600">Try adjusting your filters or search terms.</p>
+                <h3 className="text-lg font-medium text-gray-900 mb-2">
+                  No products found
+                </h3>
+                <p className="text-gray-600">
+                  Try adjusting your filters or search terms.
+                </p>
               </div>
             )}
 

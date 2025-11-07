@@ -1,8 +1,12 @@
-"use client";
+﻿"use client";
 
 import React from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import type { CatalogFilterGroup } from "@/types";
+
+type FilterOptionWithSwatch = CatalogFilterGroup["options"][number] & {
+  swatchColor?: string;
+};
 
 function useUrl() {
   const router = useRouter();
@@ -14,31 +18,35 @@ function useUrl() {
     return new URL(
       window.location.origin +
         pathname +
-        (query && query.length ? `?${query}` : "")
+        (query && query.length ? `?${query}` : ""),
     );
   }, [pathname, sp]);
 
   const setParams = React.useCallback(
-    (updates: Array<{ key: string; value?: string | null }>) => {
+    (updates: Array<{ key: string; value: string | string[] | null | undefined }>) => {
       const url = buildUrl();
       updates.forEach(({ key, value }) => {
-        if (value != null && String(value).length > 0) {
-          url.searchParams.set(key, String(value));
-        } else {
-          url.searchParams.delete(key);
+        url.searchParams.delete(key);
+        if (value === undefined || value === null) {
+          return;
         }
+        const values = Array.isArray(value) ? value : [value];
+        values
+          .map((entry) => entry.trim())
+          .filter((entry) => entry.length > 0)
+          .forEach((entry) => url.searchParams.append(key, entry));
       });
       url.searchParams.delete("page");
       router.push(`${url.pathname}${url.search}`);
     },
-    [buildUrl, router]
+    [buildUrl, router],
   );
 
   const setParam = React.useCallback(
-    (key: string, value?: string | null) => {
-      setParams([{ key, value: value ?? undefined }]);
+    (key: string, value?: string | string[] | null) => {
+      setParams([{ key, value }]);
     },
-    [setParams]
+    [setParams],
   );
 
   return { setParam, setParams, sp };
@@ -72,20 +80,39 @@ export function FilterSidebar({
 
   const safeFilters = React.useMemo(
     () => (Array.isArray(filters) ? filters : []),
-    [filters]
+    [filters],
   );
 
   const safeFallbackFilters = React.useMemo(
     () => (Array.isArray(fallbackFilters) ? fallbackFilters : []),
-    [fallbackFilters]
+    [fallbackFilters],
   );
 
   const filtersSource =
     safeFilters.length > 0 ? safeFilters : safeFallbackFilters;
 
+  const serializedParams = sp?.toString() ?? "";
+
+  const selectedValuesByParam = React.useMemo(() => {
+    const map = new Map<string, Set<string>>();
+    if (sp) {
+      sp.forEach((value, key) => {
+        const trimmed = value.trim();
+        if (!trimmed.length) {
+          return;
+        }
+        if (!map.has(key)) {
+          map.set(key, new Set());
+        }
+        map.get(key)!.add(trimmed);
+      });
+    }
+    return map;
+  }, [serializedParams, sp]);
+
   const priceGroup = React.useMemo(
     () => filtersSource.find((group) => group.id === "price"),
-    [filtersSource]
+    [filtersSource],
   );
 
   const activePriceMin =
@@ -104,7 +131,7 @@ export function FilterSidebar({
         { key: "price_max", value: max != null ? String(max) : undefined },
       ]);
     },
-    [setParams]
+    [setParams],
   );
 
   const isPresetActive = React.useCallback(
@@ -115,11 +142,17 @@ export function FilterSidebar({
       const targetMax = max ?? null;
       return currentMin === targetMin && currentMax === targetMax;
     },
-    [priceGroup]
+    [priceGroup],
   );
 
   const renderGroupLabel = (label: string, group: CatalogFilterGroup) => {
-    const selectedCount = group.selected?.filter(Boolean).length ?? 0;
+    const urlSelected = group.param
+      ? selectedValuesByParam.get(group.param)
+      : undefined;
+    const urlSelectedCount = urlSelected?.size ?? 0;
+    const fallbackSelectedCount = group.selected?.filter(Boolean).length ?? 0;
+    const selectedCount =
+      urlSelectedCount > 0 ? urlSelectedCount : fallbackSelectedCount;
     const rangeActive =
       group.selection === "range" &&
       (group.range?.active_min != null || group.range?.active_max != null);
@@ -128,12 +161,12 @@ export function FilterSidebar({
   };
 
   const filtersToRender = filtersSource.filter(
-    (group) => group.options.length > 0 || group.selection === "range"
+    (group) => group.options.length > 0 || group.selection === "range",
   );
 
   const filtersSignature = React.useMemo(
     () => filtersToRender.map((group) => group.id).join("|"),
-    [filtersToRender]
+    [filtersToRender],
   );
 
   React.useEffect(() => {
@@ -144,7 +177,7 @@ export function FilterSidebar({
       filtersToRender.forEach((group) => {
         const hadPrev = Object.prototype.hasOwnProperty.call(prev, group.id);
         const prevValue = hadPrev ? prev[group.id] : defaultOpen;
-        next[group.id] = prevValue;
+        next[group.id] = prevValue ?? defaultOpen;
         if (!hadPrev) {
           changed = true;
         }
@@ -165,7 +198,10 @@ export function FilterSidebar({
     <aside className={`${className}`}>
       <div className="mb-4 flex items-center justify-between">
         <h2 className="text-base font-semibold">Filters</h2>
-        <button onClick={() => setShow((s) => !s)} className="text-sm text-gray-600 hover:underline">
+        <button
+          onClick={() => setShow((s) => !s)}
+          className="text-sm text-gray-600 hover:underline"
+        >
           {show ? "Hide Filters" : "Show Filters"}
         </button>
       </div>
@@ -198,11 +234,15 @@ export function FilterSidebar({
           )}
 
           {!isLoading && filtersToRender.length === 0 && !error && (
-            <p className="text-sm text-gray-500">No filters available for this view.</p>
+            <p className="text-sm text-gray-500">
+              No filters available for this view.
+            </p>
           )}
 
           {!isLoading && error && (
-            <p className="text-sm text-red-600">Unable to load filters right now.</p>
+            <p className="text-sm text-red-600">
+              Unable to load filters right now.
+            </p>
           )}
 
           {filtersToRender.map((group, groupIndex) => {
@@ -210,18 +250,41 @@ export function FilterSidebar({
             const isOpen = openState[group.id] ?? false;
             let content: React.ReactNode = null;
 
+            const paramKey = group.param;
+            const urlSelectedSet = paramKey
+              ? selectedValuesByParam.get(paramKey)
+              : undefined;
+            const fallbackSelected = (group.selected ?? []).filter(
+              (entry): entry is string =>
+                typeof entry === "string" && entry.trim().length > 0,
+            );
+            const selectedValues =
+              urlSelectedSet && urlSelectedSet.size > 0
+                ? Array.from(urlSelectedSet)
+                : fallbackSelected;
+            const selectedSet = new Set(selectedValues);
+
             if (group.id === "gender") {
               content = (
                 <div className="space-y-1">
                   {group.options.map((option) => {
-                    const isChecked = group.selected?.includes(option.value) ?? false;
+                    const rawValue = option.value ?? "";
+                    const value = rawValue.trim();
+                    if (!value.length) {
+                      return null;
+                    }
+                    const isChecked = selectedSet.has(value);
                     return (
-                      <label key={option.value} className="flex items-center gap-2 text-sm">
+                      <label
+                        key={value}
+                        className="flex items-center gap-2 text-sm"
+                      >
                         <input
                           type="radio"
-                          name="gender"
+                          name={paramKey}
+                          value={value}
                           checked={isChecked}
-                          onChange={() => setParam("gender", option.value)}
+                          onChange={() => setParam(paramKey, value)}
                         />
                         <span>
                           {option.count != null
@@ -231,10 +294,10 @@ export function FilterSidebar({
                       </label>
                     );
                   })}
-                  {(group.selected?.length ?? 0) > 0 && (
+                  {selectedSet.size > 0 && (
                     <button
                       className="text-xs text-gray-600 hover:underline mt-1"
-                      onClick={() => setParam("gender", undefined)}
+                      onClick={() => setParam(paramKey, undefined)}
                     >
                       Clear
                     </button>
@@ -264,7 +327,10 @@ export function FilterSidebar({
                       defaultValue={activePriceMin}
                       className="w-20 px-2 py-1 border rounded"
                       onBlur={(e) =>
-                        setParam("price_min", e.target.value ? e.target.value : undefined)
+                        setParam(
+                          "price_min",
+                          e.target.value ? e.target.value : undefined,
+                        )
                       }
                     />
                     <span className="text-gray-500">-</span>
@@ -273,7 +339,10 @@ export function FilterSidebar({
                       defaultValue={activePriceMax}
                       className="w-20 px-2 py-1 border rounded"
                       onBlur={(e) =>
-                        setParam("price_max", e.target.value ? e.target.value : undefined)
+                        setParam(
+                          "price_max",
+                          e.target.value ? e.target.value : undefined,
+                        )
                       }
                     />
                   </div>
@@ -293,19 +362,34 @@ export function FilterSidebar({
                 </div>
               );
             } else if (group.selection === "toggle") {
-              const paramKey = group.param;
               content = (
                 <>
                   {group.options.map((option) => {
-                    const isChecked = group.selected?.includes(option.value) ?? false;
+                    const rawValue = option.value ?? "";
+                    const value = rawValue.trim();
+                    if (!value.length) {
+                      return null;
+                    }
+                    const isChecked = selectedSet.has(value);
                     return (
-                      <label key={option.value} className="flex items-center gap-2 text-sm">
+                      <label
+                        key={value}
+                        className="flex items-center gap-2 text-sm"
+                      >
                         <input
                           type="checkbox"
                           checked={isChecked}
-                          onChange={(e) =>
-                            setParam(paramKey, e.target.checked ? option.value : undefined)
-                          }
+                          onChange={(e) => {
+                            const nextValues = e.target.checked
+                              ? Array.from(new Set([...selectedValues, value]))
+                              : selectedValues.filter(
+                                  (entry) => entry !== value,
+                                );
+                            setParam(
+                              paramKey,
+                              nextValues.length > 0 ? nextValues : undefined,
+                            );
+                          }}
                         />
                         <span>
                           {option.count != null
@@ -318,31 +402,46 @@ export function FilterSidebar({
                 </>
               );
             } else if (group.id === "size") {
-              const current = group.selected?.[0];
               content = (
                 <>
                   <div className="flex flex-wrap gap-2">
                     {group.options.map((option) => {
-                      const isActive = current === option.value;
+                      const rawValue = option.value ?? option.label ?? "";
+                      const value = rawValue.trim();
+                      if (!value.length) {
+                        return null;
+                      }
+                      const isActive = selectedSet.has(value);
                       return (
                         <button
-                          key={option.value}
-                          className={`px-2 py-1 border rounded text-xs ${
-                            isActive ? "bg-black text-white" : "hover:bg-gray-100"
+                          key={value}
+                          type="button"
+                          className={`px-3 py-1.5 border rounded-md text-sm transition ${
+                            isActive
+                              ? "bg-black text-white border-black shadow-sm"
+                              : "border-gray-200 hover:bg-gray-100"
                           }`}
-                          onClick={() =>
-                            setParam("size", isActive ? undefined : option.value)
-                          }
+                          onClick={() => {
+                            const nextValues = isActive
+                              ? selectedValues.filter(
+                                  (entry) => entry !== value,
+                                )
+                              : [...selectedValues, value];
+                            setParam(
+                              paramKey,
+                              nextValues.length > 0 ? nextValues : undefined,
+                            );
+                          }}
                         >
                           {option.label}
                         </button>
                       );
                     })}
                   </div>
-                  {current && (
+                  {selectedSet.size > 0 && (
                     <button
                       className="text-xs text-gray-600 hover:underline mt-1"
-                      onClick={() => setParam("size", undefined)}
+                      onClick={() => setParam(paramKey, undefined)}
                     >
                       Clear
                     </button>
@@ -350,31 +449,66 @@ export function FilterSidebar({
                 </>
               );
             } else if (group.id === "color") {
-              const current = group.selected?.[0];
               content = (
                 <>
-                  <div className="flex flex-wrap gap-2">
+                  <div className="flex flex-wrap gap-3">
                     {group.options.map((option) => {
-                      const isActive = current === option.value;
+                      const rawValue =
+                        option.value ?? option.slug ?? option.label ?? "";
+                      const value = rawValue.trim();
+                      if (!value.length) {
+                        return null;
+                      }
+                      const isActive = selectedSet.has(value);
+                      const swatchSource =
+                        (option as FilterOptionWithSwatch).swatchColor ??
+                        value.replace(/-/g, " ");
+                      const swatchColor =
+                        swatchSource && swatchSource.length > 0
+                          ? swatchSource
+                          : undefined;
                       return (
                         <button
-                          key={option.value}
-                          className={`px-2 py-1 border rounded text-xs ${
-                            isActive ? "bg-black text-white" : "hover:bg-gray-100"
+                          key={value}
+                          type="button"
+                          className={`flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black ${
+                            isActive
+                              ? "border-black bg-gray-50 shadow-sm"
+                              : "border-gray-200 hover:border-gray-300"
                           }`}
-                          onClick={() =>
-                            setParam("color", isActive ? undefined : option.value)
-                          }
+                          onClick={() => {
+                            const nextValues = isActive
+                              ? selectedValues.filter(
+                                  (entry) => entry !== value,
+                                )
+                              : [...selectedValues, value];
+                            setParam(
+                              paramKey,
+                              nextValues.length > 0 ? nextValues : undefined,
+                            );
+                          }}
+                          title={option.label}
+                          aria-pressed={isActive}
                         >
-                          {option.label}
+                          <span
+                            className="h-5 w-5 rounded-full border border-white shadow-inner"
+                            style={
+                              swatchColor
+                                ? { backgroundColor: swatchColor }
+                                : undefined
+                            }
+                          />
+                          <span className="text-xs font-medium text-gray-700">
+                            {option.label}
+                          </span>
                         </button>
                       );
                     })}
                   </div>
-                  {current && (
+                  {selectedSet.size > 0 && (
                     <button
-                      className="text-xs text-gray-600 hover:underline mt-1"
-                      onClick={() => setParam("color", undefined)}
+                      className="text-xs text-gray-600 hover:underline mt-2"
+                      onClick={() => setParam(paramKey, undefined)}
                     >
                       Clear
                     </button>
@@ -382,31 +516,109 @@ export function FilterSidebar({
                 </>
               );
             } else if (group.id === "brand") {
-              const current = group.selected?.[0];
               content = (
                 <>
-                  <div className="space-y-1">
+                  <div className="space-y-2">
                     {group.options.map((option) => {
-                      const value = (option.slug ?? option.value) ?? "";
-                      const isActive = current === value;
+                      const rawValue = option.slug ?? option.value ?? "";
+                      const value = rawValue.trim();
+                      if (!value.length) {
+                        return null;
+                      }
+                      const isActive = selectedSet.has(value);
+                      return (
+                        <label
+                          key={value}
+                          className="flex items-center justify-between gap-3 rounded-md px-2 py-1 hover:bg-gray-50"
+                        >
+                          <span className="flex items-center gap-2">
+                            <input
+                              type="checkbox"
+                              className="h-4 w-4 rounded border-gray-300 text-black focus:ring-black"
+                              checked={isActive}
+                              onChange={(e) => {
+                                const nextValues = e.target.checked
+                                  ? Array.from(
+                                      new Set([...selectedValues, value]),
+                                    )
+                                  : selectedValues.filter(
+                                      (entry) => entry !== value,
+                                    );
+                                setParam(
+                                  paramKey,
+                                  nextValues.length > 0
+                                    ? nextValues
+                                    : undefined,
+                                );
+                              }}
+                            />
+                            <span
+                              className={`text-sm ${isActive ? "font-semibold text-gray-900" : "text-gray-700"}`}
+                            >
+                              {option.label}
+                            </span>
+                          </span>
+                          {option.count != null && (
+                            <span className="text-xs text-gray-500">
+                              {option.count}
+                            </span>
+                          )}
+                        </label>
+                      );
+                    })}
+                  </div>
+                  {selectedSet.size > 0 && (
+                    <button
+                      className="text-xs text-gray-600 hover:underline mt-1"
+                      onClick={() => setParam(paramKey, undefined)}
+                    >
+                      Clear
+                    </button>
+                  )}
+                </>
+              );
+            } else if (group.selection === "multi") {
+              content = (
+                <>
+                  <div className="flex flex-wrap gap-2">
+                    {group.options.map((option) => {
+                      const rawValue =
+                        option.value ?? option.slug ?? option.label ?? "";
+                      const value = rawValue.trim();
+                      if (!value.length) {
+                        return null;
+                      }
+                      const isActive = selectedSet.has(value);
                       return (
                         <button
                           key={value}
-                          className={`block w-full text-left text-sm ${
-                            isActive ? "font-semibold text-gray-900" : "hover:underline"
+                          type="button"
+                          className={`px-2 py-1 border rounded text-xs transition ${
+                            isActive
+                              ? "bg-black text-white border-black"
+                              : "border-gray-200 hover:bg-gray-100"
                           }`}
-                          onClick={() => setParam("brand", isActive ? undefined : value)}
+                          onClick={() => {
+                            const nextValues = isActive
+                              ? selectedValues.filter(
+                                  (entry) => entry !== value,
+                                )
+                              : [...selectedValues, value];
+                            setParam(
+                              paramKey,
+                              nextValues.length > 0 ? nextValues : undefined,
+                            );
+                          }}
                         >
                           {option.label}
-                          {option.count != null ? ` (${option.count})` : ""}
                         </button>
                       );
                     })}
                   </div>
-                  {current && (
+                  {selectedSet.size > 0 && (
                     <button
                       className="text-xs text-gray-600 hover:underline mt-1"
-                      onClick={() => setParam("brand", undefined)}
+                      onClick={() => setParam(paramKey, undefined)}
                     >
                       Clear
                     </button>
@@ -417,15 +629,24 @@ export function FilterSidebar({
               content = (
                 <div className="flex flex-wrap gap-2">
                   {group.options.map((option) => {
-                    const isActive = group.selected?.includes(option.value) ?? false;
+                    const rawValue =
+                      option.value ?? option.slug ?? option.label ?? "";
+                    const value = rawValue.trim();
+                    if (!value.length) {
+                      return null;
+                    }
+                    const isActive = selectedSet.has(value);
                     return (
                       <button
-                        key={option.value}
-                        className={`px-2 py-1 border rounded text-xs ${
-                          isActive ? "bg-black text-white" : "hover:bg-gray-100"
+                        key={value}
+                        type="button"
+                        className={`px-2 py-1 border rounded text-xs transition ${
+                          isActive
+                            ? "bg-black text-white border-black"
+                            : "border-gray-200 hover:bg-gray-100"
                         }`}
                         onClick={() =>
-                          setParam(group.param, isActive ? undefined : option.value)
+                          setParam(paramKey, isActive ? undefined : value)
                         }
                       >
                         {option.label}

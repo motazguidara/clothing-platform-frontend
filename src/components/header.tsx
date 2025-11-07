@@ -4,8 +4,22 @@ import React from "react";
 import Link from "next/link";
 import { IconButton } from "@/components/ui/icon-button";
 import { WishlistLink } from "@/components/ui/wishlist-link";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { UserRound, ChevronDown, ChevronRight, Heart, ShoppingBag, TicketPercent, Search, X } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  UserRound,
+  ChevronDown,
+  ChevronRight,
+  Heart,
+  ShoppingBag,
+  TicketPercent,
+  Search,
+  X,
+} from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useUIStore } from "@/store/ui";
 import { useCart } from "@/hooks/useCart";
@@ -22,24 +36,84 @@ const STATIC_NAVIGATION_MENUS: NavigationMenu[] = [
     title: "Women",
     order: 10,
     hero_title: "New Season Essentials",
-    hero_subtitle: "Discover versatile layers and polished looks for every day.",
+    hero_subtitle:
+      "Discover versatile layers and polished looks for every day.",
     hero_link: "/catalog?gender=women&ordering=-created_at",
     entry_url: "/women",
     hero_image: null,
     hero_links: [
       { href: "/women", label: "Women overview" },
-      { href: "/catalog?gender=women&ordering=-created_at", label: "New in", badge_text: "New", badge_variant: "new" },
+      {
+        href: "/catalog?gender=women&ordering=-created_at",
+        label: "New in",
+        badge_text: "New",
+        badge_variant: "new",
+      },
       { href: "/catalog?gender=women&category=cashmere", label: "Cashmere" },
-      { href: "/catalog?sale=1&gender=women", label: "Sale", badge_text: "%", badge_variant: "sale" },
+      {
+        href: "/catalog?sale=1&gender=women",
+        label: "Sale",
+        badge_text: "%",
+        badge_variant: "sale",
+      },
     ],
     items: [
-      { id: -101, label: "Women overview", url: "/women", category_slug: null, badge_text: null, badge_variant: "default" },
-      { id: -102, label: "New in", url: "/catalog?gender=women&ordering=-created_at", category_slug: null, badge_text: "New", badge_variant: "new" },
-      { id: -103, label: "Cashmere", url: "/catalog?gender=women&category=cashmere", category_slug: "cashmere", badge_text: null, badge_variant: "default" },
-      { id: -104, label: "Jackets", url: "/catalog?gender=women&category=outerwear", category_slug: "outerwear", badge_text: null, badge_variant: "default" },
-      { id: -105, label: "Sale", url: "/catalog?sale=1&gender=women", category_slug: null, badge_text: "%", badge_variant: "sale" },
-      { id: -106, label: "Accessories & Shoes", url: "/catalog?gender=women&category=accessories", category_slug: "accessories", badge_text: "Trend", badge_variant: "trend" },
-      { id: -107, label: "Young Fashion", url: "/catalog?gender=women&category=young-fashion", category_slug: "young-fashion", badge_text: "Trend", badge_variant: "trend" },
+      {
+        id: -101,
+        label: "Women overview",
+        url: "/women",
+        category_slug: null,
+        badge_text: null,
+        badge_variant: "default",
+      },
+      {
+        id: -102,
+        label: "New in",
+        url: "/catalog?gender=women&ordering=-created_at",
+        category_slug: null,
+        badge_text: "New",
+        badge_variant: "new",
+      },
+      {
+        id: -103,
+        label: "Cashmere",
+        url: "/catalog?gender=women&category=cashmere",
+        category_slug: "cashmere",
+        badge_text: null,
+        badge_variant: "default",
+      },
+      {
+        id: -104,
+        label: "Jackets",
+        url: "/catalog?gender=women&category=outerwear",
+        category_slug: "outerwear",
+        badge_text: null,
+        badge_variant: "default",
+      },
+      {
+        id: -105,
+        label: "Sale",
+        url: "/catalog?sale=1&gender=women",
+        category_slug: null,
+        badge_text: "%",
+        badge_variant: "sale",
+      },
+      {
+        id: -106,
+        label: "Accessories & Shoes",
+        url: "/catalog?gender=women&category=accessories",
+        category_slug: "accessories",
+        badge_text: "Trend",
+        badge_variant: "trend",
+      },
+      {
+        id: -107,
+        label: "Young Fashion",
+        url: "/catalog?gender=women&category=young-fashion",
+        category_slug: "young-fashion",
+        badge_text: "Trend",
+        badge_variant: "trend",
+      },
     ],
   },
   {
@@ -54,17 +128,72 @@ const STATIC_NAVIGATION_MENUS: NavigationMenu[] = [
     hero_image: null,
     hero_links: [
       { href: "/men", label: "Men overview" },
-      { href: "/catalog?gender=men&ordering=-created_at", label: "New in", badge_text: "New", badge_variant: "new" },
-      { href: "/catalog?gender=men&category=outerwear", label: "Coats & Jackets" },
-      { href: "/catalog?sale=1&gender=men", label: "Sale", badge_text: "%", badge_variant: "sale" },
+      {
+        href: "/catalog?gender=men&ordering=-created_at",
+        label: "New in",
+        badge_text: "New",
+        badge_variant: "new",
+      },
+      {
+        href: "/catalog?gender=men&category=outerwear",
+        label: "Coats & Jackets",
+      },
+      {
+        href: "/catalog?sale=1&gender=men",
+        label: "Sale",
+        badge_text: "%",
+        badge_variant: "sale",
+      },
     ],
     items: [
-      { id: -201, label: "Men overview", url: "/men", category_slug: null, badge_text: null, badge_variant: "default" },
-      { id: -202, label: "New in", url: "/catalog?gender=men&ordering=-created_at", category_slug: null, badge_text: "New", badge_variant: "new" },
-      { id: -203, label: "Coats & Jackets", url: "/catalog?gender=men&category=outerwear", category_slug: "outerwear", badge_text: null, badge_variant: "default" },
-      { id: -204, label: "Clothing", url: "/catalog?gender=men", category_slug: null, badge_text: null, badge_variant: "default" },
-      { id: -205, label: "Accessories & Shoes", url: "/catalog?gender=men&category=accessories", category_slug: "accessories", badge_text: null, badge_variant: "default" },
-      { id: -206, label: "Sale", url: "/catalog?sale=1&gender=men", category_slug: null, badge_text: "%", badge_variant: "sale" },
+      {
+        id: -201,
+        label: "Men overview",
+        url: "/men",
+        category_slug: null,
+        badge_text: null,
+        badge_variant: "default",
+      },
+      {
+        id: -202,
+        label: "New in",
+        url: "/catalog?gender=men&ordering=-created_at",
+        category_slug: null,
+        badge_text: "New",
+        badge_variant: "new",
+      },
+      {
+        id: -203,
+        label: "Coats & Jackets",
+        url: "/catalog?gender=men&category=outerwear",
+        category_slug: "outerwear",
+        badge_text: null,
+        badge_variant: "default",
+      },
+      {
+        id: -204,
+        label: "Clothing",
+        url: "/catalog?gender=men",
+        category_slug: null,
+        badge_text: null,
+        badge_variant: "default",
+      },
+      {
+        id: -205,
+        label: "Accessories & Shoes",
+        url: "/catalog?gender=men&category=accessories",
+        category_slug: "accessories",
+        badge_text: null,
+        badge_variant: "default",
+      },
+      {
+        id: -206,
+        label: "Sale",
+        url: "/catalog?sale=1&gender=men",
+        category_slug: null,
+        badge_text: "%",
+        badge_variant: "sale",
+      },
     ],
   },
   {
@@ -79,17 +208,64 @@ const STATIC_NAVIGATION_MENUS: NavigationMenu[] = [
     hero_image: null,
     hero_links: [
       { href: "/kids", label: "Kids overview" },
-      { href: "/catalog?gender=kids&ordering=-created_at", label: "New in", badge_text: "New", badge_variant: "new" },
+      {
+        href: "/catalog?gender=kids&ordering=-created_at",
+        label: "New in",
+        badge_text: "New",
+        badge_variant: "new",
+      },
       { href: "/catalog?gender=kids&category=girls", label: "Girls" },
       { href: "/catalog?gender=kids&category=boys", label: "Boys" },
     ],
     items: [
-      { id: -301, label: "Kids overview", url: "/kids", category_slug: null, badge_text: null, badge_variant: "default" },
-      { id: -302, label: "New in", url: "/catalog?gender=kids&ordering=-created_at", category_slug: null, badge_text: "New", badge_variant: "new" },
-      { id: -303, label: "Girls", url: "/catalog?gender=kids&category=girls", category_slug: "girls", badge_text: null, badge_variant: "default" },
-      { id: -304, label: "Boys", url: "/catalog?gender=kids&category=boys", category_slug: "boys", badge_text: null, badge_variant: "default" },
-      { id: -305, label: "Baby", url: "/catalog?gender=kids&category=baby", category_slug: "baby", badge_text: null, badge_variant: "default" },
-      { id: -306, label: "Accessories", url: "/catalog?gender=kids&category=accessories", category_slug: "accessories", badge_text: "Trend", badge_variant: "trend" },
+      {
+        id: -301,
+        label: "Kids overview",
+        url: "/kids",
+        category_slug: null,
+        badge_text: null,
+        badge_variant: "default",
+      },
+      {
+        id: -302,
+        label: "New in",
+        url: "/catalog?gender=kids&ordering=-created_at",
+        category_slug: null,
+        badge_text: "New",
+        badge_variant: "new",
+      },
+      {
+        id: -303,
+        label: "Girls",
+        url: "/catalog?gender=kids&category=girls",
+        category_slug: "girls",
+        badge_text: null,
+        badge_variant: "default",
+      },
+      {
+        id: -304,
+        label: "Boys",
+        url: "/catalog?gender=kids&category=boys",
+        category_slug: "boys",
+        badge_text: null,
+        badge_variant: "default",
+      },
+      {
+        id: -305,
+        label: "Baby",
+        url: "/catalog?gender=kids&category=baby",
+        category_slug: "baby",
+        badge_text: null,
+        badge_variant: "default",
+      },
+      {
+        id: -306,
+        label: "Accessories",
+        url: "/catalog?gender=kids&category=accessories",
+        category_slug: "accessories",
+        badge_text: "Trend",
+        badge_variant: "trend",
+      },
     ],
   },
   {
@@ -103,16 +279,49 @@ const STATIC_NAVIGATION_MENUS: NavigationMenu[] = [
     entry_url: "/catalog?sale=1",
     hero_image: null,
     hero_links: [
-      { href: "/catalog?sale=1", label: "All sale", badge_text: "%", badge_variant: "sale" },
+      {
+        href: "/catalog?sale=1",
+        label: "All sale",
+        badge_text: "%",
+        badge_variant: "sale",
+      },
       { href: "/catalog?sale=1&gender=women", label: "Women Sale" },
       { href: "/catalog?sale=1&gender=men", label: "Men Sale" },
       { href: "/catalog?sale=1&gender=kids", label: "Kids Sale" },
     ],
     items: [
-      { id: -401, label: "All Sale", url: "/catalog?sale=1", category_slug: null, badge_text: "%", badge_variant: "sale" },
-      { id: -402, label: "Women Sale", url: "/catalog?sale=1&gender=women", category_slug: null, badge_text: null, badge_variant: "sale" },
-      { id: -403, label: "Men Sale", url: "/catalog?sale=1&gender=men", category_slug: null, badge_text: null, badge_variant: "sale" },
-      { id: -404, label: "Kids Sale", url: "/catalog?sale=1&gender=kids", category_slug: null, badge_text: null, badge_variant: "sale" },
+      {
+        id: -401,
+        label: "All Sale",
+        url: "/catalog?sale=1",
+        category_slug: null,
+        badge_text: "%",
+        badge_variant: "sale",
+      },
+      {
+        id: -402,
+        label: "Women Sale",
+        url: "/catalog?sale=1&gender=women",
+        category_slug: null,
+        badge_text: null,
+        badge_variant: "sale",
+      },
+      {
+        id: -403,
+        label: "Men Sale",
+        url: "/catalog?sale=1&gender=men",
+        category_slug: null,
+        badge_text: null,
+        badge_variant: "sale",
+      },
+      {
+        id: -404,
+        label: "Kids Sale",
+        url: "/catalog?sale=1&gender=kids",
+        category_slug: null,
+        badge_text: null,
+        badge_variant: "sale",
+      },
     ],
   },
 ];
@@ -123,25 +332,30 @@ export default function Header() {
   const openMenu = useUIStore((s) => s.openMenu);
   const closeMenu = useUIStore((s) => s.closeMenu);
   const isMenuOpen = useUIStore((s) => s.isMenuOpen);
-  const [activeMegaMenuKey, setActiveMegaMenuKey] = React.useState<string | null>(null);
-  
+  const [activeMegaMenuKey, setActiveMegaMenuKey] = React.useState<
+    string | null
+  >(null);
+
   const { data: cart } = useCart();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const searchParamsString = React.useMemo(
     () => (searchParams ? searchParams.toString() : ""),
-    [searchParams]
+    [searchParams],
   );
   const lastLocationRef = React.useRef<string | null>(null);
   const cartCount = React.useMemo(() => {
-    const items: CartItem[] = Array.isArray(cart?.items) ? (cart?.items as CartItem[]) : [];
+    const items: CartItem[] = Array.isArray(cart?.items)
+      ? (cart?.items as CartItem[])
+      : [];
     return items.reduce((sum: number, item) => {
       const rawQuantity = Number(item.quantity);
-      const normalizedQuantity = Number.isFinite(rawQuantity) && rawQuantity > 0 ? rawQuantity : 1;
+      const normalizedQuantity =
+        Number.isFinite(rawQuantity) && rawQuantity > 0 ? rawQuantity : 1;
       return sum + normalizedQuantity;
     }, 0);
   }, [cart]);
-  
+
   const displayCartCount = mounted ? cartCount : 0;
   const openCart = useUIStore((s) => s.openCart);
   const { isAuthenticated, hasProfile, user, isLoading, logout } = useAuth();
@@ -149,7 +363,7 @@ export default function Header() {
   const menusToRender = STATIC_NAVIGATION_MENUS;
   const activeMegaMenu = React.useMemo(
     () => menusToRender.find((menu) => menu.key === activeMegaMenuKey) ?? null,
-    [menusToRender, activeMegaMenuKey]
+    [menusToRender, activeMegaMenuKey],
   );
   const isMegaMenuOpen = Boolean(activeMegaMenu);
   const headerHeight = scrolled ? 56 : 80;
@@ -160,43 +374,43 @@ export default function Header() {
     setIsSearchOpen(false);
     setActiveMegaMenuKey(key);
   }, []);
-  const toggleMegaMenu = React.useCallback(
-    (key: string) => {
-      setIsSearchOpen(false);
-      setActiveMegaMenuKey((current) => (current === key ? null : key));
-    },
-    []
-  );
+  const toggleMegaMenu = React.useCallback((key: string) => {
+    setIsSearchOpen(false);
+    setActiveMegaMenuKey((current) => (current === key ? null : key));
+  }, []);
   const handleMegaTriggerClick = React.useCallback(
     (key: string) => {
       if (!mounted) return;
       toggleMegaMenu(key);
     },
-    [mounted, toggleMegaMenu]
+    [mounted, toggleMegaMenu],
   );
-  const resolveBadgeClass = React.useCallback((variant: string | null | undefined) => {
-    switch (variant) {
-      case "new":
-        return "ml-3 inline-flex items-center rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-800";
-      case "sale":
-        return "ml-3 inline-flex items-center rounded-full bg-red-100 px-2 py-0.5 text-xs font-semibold text-red-700";
-      case "trend":
-        return "ml-3 inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-800";
-      case "info":
-        return "ml-3 inline-flex items-center rounded-full bg-sky-100 px-2 py-0.5 text-xs font-semibold text-sky-700";
-      default:
-        return "ml-3 inline-flex items-center rounded-full bg-gray-200 px-2 py-0.5 text-xs font-semibold text-gray-700";
-    }
-  }, []);
+  const resolveBadgeClass = React.useCallback(
+    (variant: string | null | undefined) => {
+      switch (variant) {
+        case "new":
+          return "ml-3 inline-flex items-center rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-800";
+        case "sale":
+          return "ml-3 inline-flex items-center rounded-full bg-red-100 px-2 py-0.5 text-xs font-semibold text-red-700";
+        case "trend":
+          return "ml-3 inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-800";
+        case "info":
+          return "ml-3 inline-flex items-center rounded-full bg-sky-100 px-2 py-0.5 text-xs font-semibold text-sky-700";
+        default:
+          return "ml-3 inline-flex items-center rounded-full bg-gray-200 px-2 py-0.5 text-xs font-semibold text-gray-700";
+      }
+    },
+    [],
+  );
 
   const accountDisplayName = React.useMemo(() => {
     const profile = user as User | undefined | null;
-    const first = profile?.first_name?.trim() ?? '';
-    const last = profile?.last_name?.trim() ?? '';
-    const full = [first, last].filter(Boolean).join(' ').trim();
+    const first = profile?.first_name?.trim() ?? "";
+    const last = profile?.last_name?.trim() ?? "";
+    const full = [first, last].filter(Boolean).join(" ").trim();
     if (full) return full;
-    const emailHandle = profile?.email?.split('@')?.[0];
-    return emailHandle && emailHandle.length > 0 ? emailHandle : 'Account';
+    const emailHandle = profile?.email?.split("@")?.[0];
+    return emailHandle && emailHandle.length > 0 ? emailHandle : "Account";
   }, [user]);
 
   const handleLogout = React.useCallback(() => {
@@ -205,12 +419,16 @@ export default function Header() {
 
   const showAccountMenu = mounted && isAuthenticated;
 
-
   // Debug: log auth state from header
   React.useEffect(() => {
-    if (process.env.NODE_ENV === 'development') {
+    if (process.env.NODE_ENV === "development") {
       // eslint-disable-next-line no-console
-      console.log('[Header] auth', { isAuthenticated, hasProfile, user: user ? { id: user.id, email: user.email } : null, loading: isLoading });
+      console.log("[Header] auth", {
+        isAuthenticated,
+        hasProfile,
+        user: user ?? null,
+        loading: isLoading,
+      });
     }
   }, [isAuthenticated, hasProfile, user, isLoading]);
 
@@ -219,7 +437,7 @@ export default function Header() {
     const handleScroll = () => {
       setScrolled(window.scrollY > 16);
     };
-    
+
     window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
@@ -228,7 +446,10 @@ export default function Header() {
   React.useEffect(() => {
     const currentLocation = `${pathname ?? ""}?${searchParamsString}`;
 
-    if (lastLocationRef.current && lastLocationRef.current !== currentLocation) {
+    if (
+      lastLocationRef.current &&
+      lastLocationRef.current !== currentLocation
+    ) {
       setIsSearchOpen(false);
       closeMegaMenu();
     }
@@ -244,20 +465,20 @@ export default function Header() {
   // Handle escape key to close mobile menu
   React.useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape' && isMenuOpen) {
+      if (event.key === "Escape" && isMenuOpen) {
         closeMenu();
       }
     };
 
     if (isMenuOpen) {
-      document.addEventListener('keydown', handleKeyDown);
+      document.addEventListener("keydown", handleKeyDown);
       // Prevent body scroll when menu is open
-      document.body.style.overflow = 'hidden';
+      document.body.style.overflow = "hidden";
     }
 
     return () => {
-      document.removeEventListener('keydown', handleKeyDown);
-      document.body.style.overflow = 'unset';
+      document.removeEventListener("keydown", handleKeyDown);
+      document.body.style.overflow = "unset";
     };
   }, [isMenuOpen, closeMenu]);
 
@@ -298,12 +519,27 @@ export default function Header() {
 
   return (
     <>
-      <header className={`fixed inset-x-0 top-0 z-40 bg-white/90 backdrop-blur supports-[backdrop-filter]:bg-white/80 border-b border-border ${scrolled ? "h-14" : "h-20"} transition-[height,background-color] duration-300`}>
+      <header
+        className={`fixed inset-x-0 top-0 z-40 bg-white/90 backdrop-blur supports-[backdrop-filter]:bg-white/80 border-b border-border ${scrolled ? "h-14" : "h-20"} transition-[height,background-color] duration-300`}
+      >
         <div className="max-w-7xl mx-auto px-6 h-full flex items-center justify-between">
           <div className="flex items-center gap-6">
-            <Link href="/" className="text-xl font-bold tracking-tight uppercase">Clothing</Link>
-            <nav className="hidden md:flex items-center gap-6 text-sm" aria-label="Main navigation">
-              <Link href="/catalog?ordering=-created_at" className="underline-link transition-soft">New</Link>
+            <Link
+              href="/"
+              className="text-xl font-bold tracking-tight uppercase"
+            >
+              Clothing
+            </Link>
+            <nav
+              className="hidden md:flex items-center gap-6 text-sm"
+              aria-label="Main navigation"
+            >
+              <Link
+                href="/catalog?ordering=-created_at"
+                className="underline-link transition-soft"
+              >
+                New
+              </Link>
               {menusToRender.map((menu) => {
                 const isActive = activeMegaMenu?.key === menu.key;
                 return (
@@ -335,9 +571,21 @@ export default function Header() {
                 className="w-full max-w-md rounded-full bg-gray-100 shadow-inner px-4 py-2 flex items-center gap-2 text-sm hover:bg-gray-200 focus-visible:ring-2 ring-offset-2 ring-black cursor-pointer"
                 aria-label="Open search"
               >
-                <svg width="18" height="18" viewBox="0 0 24 24" className="stroke-gray-500" fill="none" strokeWidth="1.5" aria-hidden="true">
+                <svg
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  className="stroke-gray-500"
+                  fill="none"
+                  strokeWidth="1.5"
+                  aria-hidden="true"
+                >
                   <circle cx="11" cy="11" r="7" stroke="currentColor" />
-                  <path d="M20 20l-3.5-3.5" stroke="currentColor" strokeLinecap="round" />
+                  <path
+                    d="M20 20l-3.5-3.5"
+                    stroke="currentColor"
+                    strokeLinecap="round"
+                  />
                 </svg>
                 <span className="text-gray-600">Search</span>
               </button>
@@ -346,7 +594,12 @@ export default function Header() {
             {/* Right icons */}
             <div className="flex items-center gap-2">
               {!showAccountMenu && (
-                <Link href="/login" className="px-3 py-2 rounded-md text-sm hidden md:block underline-link transition-soft">Login</Link>
+                <Link
+                  href="/login"
+                  className="px-3 py-2 rounded-md text-sm hidden md:block underline-link transition-soft"
+                >
+                  Login
+                </Link>
               )}
               {showAccountMenu && (
                 <DropdownMenu
@@ -364,21 +617,26 @@ export default function Header() {
                       className="hidden md:flex items-center gap-2 px-3 py-2 text-sm font-semibold text-gray-900 transition-soft focus:outline-none focus:ring-0 cursor-pointer group"
                       aria-label="Open account menu"
                     >
-                      <UserRound className="h-4 w-4 text-gray-600" aria-hidden="true" />
+                      <UserRound
+                        className="h-4 w-4 text-gray-600"
+                        aria-hidden="true"
+                      />
                       <span className="hidden lg:inline underline-link transition-soft group-hover:after:scale-x-100 group-focus-visible:after:scale-x-100">
                         Hi, {accountDisplayName}
                       </span>
                       <span className="lg:hidden underline-link transition-soft group-hover:after:scale-x-100 group-focus-visible:after:scale-x-100">
                         Account
                       </span>
-                      <ChevronDown className="h-4 w-4 text-gray-600" aria-hidden="true" />
+                      <ChevronDown
+                        className="h-4 w-4 text-gray-600"
+                        aria-hidden="true"
+                      />
                     </button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent
                     align="end"
                     className="w-56 rounded-lg bg-white shadow-lg py-2 border-0 focus:outline-none "
                   >
-
                     <DropdownMenuItem
                       asChild
                       className="p-0  data-[highlighted]:bg-transparent "
@@ -387,7 +645,9 @@ export default function Header() {
                         href="/profile"
                         className="group block w-full px-4 py-2 text-sm font-medium  cursor-pointer"
                       >
-                        <span className="inline-block w-fit underline-link transition-soft">Profile</span>
+                        <span className="inline-block w-fit underline-link transition-soft">
+                          Profile
+                        </span>
                       </Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem
@@ -398,7 +658,9 @@ export default function Header() {
                         href="/orders"
                         className="group block w-full px-4 py-2 text-sm font-medium  cursor-pointer"
                       >
-                        <span className="inline-block w-fit underline-link transition-soft">Orders</span>
+                        <span className="inline-block w-fit underline-link transition-soft">
+                          Orders
+                        </span>
                       </Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem
@@ -409,7 +671,9 @@ export default function Header() {
                         href="/wishlist"
                         className="group block w-full px-4 py-2 text-sm font-medium  cursor-pointer"
                       >
-                        <span className="inline-block w-fit underline-link transition-soft">Favourites</span>
+                        <span className="inline-block w-fit underline-link transition-soft">
+                          Favourites
+                        </span>
                       </Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem
@@ -420,7 +684,9 @@ export default function Header() {
                         href="/profile"
                         className="group block w-full px-4 py-2 text-sm font-medium  cursor-pointer"
                       >
-                        <span className="inline-block w-fit underline-link transition-soft">Account Settings</span>
+                        <span className="inline-block w-fit underline-link transition-soft">
+                          Account Settings
+                        </span>
                       </Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem
@@ -430,7 +696,9 @@ export default function Header() {
                         handleLogout();
                       }}
                     >
-                      <span className="inline-block w-fit underline-link transition-soft">Log Out</span>
+                      <span className="inline-block w-fit underline-link transition-soft">
+                        Log Out
+                      </span>
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -439,15 +707,33 @@ export default function Header() {
               <WishlistLink size="sm" />
 
               <div className="relative">
-                <IconButton onClick={openCart} aria-label="Open cart" tooltip="Cart">
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" strokeWidth="1.5" className="stroke-black/80" aria-hidden="true">
-                    <path d="M6 6h15l-1.5 9h-12z" strokeLinecap="round" strokeLinejoin="round" />
+                <IconButton
+                  onClick={openCart}
+                  aria-label="Open cart"
+                  tooltip="Cart"
+                >
+                  <svg
+                    width="22"
+                    height="22"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    strokeWidth="1.5"
+                    className="stroke-black/80"
+                    aria-hidden="true"
+                  >
+                    <path
+                      d="M6 6h15l-1.5 9h-12z"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
                     <circle cx="9" cy="20" r="1.5" />
                     <circle cx="18" cy="20" r="1.5" />
                   </svg>
                 </IconButton>
                 {displayCartCount > 0 && (
-                  <span className="absolute -top-1 -right-1 inline-flex items-center justify-center min-w-5 h-5 px-1 rounded-full bg-black text-white font-bold text-[10px] border border-white">{displayCartCount}</span>
+                  <span className="absolute -top-1 -right-1 inline-flex items-center justify-center min-w-5 h-5 px-1 rounded-full bg-black text-white font-bold text-[10px] border border-white">
+                    {displayCartCount}
+                  </span>
                 )}
               </div>
 
@@ -458,9 +744,21 @@ export default function Header() {
                 className={`md:hidden h-10 w-10 grid place-items-center rounded-md hover:bg-secondary/50 cursor-pointer`}
                 aria-label="Open search"
               >
-                <svg width="20" height="20" viewBox="0 0 24 24" className="stroke-black/80" fill="none" strokeWidth="1.5" aria-hidden="true">
+                <svg
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  className="stroke-black/80"
+                  fill="none"
+                  strokeWidth="1.5"
+                  aria-hidden="true"
+                >
                   <circle cx="11" cy="11" r="7" stroke="currentColor" />
-                  <path d="M20 20l-3.5-3.5" stroke="currentColor" strokeLinecap="round" />
+                  <path
+                    d="M20 20l-3.5-3.5"
+                    stroke="currentColor"
+                    strokeLinecap="round"
+                  />
                 </svg>
               </button>
 
@@ -471,14 +769,38 @@ export default function Header() {
                 aria-label="Open menu"
                 aria-expanded={isMenuOpen}
               >
-                <svg width="20" height="20" viewBox="0 0 24 24" className="stroke-black/80" fill="none" strokeWidth="1.5" aria-hidden="true">
+                <svg
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  className="stroke-black/80"
+                  fill="none"
+                  strokeWidth="1.5"
+                  aria-hidden="true"
+                >
                   {isMenuOpen ? (
-                    <path d="M18 6L6 18M6 6l12 12" strokeLinecap="round" strokeLinejoin="round" />
+                    <path
+                      d="M18 6L6 18M6 6l12 12"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
                   ) : (
                     <>
-                      <path d="M4 6h16" strokeLinecap="round" strokeLinejoin="round" />
-                      <path d="M4 12h16" strokeLinecap="round" strokeLinejoin="round" />
-                      <path d="M4 18h16" strokeLinecap="round" strokeLinejoin="round" />
+                      <path
+                        d="M4 6h16"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                      <path
+                        d="M4 12h16"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                      <path
+                        d="M4 18h16"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
                     </>
                   )}
                 </svg>
@@ -489,18 +811,37 @@ export default function Header() {
       </header>
       {/* Search Overlay (only navigates to /search on submit) */}
       {activeMegaMenu && (
-        <div className="fixed inset-0 z-40 hidden md:flex" role="dialog" aria-label={`${activeMegaMenu.title} menu`}>
+        <div
+          className="fixed inset-0 z-40 hidden md:flex"
+          role="dialog"
+          aria-label={`${activeMegaMenu.title} menu`}
+        >
           <div className="flex h-full w-full justify-start">
             <div className="relative flex h-full w-[360px] max-w-[90vw] flex-col border-r border-border bg-white shadow-2xl">
               <div className="flex items-center justify-between gap-6 px-6 pt-6">
                 <div className="flex items-center gap-4 text-gray-700">
-                  <Link href="/promotions" className="inline-flex h-9 w-9 items-center justify-center rounded-full transition-colors hover:bg-gray-100" aria-label="Promotions" onClick={closeMegaMenu}>
+                  <Link
+                    href="/promotions"
+                    className="inline-flex h-9 w-9 items-center justify-center rounded-full transition-colors hover:bg-gray-100"
+                    aria-label="Promotions"
+                    onClick={closeMegaMenu}
+                  >
                     <TicketPercent className="h-4 w-4" aria-hidden="true" />
                   </Link>
-                  <Link href="/wishlist" className="relative inline-flex h-9 w-9 items-center justify-center rounded-full transition-colors hover:bg-gray-100" aria-label="Wishlist" onClick={closeMegaMenu}>
+                  <Link
+                    href="/wishlist"
+                    className="relative inline-flex h-9 w-9 items-center justify-center rounded-full transition-colors hover:bg-gray-100"
+                    aria-label="Wishlist"
+                    onClick={closeMegaMenu}
+                  >
                     <Heart className="h-4 w-4" aria-hidden="true" />
                   </Link>
-                  <Link href={isAuthenticated ? "/profile" : "/login"} className="inline-flex h-9 w-9 items-center justify-center rounded-full transition-colors hover:bg-gray-100" aria-label="Account" onClick={closeMegaMenu}>
+                  <Link
+                    href={isAuthenticated ? "/profile" : "/login"}
+                    className="inline-flex h-9 w-9 items-center justify-center rounded-full transition-colors hover:bg-gray-100"
+                    aria-label="Account"
+                    onClick={closeMegaMenu}
+                  >
                     <UserRound className="h-4 w-4" aria-hidden="true" />
                   </Link>
                   <Link
@@ -533,7 +874,10 @@ export default function Header() {
                   Search
                 </label>
                 <div className="relative">
-                  <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" aria-hidden="true" />
+                  <Search
+                    className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500"
+                    aria-hidden="true"
+                  />
                   <input
                     id="mega-menu-search"
                     type="search"
@@ -576,10 +920,17 @@ export default function Header() {
                         <span className="flex items-center gap-2">
                           {item.label}
                           {item.badge_text ? (
-                            <span className={resolveBadgeClass(item.badge_variant)}>{item.badge_text}</span>
+                            <span
+                              className={resolveBadgeClass(item.badge_variant)}
+                            >
+                              {item.badge_text}
+                            </span>
                           ) : null}
                         </span>
-                        <ChevronRight className="h-4 w-4 text-gray-400" aria-hidden="true" />
+                        <ChevronRight
+                          className="h-4 w-4 text-gray-400"
+                          aria-hidden="true"
+                        />
                       </Link>
                     ))
                   ) : (
@@ -590,13 +941,25 @@ export default function Header() {
                 </nav>
 
                 <div className="mt-8 space-y-3 text-sm text-gray-600">
-                  <Link href="/profile" className="flex items-center gap-2 hover:text-gray-900" onClick={closeMegaMenu}>
+                  <Link
+                    href="/profile"
+                    className="flex items-center gap-2 hover:text-gray-900"
+                    onClick={closeMegaMenu}
+                  >
                     <span className="font-medium">My Account</span>
                   </Link>
-                  <Link href="/support" className="flex items-center gap-2 hover:text-gray-900" onClick={closeMegaMenu}>
+                  <Link
+                    href="/support"
+                    className="flex items-center gap-2 hover:text-gray-900"
+                    onClick={closeMegaMenu}
+                  >
                     <span>Customer service</span>
                   </Link>
-                  <Link href="/app" className="flex items-center gap-2 hover:text-gray-900" onClick={closeMegaMenu}>
+                  <Link
+                    href="/app"
+                    className="flex items-center gap-2 hover:text-gray-900"
+                    onClick={closeMegaMenu}
+                  >
                     <span>App</span>
                   </Link>
                 </div>
@@ -612,12 +975,17 @@ export default function Header() {
           </div>
         </div>
       )}
-      <SearchOverlay isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} />
+      <SearchOverlay
+        isOpen={isSearchOpen}
+        onClose={() => setIsSearchOpen(false)}
+      />
 
       {/* Mobile Menu Overlay */}
       <div
         className={`fixed inset-0 z-50 md:hidden transition-opacity duration-300 ${
-          isMenuOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
+          isMenuOpen
+            ? "opacity-100 pointer-events-auto"
+            : "opacity-0 pointer-events-none"
         }`}
         onClick={closeMenu}
       >
@@ -633,7 +1001,11 @@ export default function Header() {
         >
           <div className="p-6">
             <div className="flex items-center justify-between mb-8">
-              <Link href="/" className="text-xl font-bold tracking-tight uppercase" onClick={closeMenu}>
+              <Link
+                href="/"
+                className="text-xl font-bold tracking-tight uppercase"
+                onClick={closeMenu}
+              >
                 Clothing
               </Link>
               <button
@@ -641,8 +1013,20 @@ export default function Header() {
                 className="h-8 w-8 grid place-items-center rounded-md hover:bg-secondary/50"
                 aria-label="Close menu"
               >
-                <svg width="16" height="16" viewBox="0 0 24 24" className="stroke-black/80" fill="none" strokeWidth="1.5" aria-hidden="true">
-                  <path d="M18 6L6 18M6 6l12 12" strokeLinecap="round" strokeLinejoin="round" />
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  className="stroke-black/80"
+                  fill="none"
+                  strokeWidth="1.5"
+                  aria-hidden="true"
+                >
+                  <path
+                    d="M18 6L6 18M6 6l12 12"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
                 </svg>
               </button>
             </div>
@@ -719,7 +1103,7 @@ export default function Header() {
                   Orders
                 </Link>
               )}
-              <WishlistLink 
+              <WishlistLink
                 className="block py-3 text-lg font-medium hover:underline underline-offset-4 decoration-2 transition-colors"
                 onClick={closeMenu}
               />

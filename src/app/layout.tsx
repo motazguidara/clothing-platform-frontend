@@ -1,3 +1,4 @@
+import '@/polyfills/global-self';
 import '@/polyfills/safeRepeat';
 import './globals.css';
 import type { Metadata, Viewport } from "next";

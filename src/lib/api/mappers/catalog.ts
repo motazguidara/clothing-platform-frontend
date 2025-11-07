@@ -1,4 +1,4 @@
-import { z } from "zod";
+﻿import { z } from "zod";
 import type { Product } from "@/types";
 
 const toNumberOrUndefined = (value: unknown): number | undefined => {
@@ -14,8 +14,9 @@ const toNumberOrUndefined = (value: unknown): number | undefined => {
 
 const sanitizeStringArray = (value: unknown): string[] => {
   if (!Array.isArray(value)) return [];
-  return value
-    .filter((entry): entry is string => typeof entry === "string" && entry.length > 0);
+  return value.filter(
+    (entry): entry is string => typeof entry === "string" && entry.length > 0,
+  );
 };
 
 const extractDimensions = (value: unknown): Product["dimensions"] => {
@@ -23,14 +24,10 @@ const extractDimensions = (value: unknown): Product["dimensions"] => {
     return undefined;
   }
   const record = value as Record<string, unknown>;
-  const length = toNumberOrUndefined(record.length);
-  const width = toNumberOrUndefined(record.width);
-  const height = toNumberOrUndefined(record.height);
-  if (
-    length === undefined ||
-    width === undefined ||
-    height === undefined
-  ) {
+  const length = toNumberOrUndefined(record["length"]);
+  const width = toNumberOrUndefined(record["width"]);
+  const height = toNumberOrUndefined(record["height"]);
+  if (length === undefined || width === undefined || height === undefined) {
     return undefined;
   }
   return { length, width, height };
@@ -136,10 +133,16 @@ export function mapApiProductToProduct(rawProduct: unknown): Product {
   const primaryImage =
     typeof product.image === "string" && product.image.length > 0
       ? product.image
-      : product.images?.find((img) => typeof img.image === "string" && img.image.length > 0)?.image ?? undefined;
+      : (product.images?.find(
+          (img) => typeof img.image === "string" && img.image.length > 0,
+        )?.image ?? undefined);
 
   const images =
-    product.images?.map((img) => (typeof img.image === "string" ? img.image : undefined)).filter(Boolean) ?? [];
+    product.images
+      ?.map((img) => (typeof img.image === "string" ? img.image : undefined))
+      ?.filter(
+        (img): img is string => typeof img === "string" && img.length > 0,
+      ) ?? [];
 
   const price =
     toNumberOrUndefined(product.current_price) ??
@@ -147,22 +150,49 @@ export function mapApiProductToProduct(rawProduct: unknown): Product {
     0;
 
   const variants =
-    product.variants?.map((variant) => ({
-      id: Number(variant.id),
-      sku: typeof variant.sku === "string" && variant.sku.length > 0 ? variant.sku : "",
-      size: variant.size ?? undefined,
-      color: variant.color ?? undefined,
-      price_adjustment: toNumberOrUndefined(variant.price_adjustment) ?? 0,
-      is_active: variant.is_active ?? true,
-      inventory: variant.inventory
-        ? {
-            quantity: toNumberOrUndefined(variant.inventory.quantity) ?? 0,
-            status: variant.inventory.status ?? "unknown",
-            is_in_stock: variant.inventory.is_in_stock ?? false,
-            is_low_stock: variant.inventory.is_low_stock ?? false,
-          }
-        : undefined,
-    })) ?? [];
+    product.variants?.map((variant) => {
+      const mappedVariant: {
+        id: number;
+        sku: string;
+        price_adjustment: number;
+        is_active: boolean;
+        size?: string;
+        color?: string;
+        inventory?: {
+          quantity: number;
+          status: string;
+          is_in_stock: boolean;
+          is_low_stock: boolean;
+        };
+      } = {
+        id: Number(variant.id),
+        sku:
+          typeof variant.sku === "string" && variant.sku.length > 0
+            ? variant.sku
+            : "",
+        price_adjustment: toNumberOrUndefined(variant.price_adjustment) ?? 0,
+        is_active: variant.is_active ?? true,
+      };
+
+      if (typeof variant.size === "string" && variant.size.length > 0) {
+        mappedVariant.size = variant.size;
+      }
+
+      if (typeof variant.color === "string" && variant.color.length > 0) {
+        mappedVariant.color = variant.color;
+      }
+
+      if (variant.inventory) {
+        mappedVariant.inventory = {
+          quantity: toNumberOrUndefined(variant.inventory.quantity) ?? 0,
+          status: variant.inventory.status ?? "unknown",
+          is_in_stock: variant.inventory.is_in_stock ?? false,
+          is_low_stock: variant.inventory.is_low_stock ?? false,
+        };
+      }
+
+      return mappedVariant;
+    }) ?? [];
 
   const reviews =
     product.reviews?.map((review) => ({
@@ -174,43 +204,85 @@ export function mapApiProductToProduct(rawProduct: unknown): Product {
       created_at: review.created_at ?? "",
     })) ?? [];
 
-  return {
+  const slug =
+    typeof product.slug === "string" && product.slug.length > 0
+      ? product.slug
+      : undefined;
+  const compareAtPrice = toNumberOrUndefined(product.compare_at_price);
+  const salePrice = toNumberOrUndefined(product.sale_price);
+  const basePrice = toNumberOrUndefined(product.base_price);
+  const sku =
+    typeof product.sku === "string" && product.sku.length > 0
+      ? product.sku
+      : undefined;
+  const brandName =
+    typeof product.brand === "string"
+      ? product.brand
+      : (product.brand?.name ?? undefined);
+  const description = product.description ?? undefined;
+  const material = product.material ?? undefined;
+  const careInstructions = product.care_instructions ?? undefined;
+  const seoTitle = product.seo_title ?? undefined;
+  const seoDescription = product.seo_description ?? undefined;
+  const createdAt = product.created_at ?? undefined;
+  const updatedAt = product.updated_at ?? undefined;
+  const gender = product.gender ?? undefined;
+  const shortDescription = product.short_description ?? undefined;
+  const avgRating = toNumberOrUndefined(product.avg_rating);
+  const reviewCount = toNumberOrUndefined(product.review_count);
+  const weight = toNumberOrUndefined(product.weight);
+  const dimensions = extractDimensions(product.dimensions);
+  const rating = toNumberOrUndefined(product.rating);
+
+  const mappedProduct: Product = {
     id: Number(product.id ?? 0),
     name: product.name ?? "",
-    slug: product.slug ?? undefined,
     price,
-    compare_at_price: toNumberOrUndefined(product.compare_at_price),
-    sale_price: toNumberOrUndefined(product.sale_price),
-    base_price: toNumberOrUndefined(product.base_price),
+    category: product.category?.name ?? "",
+    in_stock:
+      product.in_stock ??
+      variants.some((variant) => variant.inventory?.is_in_stock),
     is_on_sale: product.is_on_sale ?? false,
     is_featured: product.is_featured ?? false,
-    in_stock: product.in_stock ?? variants.some((variant) => variant.inventory?.is_in_stock),
-    category: product.category?.name ?? "",
-    sku: product.sku ?? undefined,
-    brand:
-      typeof product.brand === "string"
-        ? product.brand
-        : product.brand?.name ?? undefined,
-    description: product.description ?? undefined,
-    material: product.material ?? undefined,
-    care_instructions: product.care_instructions ?? undefined,
-    images,
-    image: primaryImage,
     available_sizes: sanitizeStringArray(product.available_sizes),
     available_colors: sanitizeStringArray(product.available_colors),
     tags: sanitizeStringArray(product.tags),
-    seo_title: product.seo_title ?? undefined,
-    seo_description: product.seo_description ?? undefined,
-    created_at: product.created_at ?? undefined,
-    updated_at: product.updated_at ?? undefined,
-    gender: product.gender ?? undefined,
-    short_description: product.short_description ?? undefined,
-    avg_rating: toNumberOrUndefined(product.avg_rating),
-    review_count: toNumberOrUndefined(product.review_count),
-    weight: toNumberOrUndefined(product.weight),
-    dimensions: extractDimensions(product.dimensions),
-    rating: toNumberOrUndefined(product.rating),
-    variants: variants.length > 0 ? variants : undefined,
-    reviews: reviews.length > 0 ? reviews : undefined,
+    ...(slug ? { slug } : {}),
+    ...(compareAtPrice !== undefined
+      ? { compare_at_price: compareAtPrice }
+      : {}),
+    ...(salePrice !== undefined ? { sale_price: salePrice } : {}),
+    ...(basePrice !== undefined ? { base_price: basePrice } : {}),
+    ...(sku ? { sku } : {}),
+    ...(brandName ? { brand: brandName } : {}),
+    ...(description ? { description } : {}),
+    ...(material ? { material } : {}),
+    ...(careInstructions ? { care_instructions: careInstructions } : {}),
+    ...(seoTitle ? { seo_title: seoTitle } : {}),
+    ...(seoDescription ? { seo_description: seoDescription } : {}),
+    ...(createdAt ? { created_at: createdAt } : {}),
+    ...(updatedAt ? { updated_at: updatedAt } : {}),
+    ...(gender ? { gender } : {}),
+    ...(shortDescription ? { short_description: shortDescription } : {}),
+    ...(avgRating !== undefined ? { avg_rating: avgRating } : {}),
+    ...(reviewCount !== undefined ? { review_count: reviewCount } : {}),
+    ...(weight !== undefined ? { weight } : {}),
+    ...(dimensions ? { dimensions } : {}),
+    ...(rating !== undefined ? { rating } : {}),
   };
+
+  if (images.length > 0) {
+    mappedProduct.images = images;
+  }
+  if (primaryImage) {
+    mappedProduct.image = primaryImage;
+  }
+  if (variants.length > 0) {
+    mappedProduct.variants = variants;
+  }
+  if (reviews.length > 0) {
+    mappedProduct.reviews = reviews;
+  }
+
+  return mappedProduct;
 }

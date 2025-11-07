@@ -270,7 +270,7 @@ export const useWishlistStore = create<WishlistStore>()(
           const results = Array.isArray(response?.results) ? response.results : [];
 
           const nowIso = new Date().toISOString();
-          const items: WishlistItem[] = results
+          const items = results
             .map((product) => {
               if (!product) {
                 return null;
@@ -331,10 +331,10 @@ export const useWishlistStore = create<WishlistStore>()(
                 product: product.product ?? product,
               };
             })
-            .filter((item): item is WishlistItem => item !== null);
+            .filter((item): item is NonNullable<typeof item> => item !== null);
 
           set((draft) => {
-            draft.items = items;
+            draft.items = items as WishlistItem[];
             draft.lastSyncAt = new Date().toISOString();
           });
         } catch (error) {

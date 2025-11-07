@@ -4,7 +4,12 @@ import { catalogService } from "@/lib/api/services/catalog";
 import { apiClient } from "@/lib/api/client";
 import { mapApiProductToProduct } from "@/lib/api/mappers/catalog";
 import { prepareCatalogQueryParams } from "@/lib/catalog/query";
-import type { Product, ProductList, Category, CatalogFacetsResponse } from "@/types";
+import type {
+  Product,
+  ProductList,
+  Category,
+  CatalogFacetsResponse,
+} from "@/types";
 
 export interface Coupon {
   code: string;
@@ -107,11 +112,20 @@ export function useCoupon(code?: string) {
         throw new Error("Invalid coupon payload");
       }
       const data = parsed.data;
-      return {
+      const coupon: Coupon = {
         code: data.code,
         discount: toNumber(data.discount_value) ?? toNumber(data.discount) ?? 0,
-        valid_until: data.valid_until ?? undefined,
       };
+
+      const normalizedValidUntil =
+        typeof data.valid_until === "string" && data.valid_until.length > 0
+          ? data.valid_until
+          : undefined;
+      if (normalizedValidUntil) {
+        coupon.valid_until = normalizedValidUntil;
+      }
+
+      return coupon;
     },
   });
 }

@@ -3,7 +3,7 @@ import * as schemas from '../schemas';
 import type { CatalogFacetsResponse } from '@/types';
 
 type Primitive = string | number | boolean;
-type CatalogProductRequest = Record<string, Primitive>;
+type CatalogProductRequest = Record<string, Primitive | Primitive[]>;
 
 export class CatalogService {
   // Products
@@ -18,6 +18,15 @@ export class CatalogService {
           key === 'featured' ? 'is_featured' :
           key === 'on_sale' ? 'is_on_sale' :
           key;
+
+        if (Array.isArray(value)) {
+          value.forEach((entry) => {
+            if (entry === undefined || entry === null) return;
+            searchParams.append(mappedKey, String(entry));
+          });
+          return;
+        }
+
         searchParams.append(mappedKey, String(value));
       });
     }

@@ -6,7 +6,10 @@ import ProductCard from "@/components/product-card";
 import { useProducts, useCatalogFacets } from "@/hooks/useCatalog";
 import type { Product } from "@/types";
 import { FilterSidebar, SortSelect } from "@/components/filters/filter-sidebar";
-import { buildDefaultFilters } from "@/components/filters/default-filter-presets";
+import {
+  buildDefaultFilters,
+  type BuildDefaultFiltersOptions,
+} from "@/components/filters/default-filter-presets";
 
 type AllowedFilter =
   | "price_min"
@@ -36,9 +39,14 @@ const allowedFilters: AllowedFilter[] = [
   "gender",
 ];
 
-const SKELETON_CARD_KEYS = Array.from({ length: 8 }, (_, idx) => `catalog-skeleton-${idx}`);
+const SKELETON_CARD_KEYS = Array.from(
+  { length: 8 },
+  (_, idx) => `catalog-skeleton-${idx}`,
+);
 
-function buildInitialParams(initial?: Record<string, string | string[] | undefined>) {
+function buildInitialParams(
+  initial?: Record<string, string | string[] | undefined>,
+) {
   const params = new URLSearchParams();
   if (!initial) return params;
   for (const [key, value] of Object.entries(initial)) {
@@ -52,7 +60,10 @@ function buildInitialParams(initial?: Record<string, string | string[] | undefin
   return params;
 }
 
-export function CategoryPageClient({ category, initialSearchParams }: CategoryPageClientProps) {
+export function CategoryPageClient({
+  category,
+  initialSearchParams,
+}: CategoryPageClientProps) {
   const searchParams = useSearchParams();
 
   const effectiveSearchParams = React.useMemo(() => {
@@ -63,69 +74,150 @@ export function CategoryPageClient({ category, initialSearchParams }: CategoryPa
   }, [initialSearchParams, searchParams]);
 
   const requestFilters = React.useMemo(() => {
-    const filters: Record<string, string> = { category };
+    const filters: Record<string, string | string[]> = { category };
     allowedFilters.forEach((key) => {
+      const values = effectiveSearchParams
+        .getAll(key)
+        .map((entry) => entry.trim())
+        .filter((entry) => entry.length > 0);
+      if (values.length > 1) {
+        filters[key] = values;
+        return;
+      }
+      const [firstValue] = values;
+      if (firstValue) {
+        filters[key] = firstValue;
+        return;
+      }
       const value = effectiveSearchParams.get(key);
-      if (value) {
-        filters[key] = value;
+      const trimmed = value?.trim() ?? "";
+      if (trimmed.length > 0) {
+        filters[key] = trimmed;
       }
     });
     return filters;
   }, [category, effectiveSearchParams]);
 
-  const productParams = React.useMemo(() => ({ ...requestFilters, limit: 24 }), [requestFilters]);
+  const productParams = React.useMemo(
+    () => ({ ...requestFilters, limit: 24 }),
+    [requestFilters],
+  );
   const { data, isLoading, isError } = useProducts(productParams);
-  const { data: facets, isLoading: facetsLoading, isError: facetsError } = useCatalogFacets(requestFilters);
+  const {
+    data: facets,
+    isLoading: facetsLoading,
+    isError: facetsError,
+  } = useCatalogFacets(requestFilters);
 
   const products: Product[] = data?.results ?? [];
   const serializedSearch = effectiveSearchParams.toString();
 
   const fallbackFilters = React.useMemo(() => {
     const sp = new URLSearchParams(serializedSearch);
-    return buildDefaultFilters({
-      gender: sp.get("gender") ?? undefined,
-      price_min: sp.get("price_min") ?? undefined,
-      price_max: sp.get("price_max") ?? undefined,
-      size: sp.get("size") ?? undefined,
-      color: sp.get("color") ?? undefined,
-      sale: sp.get("sale") ?? undefined,
-      in_stock: sp.get("in_stock") ?? undefined,
-    });
+    const options: BuildDefaultFiltersOptions = {};
+
+    const gender = sp.get("gender");
+    if (gender && gender.trim().length > 0) {
+      options.gender = gender.trim();
+    }
+
+    const priceMin = sp.get("price_min");
+    if (priceMin && priceMin.trim().length > 0) {
+      options.price_min = priceMin.trim();
+    }
+
+    const priceMax = sp.get("price_max");
+    if (priceMax && priceMax.trim().length > 0) {
+      options.price_max = priceMax.trim();
+    }
+
+    const sizeValues = sp
+      .getAll("size")
+      .map((value) => value.trim())
+      .filter((value) => value.length > 0);
+    if (sizeValues.length > 0) {
+      options.size = sizeValues;
+    }
+
+    const colorValues = sp
+      .getAll("color")
+      .map((value) => value.trim())
+      .filter((value) => value.length > 0);
+    if (colorValues.length > 0) {
+      options.color = colorValues;
+    }
+
+    const brandValues = sp
+      .getAll("brand")
+      .map((value) => value.trim())
+      .filter((value) => value.length > 0);
+    if (brandValues.length > 0) {
+      options.brand = brandValues;
+    }
+
+    const sale = sp.get("sale");
+    if (sale && sale.trim().length > 0) {
+      options.sale = sale.trim();
+    }
+
+    const inStock = sp.get("in_stock");
+    if (inStock && inStock.trim().length > 0) {
+      options.in_stock = inStock.trim();
+    }
+
+    return buildDefaultFilters(options);
   }, [serializedSearch]);
 
   const createFilterHref = React.useCallback(
-    (overrides: Record<string, string | null | undefined>) => {
+    (overrides: Record<string, string | string[] | null | undefined>) => {
       const sp = new URLSearchParams(serializedSearch);
       sp.delete("page");
       Object.entries(overrides).forEach(([key, value]) => {
-        if (value == null || value === "") {
-          sp.delete(key);
-        } else {
-          sp.set(key, value);
+        if (value === undefined) {
+          return;
         }
+        sp.delete(key);
+        if (value === null) {
+          return;
+        }
+        const normalized = (Array.isArray(value) ? value : [value])
+          .map((entry) => entry.trim())
+          .filter((entry) => entry.length > 0);
+        normalized.forEach((entry) => sp.append(key, entry));
       });
       const query = sp.toString();
       return `/catalog/${category}${query ? `?${query}` : ""}`;
     },
-    [category, serializedSearch]
+    [category, serializedSearch],
   );
 
   const quickFilters = React.useMemo(
     () => [
-      { label: "New Arrivals", href: createFilterHref({ ordering: "-created_at" }) },
-      { label: "Best Sellers", href: createFilterHref({ ordering: "-bestseller" }) },
+      {
+        label: "New Arrivals",
+        href: createFilterHref({ ordering: "-created_at" }),
+      },
+      {
+        label: "Best Sellers",
+        href: createFilterHref({ ordering: "-bestseller" }),
+      },
       { label: "On Sale", href: createFilterHref({ sale: "1" }) },
       { label: "In Stock", href: createFilterHref({ in_stock: "1" }) },
-      { label: "Under 300 TND", href: createFilterHref({ price_max: "300", price_min: null }) },
+      {
+        label: "Under 300 TND",
+        href: createFilterHref({ price_max: "300", price_min: null }),
+      },
     ],
-    [createFilterHref]
+    [createFilterHref],
   );
 
   return (
     <section className="max-w-7xl mx-auto px-6 py-16">
       <div className="flex items-end justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-semibold tracking-tight uppercase">{category}</h1>
+          <h1 className="text-3xl font-semibold tracking-tight uppercase">
+            {category}
+          </h1>
           <p className="text-muted mt-2">Browse products in this category.</p>
         </div>
         <SortSelect />
@@ -149,7 +241,7 @@ export function CategoryPageClient({ category, initialSearchParams }: CategoryPa
         <div className="lg:col-span-3 lg:sticky lg:top-24 lg:self-start max-lg:order-2">
           <div className="lg:max-h-[calc(100vh-7rem)] lg:overflow-y-auto pr-1">
             <FilterSidebar
-              filters={facets?.filters}
+              filters={facets?.filters ?? []}
               isLoading={facetsLoading}
               error={facetsError ?? false}
               fallbackFilters={fallbackFilters}
@@ -158,13 +250,18 @@ export function CategoryPageClient({ category, initialSearchParams }: CategoryPa
         </div>
         <div className="lg:col-span-9 min-h-[50vh]">
           {isError && (
-            <div className="mt-2 text-sm text-red-600">Failed to load products. Please try again.</div>
+            <div className="mt-2 text-sm text-red-600">
+              Failed to load products. Please try again.
+            </div>
           )}
 
           {isLoading && (
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-10 xl:gap-12">
               {SKELETON_CARD_KEYS.map((skeletonKey) => (
-                <div key={skeletonKey} className="h-80 rounded-md bg-subtle animate-pulse" />
+                <div
+                  key={skeletonKey}
+                  className="h-80 rounded-md bg-subtle animate-pulse"
+                />
               ))}
             </div>
           )}
@@ -175,7 +272,9 @@ export function CategoryPageClient({ category, initialSearchParams }: CategoryPa
                 <ProductCard key={product.id} product={product} />
               ))}
               {products.length === 0 && (
-                <div className="col-span-full text-sm text-muted">No products found.</div>
+                <div className="col-span-full text-sm text-muted">
+                  No products found.
+                </div>
               )}
             </div>
           )}
@@ -184,5 +283,3 @@ export function CategoryPageClient({ category, initialSearchParams }: CategoryPa
     </section>
   );
 }
-
-

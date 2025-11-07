@@ -6,7 +6,10 @@ import { useProducts, useCatalogFacets } from "@/hooks/useCatalog";
 import type { Product } from "@/types";
 import ProductCard from "@/components/product-card";
 import { FilterSidebar, SortSelect } from "@/components/filters/filter-sidebar";
-import { buildDefaultFilters } from "@/components/filters/default-filter-presets";
+import {
+  buildDefaultFilters,
+  type BuildDefaultFiltersOptions,
+} from "@/components/filters/default-filter-presets";
 
 type AllowedKey =
   | "category"
@@ -14,6 +17,7 @@ type AllowedKey =
   | "price_max"
   | "size"
   | "color"
+  | "brand"
   | "ordering"
   | "page"
   | "sale"
@@ -29,15 +33,21 @@ const allowedKeys: AllowedKey[] = [
   "price_max",
   "size",
   "color",
+  "brand",
   "ordering",
   "page",
   "sale",
   "in_stock",
 ];
 
-const SKELETON_CARD_KEYS = Array.from({ length: 8 }, (_, idx) => `kids-skeleton-${idx}`);
+const SKELETON_CARD_KEYS = Array.from(
+  { length: 8 },
+  (_, idx) => `kids-skeleton-${idx}`,
+);
 
-function buildInitialSearchParams(initial?: Record<string, string | string[] | undefined>) {
+function buildInitialSearchParams(
+  initial?: Record<string, string | string[] | undefined>,
+) {
   const params = new URLSearchParams();
   if (!initial) return params;
   for (const [key, value] of Object.entries(initial)) {
@@ -62,16 +72,36 @@ export function KidsPageClient({ initialSearchParams }: KidsPageClientProps) {
   }, [initialSearchParams, searchParams]);
 
   const requestParams = React.useMemo(() => {
-    const params: Record<string, string> = { gender: "kids" };
+    const params: Record<string, string | string[]> = { gender: "kids" };
     allowedKeys.forEach((key) => {
+      const values = effectiveSearchParams
+        .getAll(key)
+        .map((entry) => entry.trim())
+        .filter((entry) => entry.length > 0);
+      if (values.length > 1) {
+        params[key] = values;
+        return;
+      }
+      const [firstValue] = values;
+      if (firstValue) {
+        params[key] = firstValue;
+        return;
+      }
       const value = effectiveSearchParams.get(key);
-      if (value) params[key] = value;
+      const trimmed = value?.trim() ?? "";
+      if (trimmed.length > 0) {
+        params[key] = trimmed;
+      }
     });
     return params;
   }, [effectiveSearchParams]);
 
   const { data, isLoading, isError } = useProducts(requestParams);
-  const { data: facets, isLoading: facetsLoading, isError: facetsError } = useCatalogFacets(requestParams);
+  const {
+    data: facets,
+    isLoading: facetsLoading,
+    isError: facetsError,
+  } = useCatalogFacets(requestParams);
 
   const serializedParams = effectiveSearchParams.toString();
   const products: Product[] = data?.results ?? [];
@@ -79,43 +109,96 @@ export function KidsPageClient({ initialSearchParams }: KidsPageClientProps) {
 
   const fallbackFilters = React.useMemo(() => {
     const sp = new URLSearchParams(serializedParams);
-    return buildDefaultFilters({
-      gender: "kids",
-      price_min: sp.get("price_min") ?? undefined,
-      price_max: sp.get("price_max") ?? undefined,
-      size: sp.get("size") ?? undefined,
-      color: sp.get("color") ?? undefined,
-      sale: sp.get("sale") ?? undefined,
-      in_stock: sp.get("in_stock") ?? undefined,
-    });
+    const options: BuildDefaultFiltersOptions = { gender: "kids" };
+
+    const priceMin = sp.get("price_min");
+    if (priceMin && priceMin.trim().length > 0) {
+      options.price_min = priceMin.trim();
+    }
+
+    const priceMax = sp.get("price_max");
+    if (priceMax && priceMax.trim().length > 0) {
+      options.price_max = priceMax.trim();
+    }
+
+    const sizeValues = sp
+      .getAll("size")
+      .map((value) => value.trim())
+      .filter((value) => value.length > 0);
+    if (sizeValues.length > 0) {
+      options.size = sizeValues;
+    }
+
+    const colorValues = sp
+      .getAll("color")
+      .map((value) => value.trim())
+      .filter((value) => value.length > 0);
+    if (colorValues.length > 0) {
+      options.color = colorValues;
+    }
+
+    const brandValues = sp
+      .getAll("brand")
+      .map((value) => value.trim())
+      .filter((value) => value.length > 0);
+    if (brandValues.length > 0) {
+      options.brand = brandValues;
+    }
+
+    const sale = sp.get("sale");
+    if (sale && sale.trim().length > 0) {
+      options.sale = sale.trim();
+    }
+
+    const inStock = sp.get("in_stock");
+    if (inStock && inStock.trim().length > 0) {
+      options.in_stock = inStock.trim();
+    }
+
+    return buildDefaultFilters(options);
   }, [serializedParams]);
 
   const createFilterHref = React.useCallback(
-    (overrides: Record<string, string | null | undefined>) => {
+    (overrides: Record<string, string | string[] | null | undefined>) => {
       const sp = new URLSearchParams(serializedParams);
       sp.delete("page");
       Object.entries(overrides).forEach(([key, value]) => {
-        if (value == null || value === "") {
-          sp.delete(key);
-        } else {
-          sp.set(key, value);
+        if (value === undefined) {
+          return;
         }
+        sp.delete(key);
+        if (value === null) {
+          return;
+        }
+        const normalized = (Array.isArray(value) ? value : [value])
+          .map((entry) => entry.trim())
+          .filter((entry) => entry.length > 0);
+        normalized.forEach((entry) => sp.append(key, entry));
       });
       const query = sp.toString();
       return `/kids${query ? `?${query}` : ""}`;
     },
-    [serializedParams]
+    [serializedParams],
   );
 
   const quickFilters = React.useMemo(
     () => [
-      { label: "New Arrivals", href: createFilterHref({ ordering: "-created_at" }) },
-      { label: "Best Sellers", href: createFilterHref({ ordering: "-bestseller" }) },
-      { label: "Under 150 TND", href: createFilterHref({ price_max: "150", price_min: null }) },
+      {
+        label: "New Arrivals",
+        href: createFilterHref({ ordering: "-created_at" }),
+      },
+      {
+        label: "Best Sellers",
+        href: createFilterHref({ ordering: "-bestseller" }),
+      },
+      {
+        label: "Under 150 TND",
+        href: createFilterHref({ price_max: "150", price_min: null }),
+      },
       { label: "On Sale", href: createFilterHref({ sale: "1" }) },
       { label: "In Stock", href: createFilterHref({ in_stock: "1" }) },
     ],
-    [createFilterHref]
+    [createFilterHref],
   );
 
   const makeHref = React.useCallback(
@@ -125,14 +208,16 @@ export function KidsPageClient({ initialSearchParams }: KidsPageClientProps) {
       const query = params.toString();
       return query.length ? `/kids?${query}` : "/kids";
     },
-    [effectiveSearchParams]
+    [effectiveSearchParams],
   );
 
   return (
     <section className="max-w-7xl mx-auto px-6 py-16">
       <div className="flex items-end justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-semibold tracking-tight uppercase">Kids</h1>
+          <h1 className="text-3xl font-semibold tracking-tight uppercase">
+            Kids
+          </h1>
           <p className="text-muted mt-2">Discover our kids&apos; collection.</p>
         </div>
         <SortSelect />
@@ -156,7 +241,7 @@ export function KidsPageClient({ initialSearchParams }: KidsPageClientProps) {
         <div className="lg:col-span-3 lg:sticky lg:top-24 lg:self-start max-lg:order-2">
           <div className="lg:max-h-[calc(100vh-7rem)] lg:overflow-y-auto pr-1">
             <FilterSidebar
-              filters={facets?.filters}
+              filters={facets?.filters ?? []}
               isLoading={facetsLoading}
               error={facetsError ?? false}
               fallbackFilters={fallbackFilters}
@@ -164,11 +249,16 @@ export function KidsPageClient({ initialSearchParams }: KidsPageClientProps) {
           </div>
         </div>
         <div className="lg:col-span-9 min-h-[50vh]">
-          {isError && <p className="text-sm text-red-600">Failed to load products.</p>}
+          {isError && (
+            <p className="text-sm text-red-600">Failed to load products.</p>
+          )}
           {isLoading && (
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6 md:gap-6">
               {SKELETON_CARD_KEYS.map((skeletonKey) => (
-                <div key={skeletonKey} className="h-80 rounded-md bg-gray-200 animate-pulse" />
+                <div
+                  key={skeletonKey}
+                  className="h-80 rounded-md bg-gray-200 animate-pulse"
+                />
               ))}
             </div>
           )}
@@ -186,8 +276,13 @@ export function KidsPageClient({ initialSearchParams }: KidsPageClientProps) {
           )}
           {!isLoading && products.length === 0 && (
             <div className="text-center py-12">
-              <p className="text-gray-500">No products found matching your criteria.</p>
-              <a href="/kids" className="mt-2 inline-block text-blue-600 hover:underline">
+              <p className="text-gray-500">
+                No products found matching your criteria.
+              </p>
+              <a
+                href="/kids"
+                className="mt-2 inline-block text-blue-600 hover:underline"
+              >
                 Clear filters
               </a>
             </div>
@@ -201,12 +296,16 @@ export function KidsPageClient({ initialSearchParams }: KidsPageClientProps) {
             const totalPages = Math.max(1, Math.ceil(productCount / 20));
             const pageParam = effectiveSearchParams.get("page");
             const parsedPage = Number.parseInt(pageParam ?? "1", 10);
-            const currentPage = Number.isNaN(parsedPage) ? 1 : Math.max(1, parsedPage);
+            const currentPage = Number.isNaN(parsedPage)
+              ? 1
+              : Math.max(1, parsedPage);
             return (
               <>
                 <a
                   className={`px-3 py-2 border rounded-md text-sm ${
-                    currentPage <= 1 ? "pointer-events-none opacity-50" : "hover:bg-gray-100"
+                    currentPage <= 1
+                      ? "pointer-events-none opacity-50"
+                      : "hover:bg-gray-100"
                   }`}
                   href={currentPage > 1 ? makeHref(currentPage - 1) : undefined}
                 >
@@ -217,9 +316,15 @@ export function KidsPageClient({ initialSearchParams }: KidsPageClientProps) {
                 </span>
                 <a
                   className={`px-3 py-2 border rounded-md text-sm ${
-                    currentPage >= totalPages ? "pointer-events-none opacity-50" : "hover:bg-gray-100"
+                    currentPage >= totalPages
+                      ? "pointer-events-none opacity-50"
+                      : "hover:bg-gray-100"
                   }`}
-                  href={currentPage < totalPages ? makeHref(currentPage + 1) : undefined}
+                  href={
+                    currentPage < totalPages
+                      ? makeHref(currentPage + 1)
+                      : undefined
+                  }
                 >
                   Next
                 </a>
@@ -231,5 +336,3 @@ export function KidsPageClient({ initialSearchParams }: KidsPageClientProps) {
     </section>
   );
 }
-
-

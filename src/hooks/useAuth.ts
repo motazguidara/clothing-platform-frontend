@@ -1,7 +1,12 @@
-'use client';
+﻿"use client";
 
 import { useEffect, useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  useMutation,
+  useQuery,
+  useQueryClient,
+  type UseQueryOptions,
+} from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 
@@ -34,45 +39,52 @@ export function useAuth(options?: { fetchProfile?: boolean }) {
   const shouldFetchProfile =
     (options?.fetchProfile ?? true) && (tokenAuthenticated || cookieSession);
 
-  const [storedUser, setStoredUser] = useState<User | undefined>(() =>
-    authService.getStoredUser() ?? undefined
+  const [storedUser, setStoredUser] = useState<User | undefined>(
+    () => authService.getStoredUser() ?? undefined,
   );
   const effectiveStoredUser = shouldFetchProfile ? storedUser : undefined;
 
-  const {
-    data: user,
-    isLoading: profileLoading,
-    error,
-  } = useQuery<User | undefined>({
+  const profileQueryOptions: UseQueryOptions<
+    User | undefined,
+    Error,
+    User | undefined,
+    typeof AUTH_PROFILE_QUERY_KEY
+  > = {
     queryKey: AUTH_PROFILE_QUERY_KEY,
     enabled: shouldFetchProfile,
-    initialData: effectiveStoredUser,
-    placeholderData: effectiveStoredUser,
     queryFn: async () => authService.getCurrentUser(),
     refetchOnWindowFocus: false,
     staleTime: 30 * 1000,
     gcTime: 10 * 60 * 1000,
     retry: 0,
-    onSuccess(profile) {
-      if (profile) {
-        authService.storeUser(profile);
-        setStoredUser(profile);
-      }
-    },
-    onError(err) {
-      if (err instanceof ApiError && err.status === 401) {
-        authService.clearAuth();
-      }
-      authService.clearStoredUser();
-      setStoredUser(undefined);
-    },
-  });
+  };
+
+  if (effectiveStoredUser) {
+    profileQueryOptions.initialData = effectiveStoredUser;
+    profileQueryOptions.placeholderData = effectiveStoredUser;
+  }
+
+  const {
+    data: user,
+    isLoading: profileLoading,
+    error,
+  } = useQuery(profileQueryOptions);
+
+  useEffect(() => {
+    if (user) {
+      authService.storeUser(user);
+      setStoredUser(user);
+    }
+  }, [user]);
 
   useEffect(() => {
     if (!error) return;
     if (error instanceof ApiError && error.status === 401) {
+      authService.clearAuth();
       qc.removeQueries({ queryKey: AUTH_PROFILE_QUERY_KEY, exact: true });
     }
+    authService.clearStoredUser();
+    setStoredUser(undefined);
   }, [error, qc]);
 
   const login = useMutation({
@@ -103,21 +115,38 @@ export function useAuth(options?: { fetchProfile?: boolean }) {
 
   const register = useMutation({
     mutationFn: async (data: RegisterInput) => {
-      const payload = {
+      const payload: {
+        email: string;
+        password: string;
+        password_confirm: string;
+        marketing_consent: boolean;
+        terms_consent: boolean;
+        first_name?: string;
+        last_name?: string;
+      } = {
         email: data.email,
         password: data.password,
         password_confirm: data.password,
         marketing_consent: data.marketing_consent ?? false,
         terms_consent: data.terms_consent ?? true,
-        first_name:
-          typeof data.first_name === "string" && data.first_name.length > 0
-            ? data.first_name
-            : undefined,
-        last_name:
-          typeof data.last_name === "string" && data.last_name.length > 0
-            ? data.last_name
-            : undefined,
       };
+
+      const normalizedFirstName =
+        typeof data.first_name === "string" && data.first_name.length > 0
+          ? data.first_name
+          : undefined;
+      if (normalizedFirstName) {
+        payload.first_name = normalizedFirstName;
+      }
+
+      const normalizedLastName =
+        typeof data.last_name === "string" && data.last_name.length > 0
+          ? data.last_name
+          : undefined;
+      if (normalizedLastName) {
+        payload.last_name = normalizedLastName;
+      }
+
       return authService.register(payload);
     },
     onSuccess: (result) => {
