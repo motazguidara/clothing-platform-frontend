@@ -55,6 +55,15 @@ export function useCategories() {
   });
 }
 
+export function useBrands(options?: { enabled?: boolean }) {
+  return useQuery({
+    queryKey: ["brands"],
+    enabled: options?.enabled ?? true,
+    queryFn: async () => catalogService.getBrands(),
+    staleTime: 10 * 60 * 1000,
+  });
+}
+
 export function useProducts(params?: Record<string, unknown>) {
   return useQuery({
     queryKey: ["products", params ?? {}],

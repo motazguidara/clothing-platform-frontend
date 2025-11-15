@@ -8,27 +8,10 @@ import type { UserProfile } from "@/lib/api/schemas";
 import { useProtectedRoute } from "@/hooks/useAuth";
 import { PasswordField } from "@/components/ui";
 
-const LANGUAGE_OPTIONS = [
-  { value: "en-US", label: "English (United States)" },
-  { value: "en-GB", label: "English (United Kingdom)" },
-  { value: "fr-FR", label: "French (France)" },
-  { value: "de-DE", label: "German (Germany)" },
-  { value: "es-ES", label: "Spanish (Spain)" },
-  { value: "it-IT", label: "Italian (Italy)" },
-  { value: "ja-JP", label: "Japanese (Japan)" },
-];
-
-const COUNTRY_OPTIONS = [
-  { value: "US", label: "United States" },
-  { value: "GB", label: "United Kingdom" },
-  { value: "CA", label: "Canada" },
-  { value: "FR", label: "France" },
-  { value: "DE", label: "Germany" },
-  { value: "ES", label: "Spain" },
-  { value: "IT", label: "Italy" },
-  { value: "JP", label: "Japan" },
-  { value: "AU", label: "Australia" },
-];
+const PROFILE_SECTIONS = [
+  { id: "profile-identity", label: "Identity & Contact" },
+  { id: "profile-security", label: "Security" },
+] as const;
 
 export default function ProfilePage() {
   useProtectedRoute("/login?next=/profile");
@@ -48,8 +31,6 @@ export default function ProfilePage() {
         first_name: string;
         last_name: string;
         phone: string | null;
-        preferred_language: string;
-        preferred_country: string | null;
         marketing_consent: boolean;
       }>
     ) => authService.updateProfile(payload),
@@ -69,23 +50,7 @@ export default function ProfilePage() {
   const [firstName, setFirstName] = React.useState("");
   const [lastName, setLastName] = React.useState("");
   const [phone, setPhone] = React.useState("");
-  const [preferredLanguage, setPreferredLanguage] = React.useState("en-US");
-  const [preferredCountry, setPreferredCountry] = React.useState("US");
   const [marketingConsent, setMarketingConsent] = React.useState(false);
-
-  const languageOptions = React.useMemo(() => {
-    if (!preferredLanguage) return LANGUAGE_OPTIONS;
-    return LANGUAGE_OPTIONS.some((option) => option.value === preferredLanguage)
-      ? LANGUAGE_OPTIONS
-      : [{ value: preferredLanguage, label: preferredLanguage }, ...LANGUAGE_OPTIONS];
-  }, [preferredLanguage]);
-
-  const countryOptions = React.useMemo(() => {
-    if (!preferredCountry) return COUNTRY_OPTIONS;
-    return COUNTRY_OPTIONS.some((option) => option.value === preferredCountry)
-      ? COUNTRY_OPTIONS
-      : [{ value: preferredCountry, label: preferredCountry }, ...COUNTRY_OPTIONS];
-  }, [preferredCountry]);
 
   const [newEmail, setNewEmail] = React.useState("");
   const [emailPassword, setEmailPassword] = React.useState("");
@@ -94,6 +59,56 @@ export default function ProfilePage() {
   const [confirmPassword, setConfirmPassword] = React.useState("");
   const [isUpdatingEmail, setIsUpdatingEmail] = React.useState(false);
   const [isUpdatingPassword, setIsUpdatingPassword] = React.useState(false);
+  const [activeSection, setActiveSection] = React.useState(PROFILE_SECTIONS[0].id);
+
+  const handleSectionClick = React.useCallback((id: string) => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "start" });
+      setActiveSection(id);
+    }
+  }, []);
+
+  React.useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const sections = PROFILE_SECTIONS.map((section) => document.getElementById(section.id)).filter(
+      (node): node is HTMLElement => Boolean(node),
+    );
+
+    if (!("IntersectionObserver" in window) || sections.length === 0) {
+      return undefined;
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const visible = entries
+          .filter((entry) => entry.isIntersecting)
+          .sort((a, b) => b.intersectionRatio - a.intersectionRatio);
+
+        if (visible.length > 0) {
+          setActiveSection(visible[0].target.id);
+          return;
+        }
+
+        // Fallback: pick the section whose top is closest to the viewport top
+        const closest = sections
+          .map((node) => ({
+            id: node.id,
+            distance: Math.abs(node.getBoundingClientRect().top - 120),
+          }))
+          .sort((a, b) => a.distance - b.distance);
+        if (closest[0]) {
+          setActiveSection(closest[0].id);
+        }
+      },
+      { threshold: 0.4, rootMargin: "-25% 0px -45% 0px" },
+    );
+
+    sections.forEach((section) => observer.observe(section));
+
+    return () => observer.disconnect();
+  }, []);
 
   React.useEffect(() => {
     if (!data) return;
@@ -113,8 +128,6 @@ export default function ProfilePage() {
     setFirstName(data.first_name?.trim() || first);
     setLastName(data.last_name?.trim() || last);
     setPhone((data.phone as string | null) ?? "");
-    setPreferredLanguage(data.preferred_language ?? ((data as Record<string, unknown>)?.["locale"] as string | undefined) ?? "en-US");
-    setPreferredCountry((data.preferred_country ?? "US").toUpperCase());
     setMarketingConsent(Boolean((data as any).marketing_consent));
     setNewEmail(data.email ?? "");
   }, [data]);
@@ -128,8 +141,6 @@ export default function ProfilePage() {
       first_name: firstName.trim(),
       last_name: lastName.trim(),
       phone: phone.trim() ? phone.trim() : null,
-      preferred_language: preferredLanguage,
-      preferred_country: preferredCountry ? preferredCountry.toUpperCase() : null,
       marketing_consent: marketingConsent,
     });
   }
@@ -206,216 +217,219 @@ export default function ProfilePage() {
           ))}
         </div>
       ) : (
-        <div className="space-y-10">
-          <div className="rounded-2xl border border-gray-200 bg-white shadow-sm">
-            <div className="border-b border-gray-200 px-6 py-5">
-              <h2 className="text-xl font-semibold">Identity &amp; Contact</h2>
-              <p className="text-sm text-gray-500">Update how we reach you and how your name appears on orders.</p>
+        <div className="lg:grid lg:grid-cols-[220px_1fr] lg:gap-10">
+          <nav className="mb-6 lg:mb-0 lg:sticky lg:top-24 lg:self-start">
+            <div className="flex gap-3 overflow-x-auto rounded-2xl border border-gray-200 bg-white p-3 text-sm shadow-sm lg:flex-col lg:overflow-visible">
+              {PROFILE_SECTIONS.map((section) => {
+                const isActive = activeSection === section.id;
+                return (
+                  <button
+                    key={section.id}
+                    type="button"
+                    onClick={() => handleSectionClick(section.id)}
+                    className={`flex-1 whitespace-nowrap rounded-xl px-4 py-2 text-left font-medium transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black lg:flex-none ${
+                      isActive
+                        ? "bg-black text-white shadow-sm"
+                        : "bg-gray-50 text-gray-600 hover:bg-gray-100"
+                    }`}
+                    aria-current={isActive ? "true" : undefined}
+                  >
+                    {section.label}
+                  </button>
+                );
+              })}
             </div>
-            <form onSubmit={onSave} className="px-6 py-6 space-y-6">
-              <div className="grid gap-4 sm:grid-cols-2">
-                <label className="flex flex-col gap-1 text-sm">
-                  <span className="font-medium text-gray-700">First name</span>
-                  <input
-                    value={firstName}
-                    onChange={(e) => setFirstName(e.target.value)}
-                    className="rounded-lg border border-gray-200 px-3 py-2 focus:border-black focus:outline-none"
-                    placeholder="First name"
-                    autoComplete="given-name"
-                  />
-                </label>
-                <label className="flex flex-col gap-1 text-sm">
-                  <span className="font-medium text-gray-700">Last name</span>
-                  <input
-                    value={lastName}
-                    onChange={(e) => setLastName(e.target.value)}
-                    className="rounded-lg border border-gray-200 px-3 py-2 focus:border-black focus:outline-none"
-                    placeholder="Last name"
-                    autoComplete="family-name"
-                  />
-                </label>
-              </div>
+          </nav>
 
-              <div className="grid gap-4 sm:grid-cols-[2fr,1fr]">
-                <div className="flex flex-col gap-1 text-sm">
-                  <span className="font-medium text-gray-700 flex items-center gap-2">
-                    Email
-                    <span
-                      className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${
-                        emailVerified ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"
-                      }`}
-                    >
-                      {emailVerified ? "Verified" : "Unverified"}
+          <div className="space-y-10">
+            <div
+              id="profile-identity"
+              className="rounded-2xl border border-gray-200 bg-white shadow-sm scroll-mt-24"
+            >
+              <div className="border-b border-gray-200 px-6 py-5">
+                <h2 className="text-xl font-semibold">Identity &amp; Contact</h2>
+                <p className="text-sm text-gray-500">
+                  Update how we reach you and how your name appears on orders.
+                </p>
+              </div>
+              <form onSubmit={onSave} className="px-6 py-6 space-y-6">
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <label className="flex flex-col gap-1 text-sm">
+                    <span className="font-medium text-gray-700">First name</span>
+                    <input
+                      value={firstName}
+                      onChange={(e) => setFirstName(e.target.value)}
+                      className="rounded-lg border border-gray-200 px-3 py-2 focus:border-black focus:outline-none"
+                      placeholder="First name"
+                      autoComplete="given-name"
+                    />
+                  </label>
+                  <label className="flex flex-col gap-1 text-sm">
+                    <span className="font-medium text-gray-700">Last name</span>
+                    <input
+                      value={lastName}
+                      onChange={(e) => setLastName(e.target.value)}
+                      className="rounded-lg border border-gray-200 px-3 py-2 focus:border-black focus:outline-none"
+                      placeholder="Last name"
+                      autoComplete="family-name"
+                    />
+                  </label>
+                </div>
+
+                <div className="grid gap-4 sm:grid-cols-[2fr,1fr]">
+                  <div className="flex flex-col gap-1 text-sm">
+                    <span className="font-medium text-gray-700 flex items-center gap-2">
+                      Email
+                      <span
+                        className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+                          emailVerified ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"
+                        }`}
+                      >
+                        {emailVerified ? "Verified" : "Unverified"}
+                      </span>
                     </span>
-                  </span>
-                  <input
-                    value={data?.email ?? ""}
-                    disabled
-                    className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-gray-500"
-                    autoComplete="email"
-                  />
+                    <input
+                      value={data?.email ?? ""}
+                      disabled
+                      className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-gray-500"
+                      autoComplete="email"
+                    />
+                  </div>
+                  <label className="flex flex-col gap-1 text-sm">
+                    <span className="font-medium text-gray-700">Phone</span>
+                    <input
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      className="rounded-lg border border-gray-200 px-3 py-2 focus:border-black focus:outline-none"
+                      placeholder="e.g., +15551234567"
+                      type="tel"
+                      pattern="^\+[1-9]\d{7,14}$"
+                      autoComplete="tel"
+                    />
+                  </label>
                 </div>
-                <label className="flex flex-col gap-1 text-sm">
-                  <span className="font-medium text-gray-700">Phone</span>
+
+                <label className="flex items-center gap-2 rounded-lg bg-gray-50 px-4 py-3 text-sm">
                   <input
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    className="rounded-lg border border-gray-200 px-3 py-2 focus:border-black focus:outline-none"
-                    placeholder="e.g., +15551234567"
-                    type="tel"
-                    pattern="^\+[1-9]\d{7,14}$"
-                    autoComplete="tel"
+                    type="checkbox"
+                    checked={marketingConsent}
+                    onChange={(e) => setMarketingConsent(e.target.checked)}
+                    className="h-4 w-4 rounded border-gray-300 text-black focus:ring-black"
                   />
+                  <div>
+                    <span className="font-medium text-gray-700">Receive tailored updates</span>
+                    <p className="text-xs text-gray-500">
+                      Stay informed about new drops, offers, and recommendations.
+                    </p>
+                  </div>
                 </label>
-              </div>
 
-              <div className="grid gap-4 sm:grid-cols-2">
-                <label className="flex flex-col gap-1 text-sm">
-                  <span className="font-medium text-gray-700">Preferred language</span>
-                  <select
-                    value={preferredLanguage}
-                    onChange={(e) => setPreferredLanguage(e.target.value)}
-                    className="rounded-lg border border-gray-200 px-3 py-2 focus:border-black focus:outline-none"
+                <div className="flex justify-end">
+                  <button
+                    type="submit"
+                    disabled={isSavingProfile}
+                    className="inline-flex items-center justify-center rounded-full bg-black px-6 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-black/85 disabled:opacity-60"
                   >
-                    {languageOptions.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label className="flex flex-col gap-1 text-sm">
-                  <span className="font-medium text-gray-700">Preferred country</span>
-                  <select
-                    value={preferredCountry}
-                    onChange={(e) => setPreferredCountry(e.target.value)}
-                    className="rounded-lg border border-gray-200 px-3 py-2 focus:border-black focus:outline-none"
-                  >
-                    {countryOptions.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              </div>
-
-              <label className="flex items-center gap-2 rounded-lg bg-gray-50 px-4 py-3 text-sm">
-                <input
-                  type="checkbox"
-                  checked={marketingConsent}
-                  onChange={(e) => setMarketingConsent(e.target.checked)}
-                  className="h-4 w-4 rounded border-gray-300 text-black focus:ring-black"
-                />
-                <div>
-                  <span className="font-medium text-gray-700">Receive tailored updates</span>
-                  <p className="text-xs text-gray-500">Stay informed about new drops, offers, and recommendations.</p>
+                    {isSavingProfile ? "Saving..." : "Save changes"}
+                  </button>
                 </div>
-              </label>
-
-              <div className="flex justify-end">
-                <button
-                  type="submit"
-                  disabled={isSavingProfile}
-                  className="inline-flex items-center justify-center rounded-full bg-black px-6 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-black/85 disabled:opacity-60"
-                >
-                  {isSavingProfile ? "Saving..." : "Save changes"}
-                </button>
-              </div>
-            </form>
-          </div>
-
-          <div className="rounded-2xl border border-gray-200 bg-white shadow-sm">
-            <div className="border-b border-gray-200 px-6 py-5">
-              <h2 className="text-xl font-semibold">Security</h2>
-              <p className="text-sm text-gray-500">Keep your account protected with up-to-date credentials.</p>
+              </form>
             </div>
-            <div className="space-y-8 px-6 py-6">
-              <form onSubmit={onChangeEmail} className="space-y-4">
-                <div className="space-y-1 text-sm">
-                  <span className="font-medium text-gray-700">Change email</span>
-                  <p className="text-xs text-gray-500">
-                    Update the email address you use to sign in. We will send a verification link to your new inbox.
-                  </p>
-                </div>
-                <label className="flex flex-col gap-1 text-sm">
-                  <span className="font-medium text-gray-700">New email</span>
-                  <input
-                    type="email"
-                    value={newEmail}
-                    onChange={(e) => setNewEmail(e.target.value)}
-                    className="rounded-lg border border-gray-200 px-3 py-2 focus:border-black focus:outline-none"
-                    placeholder="you@example.com"
-                    autoComplete="email"
-                  />
-                </label>
-                <div>
-                  <PasswordField
-                    id="email_current_password"
-                    name="current"
-                    label="Current password"
-                    value={emailPassword}
-                    onChange={setEmailPassword}
-                    showRules={false}
-                  />
-                </div>
-                <div className="flex justify-end">
-                  <button
-                    type="submit"
-                    disabled={isUpdatingEmail}
-                    className="inline-flex items-center justify-center rounded-full bg-black px-6 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-black/85 disabled:opacity-60"
-                  >
-                    {isUpdatingEmail ? "Updating..." : "Update email"}
-                  </button>
-                </div>
-              </form>
+            <div
+              id="profile-security"
+              className="rounded-2xl border border-gray-200 bg-white shadow-sm scroll-mt-24"
+            >
+              <div className="border-b border-gray-200 px-6 py-5">
+                <h2 className="text-xl font-semibold">Security</h2>
+                <p className="text-sm text-gray-500">Keep your account protected with up-to-date credentials.</p>
+              </div>
+              <div className="space-y-8 px-6 py-6">
+                <form onSubmit={onChangeEmail} className="space-y-4">
+                  <div className="space-y-1 text-sm">
+                    <span className="font-medium text-gray-700">Change email</span>
+                    <p className="text-xs text-gray-500">
+                      Update the email address you use to sign in. We will send a verification link to your new inbox.
+                    </p>
+                  </div>
+                  <label className="flex flex-col gap-1 text-sm">
+                    <span className="font-medium text-gray-700">New email</span>
+                    <input
+                      type="email"
+                      value={newEmail}
+                      onChange={(e) => setNewEmail(e.target.value)}
+                      className="rounded-lg border border-gray-200 px-3 py-2 focus:border-black focus:outline-none"
+                      placeholder="you@example.com"
+                      autoComplete="email"
+                    />
+                  </label>
+                  <div>
+                    <PasswordField
+                      id="email_current_password"
+                      name="current"
+                      label="Current password"
+                      value={emailPassword}
+                      onChange={setEmailPassword}
+                      showRules={false}
+                    />
+                  </div>
+                  <div className="flex justify-end">
+                    <button
+                      type="submit"
+                      disabled={isUpdatingEmail}
+                      className="inline-flex items-center justify-center rounded-full bg-black px-6 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-black/85 disabled:opacity-60"
+                    >
+                      {isUpdatingEmail ? "Updating..." : "Update email"}
+                    </button>
+                  </div>
+                </form>
 
-              <form onSubmit={onChangePassword} className="space-y-4 border-t border-gray-200 pt-6">
-                <div className="space-y-1 text-sm">
-                  <span className="font-medium text-gray-700">Change password</span>
-                  <p className="text-xs text-gray-500">
-                    Choose a strong password that you have not used elsewhere. You will be signed out after updating.
-                  </p>
-                </div>
-                <div className="grid gap-4 sm:grid-cols-3">
-                  <PasswordField
-                    id="current_password"
-                    name="current"
-                    label="Current password"
-                    value={oldPassword}
-                    onChange={setOldPassword}
-                    showRules={false}
-                  />
-                  <PasswordField
-                    id="new_password"
-                    name="new"
-                    label="New password"
-                    value={newPassword}
-                    onChange={setNewPassword}
-                    required
-                    showRules
-                  />
-                  <PasswordField
-                    id="confirm_new_password"
-                    name="confirm"
-                    label="Confirm new password"
-                    value={confirmPassword}
-                    onChange={setConfirmPassword}
-                    required
-                    showRules={false}
-                    disablePaste
-                  />
-                </div>
-                <div className="flex justify-end">
-                  <button
-                    type="submit"
-                    disabled={isUpdatingPassword}
-                    className="inline-flex items-center justify-center rounded-full bg-black px-6 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-black/85 disabled:opacity-60"
-                  >
-                    {isUpdatingPassword ? "Updating..." : "Update password"}
-                  </button>
-                </div>
-              </form>
+                <form onSubmit={onChangePassword} className="space-y-4 border-t border-gray-200 pt-6">
+                  <div className="space-y-1 text-sm">
+                    <span className="font-medium text-gray-700">Change password</span>
+                    <p className="text-xs text-gray-500">
+                      Choose a strong password that you have not used elsewhere. You will be signed out after updating.
+                    </p>
+                  </div>
+                  <div className="grid gap-4 sm:grid-cols-3">
+                    <PasswordField
+                      id="current_password"
+                      name="current"
+                      label="Current password"
+                      value={oldPassword}
+                      onChange={setOldPassword}
+                      showRules={false}
+                    />
+                    <PasswordField
+                      id="new_password"
+                      name="new"
+                      label="New password"
+                      value={newPassword}
+                      onChange={setNewPassword}
+                      required
+                      showRules
+                    />
+                    <PasswordField
+                      id="confirm_new_password"
+                      name="confirm"
+                      label="Confirm new password"
+                      value={confirmPassword}
+                      onChange={setConfirmPassword}
+                      required
+                      showRules={false}
+                      disablePaste
+                    />
+                  </div>
+                  <div className="flex justify-end">
+                    <button
+                      type="submit"
+                      disabled={isUpdatingPassword}
+                      className="inline-flex items-center justify-center rounded-full bg-black px-6 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-black/85 disabled:opacity-60"
+                    >
+                      {isUpdatingPassword ? "Updating..." : "Update password"}
+                    </button>
+                  </div>
+                </form>
+              </div>
             </div>
           </div>
         </div>

@@ -16,6 +16,7 @@ type AllowedFilter =
   | "price_max"
   | "size"
   | "color"
+  | "brand"
   | "ordering"
   | "page"
   | "sale"
@@ -32,6 +33,7 @@ const allowedFilters: AllowedFilter[] = [
   "price_max",
   "size",
   "color",
+  "brand",
   "ordering",
   "page",
   "sale",

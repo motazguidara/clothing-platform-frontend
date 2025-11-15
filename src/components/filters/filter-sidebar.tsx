@@ -2,10 +2,107 @@
 
 import React from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
-import type { CatalogFilterGroup } from "@/types";
+import { useBrands } from "@/hooks/useCatalog";
+import type { CatalogFilterGroup, CatalogFilterOption } from "@/types";
 
 type FilterOptionWithSwatch = CatalogFilterGroup["options"][number] & {
   swatchColor?: string;
+};
+
+type BrandLike = {
+  id?: number;
+  name?: string | null;
+  slug?: string | null;
+};
+
+const normalizeFilterOption = (
+  option: CatalogFilterOption,
+): CatalogFilterOption | null => {
+  if (!option) return null;
+  const candidates = [
+    typeof option.value === "string" ? option.value : undefined,
+    typeof option.slug === "string" ? option.slug : undefined,
+    typeof option.label === "string" ? option.label : undefined,
+  ];
+  let normalizedValue = "";
+  for (const candidate of candidates) {
+    if (!candidate) continue;
+    const trimmed = candidate.trim();
+    if (trimmed.length > 0) {
+      normalizedValue = trimmed;
+      break;
+    }
+  }
+  if (!normalizedValue.length) {
+    return null;
+  }
+  const normalizedLabel =
+    typeof option.label === "string" && option.label.trim().length > 0
+      ? option.label.trim()
+      : normalizedValue;
+  const normalizedSlug =
+    typeof option.slug === "string" && option.slug.trim().length > 0
+      ? option.slug.trim()
+      : null;
+  return {
+    ...option,
+    value: normalizedValue,
+    label: normalizedLabel,
+    slug: normalizedSlug,
+  };
+};
+
+const mergeBrandOptions = (
+  current: CatalogFilterOption[] = [],
+  fallback: CatalogFilterOption[] = [],
+): CatalogFilterOption[] => {
+  const map = new Map<string, CatalogFilterOption>();
+
+  current.forEach((option) => {
+    const normalized = normalizeFilterOption(option);
+    if (!normalized) return;
+    map.set(normalized.value.toLowerCase(), normalized);
+  });
+
+  fallback.forEach((option) => {
+    const normalized = normalizeFilterOption(option);
+    if (!normalized) return;
+    const key = normalized.value.toLowerCase();
+    if (!map.has(key)) {
+      map.set(key, normalized);
+    }
+  });
+
+  return Array.from(map.values()).sort((a, b) =>
+    a.label.localeCompare(b.label),
+  );
+};
+
+const mapBrandsToFilterOptions = (
+  brands?: BrandLike[] | null,
+): CatalogFilterOption[] => {
+  if (!Array.isArray(brands)) {
+    return [];
+  }
+
+  return brands
+    .map((brand) => {
+      if (!brand) return null;
+      const name =
+        typeof brand.name === "string" ? brand.name.trim() : "";
+      const slug =
+        typeof brand.slug === "string" ? brand.slug.trim() : "";
+      const value = slug.length > 0 ? slug : name;
+      if (!value.length || !name.length) {
+        return null;
+      }
+      return {
+        value,
+        label: name,
+        slug: slug.length > 0 ? slug : null,
+      };
+    })
+    .filter((option): option is CatalogFilterOption => option !== null);
 };
 
 function useUrl() {
@@ -109,6 +206,23 @@ export function FilterSidebar({
     }
     return map;
   }, [serializedParams, sp]);
+
+  const hasBrandGroup = React.useMemo(
+    () => filtersSource.some((group) => group.id === "brand"),
+    [filtersSource],
+  );
+
+  const selectedBrandCount = selectedValuesByParam.get("brand")?.size ?? 0;
+  const shouldLoadBrandOptions = hasBrandGroup || selectedBrandCount > 0;
+
+  const { data: catalogBrands } = useBrands({
+    enabled: shouldLoadBrandOptions,
+  });
+
+  const fallbackBrandOptions = React.useMemo(
+    () => mapBrandsToFilterOptions(catalogBrands),
+    [catalogBrands],
+  );
 
   const priceGroup = React.useMemo(
     () => filtersSource.find((group) => group.id === "price"),
@@ -516,12 +630,15 @@ export function FilterSidebar({
                 </>
               );
             } else if (group.id === "brand") {
+              const brandOptions = mergeBrandOptions(
+                group.options,
+                fallbackBrandOptions,
+              );
               content = (
                 <>
                   <div className="space-y-2">
-                    {group.options.map((option) => {
-                      const rawValue = option.slug ?? option.value ?? "";
-                      const value = rawValue.trim();
+                    {brandOptions.map((option) => {
+                      const value = option.value.trim();
                       if (!value.length) {
                         return null;
                       }
