@@ -120,7 +120,11 @@ export default function CheckoutPage() {
     }
 
     try {
-      const order = await checkout.mutateAsync();
+      const order = await checkout.mutateAsync({
+        email: form.email.trim(),
+        first_name: form.firstName,
+        last_name: form.lastName,
+      });
       const orderId =
         typeof order === "object" &&
         order !== null &&
@@ -128,12 +132,28 @@ export default function CheckoutPage() {
         (typeof (order as { id?: unknown }).id === "string" || typeof (order as { id?: unknown }).id === "number")
           ? (order as { id?: number | string }).id
           : undefined;
-      toast({ title: "Order placed successfully!", variant: "success" });
-      if (orderId) {
-        router.push(`/orders/${orderId}`);
-      } else {
-        router.push("/orders");
+      if (typeof window !== "undefined") {
+        const summary = {
+          orderId,
+          items: items.map((item) => ({
+            id: item.id ?? item.product_id,
+            name: item.product_title ?? item.product_name ?? "Item",
+            quantity: item.quantity,
+            price: item.price,
+          })),
+          totals: {
+            subtotal,
+            shipping,
+            tax,
+            total,
+          },
+          email: form.email.trim(),
+        };
+        window.sessionStorage.setItem("last-order-summary", JSON.stringify(summary));
       }
+      toast({ title: "Order placed successfully!", variant: "success" });
+      const thankYouPath = orderId ? `/checkout/thank-you?order=${orderId}` : "/checkout/thank-you";
+      router.push(thankYouPath);
     } catch (error: unknown) {
       const message =
         typeof error === "object" && error !== null && "message" in error && typeof (error as { message?: unknown }).message === "string"

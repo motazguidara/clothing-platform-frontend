@@ -217,15 +217,28 @@ const generateClientReferenceId = () => {
   return `ref_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
 };
 
+export interface CheckoutPayload {
+  email: string;
+  first_name?: string;
+  last_name?: string;
+}
+
 export function useCheckout() {
-  return useMutation<any, Error, void>({
-    mutationFn: async () => {
+  const qc = useQueryClient();
+  return useMutation<any, Error, CheckoutPayload>({
+    mutationFn: async (payload) => {
       const clientReferenceId = generateClientReferenceId();
       const response = await apiClient.request<any>('/orders/checkout/', {
         method: 'POST',
-        body: { client_reference_id: clientReferenceId },
+        body: {
+          client_reference_id: clientReferenceId,
+          ...payload,
+        },
       });
       return response;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: cartKeys.all });
     },
   });
 }
