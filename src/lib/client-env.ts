@@ -16,6 +16,7 @@ export const clientConfig = {
   enableAnalytics: process.env['NEXT_PUBLIC_ENABLE_ANALYTICS'] === 'true',
   enableMonitoring: process.env['NEXT_PUBLIC_ENABLE_MONITORING'] === 'true',
   featureCookieJwt: process.env['NEXT_PUBLIC_FEATURE_COOKIE_JWT'] === 'true',
+  supportPhone: process.env['NEXT_PUBLIC_SUPPORT_PHONE'] || '+1 (555) 010-9999',
 } as const;
 
 // Feature flags based on environment

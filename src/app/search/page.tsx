@@ -144,6 +144,16 @@ export default function SearchPage() {
       options.size = sizeValues;
     }
 
+    const categoryValues = sp
+      .getAll("category")
+      .map((value) => value.trim())
+      .filter((value) => value.length > 0);
+    if (categoryValues.length > 1) {
+      options.category = categoryValues;
+    } else if (categoryValues.length === 1) {
+      options.category = categoryValues[0];
+    }
+
     const colorValues = sp
       .getAll("color")
       .map((value) => value.trim())

@@ -262,15 +262,29 @@ export const OrderItemSchema = z.object({
   total_price: z.number(),
 });
 
+const OrderStatusEnum = z.enum([
+  'pending',
+  'awaiting_payment',
+  'confirmed',
+  'processing',
+  'paid',
+  'fulfilled',
+  'shipped',
+  'delivered',
+  'cancelled',
+  'refunded',
+  'failed',
+]);
+
 export const OrderSchema = z.object({
   id: z.string().uuid(),
   order_number: z.string(),
-  status: z.enum(['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled', 'refunded']),
+  status: OrderStatusEnum,
   items: z.array(OrderItemSchema),
   shipping_address: OrderAddressSchema,
   billing_address: OrderAddressSchema,
   payment_method: z.string(),
-  payment_status: z.enum(['pending', 'processing', 'completed', 'failed', 'refunded']),
+  payment_status: z.enum(['pending', 'processing', 'completed', 'failed', 'refunded', 'cancelled']),
   subtotal: z.number(),
   tax_amount: z.number(),
   shipping_amount: z.number(),
@@ -282,6 +296,8 @@ export const OrderSchema = z.object({
   estimated_delivery: z.string().date().nullable(),
   created_at: z.string().datetime(),
   updated_at: z.string().datetime(),
+  can_cancel: z.boolean().default(false),
+  can_cancel_until: z.string().datetime().nullable(),
 });
 
 export const PaginatedOrderListSchema = PaginationSchema.extend({

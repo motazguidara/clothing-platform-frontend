@@ -14,10 +14,21 @@ const pricePresets = [
   { value: "600_plus", label: "600 TND+", min: 600, max: null },
 ];
 
-const sizeOptions = ["XS", "S", "M", "L", "XL", "XXL", "3XL"].map((value) => ({
-  value,
-  label: value,
-}));
+const defaultSizeOptions = ["XS", "S", "M", "L", "XL", "XXL", "3XL"];
+const kidsGirlsSizes = ["2T", "3T", "4", "5", "6", "6X", "7", "8", "10", "12", "14", "16"];
+const kidsBoysSizes = ["2T", "3T", "4", "5", "6", "7", "8", "10", "12", "14", "16", "18"];
+const kidsUnisexSizes = Array.from(new Set([...kidsGirlsSizes, ...kidsBoysSizes]));
+
+const mapSizes = (values: string[]) =>
+  values.map((value) => ({
+    value,
+    label: value,
+  }));
+
+const adultSizeOptions = mapSizes(defaultSizeOptions);
+const kidsGirlsSizeOptions = mapSizes(kidsGirlsSizes);
+const kidsBoysSizeOptions = mapSizes(kidsBoysSizes);
+const kidsUnisexSizeOptions = mapSizes(kidsUnisexSizes);
 
 const colorOptions = [
   { value: "black", label: "Black" },
@@ -41,6 +52,7 @@ const parseActiveValue = (value?: string) => {
 
 export interface BuildDefaultFiltersOptions {
   gender?: string;
+  category?: string | string[];
   price_min?: string;
   price_max?: string;
   size?: string | string[];
@@ -61,11 +73,35 @@ const toSelectedArray = (value?: string | string[]): string[] => {
   return trimmed.length > 0 ? [trimmed] : [];
 };
 
+const normalizeCategory = (value?: string | string[]): string | null => {
+  if (!value) return null;
+  if (Array.isArray(value)) {
+    const [first] = value;
+    return first ? first.toLowerCase() : null;
+  }
+  return value.toLowerCase();
+};
+
+const getSizeOptionsForFilters = (options: BuildDefaultFiltersOptions) => {
+  if (options.gender === "kids") {
+    const category = normalizeCategory(options.category) ?? "";
+    if (category.includes("girl")) {
+      return kidsGirlsSizeOptions;
+    }
+    if (category.includes("boy")) {
+      return kidsBoysSizeOptions;
+    }
+    return kidsUnisexSizeOptions;
+  }
+  return adultSizeOptions;
+};
+
 export function buildDefaultFilters(
   options: BuildDefaultFiltersOptions,
 ): CatalogFilterGroup[] {
   const activeMin = parseActiveValue(options.price_min);
   const activeMax = parseActiveValue(options.price_max);
+  const resolvedSizeOptions = getSizeOptionsForFilters(options);
 
   return [
     {
@@ -121,7 +157,7 @@ export function buildDefaultFilters(
       label: "Size",
       param: "size",
       selection: "multi",
-      options: sizeOptions,
+      options: resolvedSizeOptions,
       selected: toSelectedArray(options.size),
     },
     {

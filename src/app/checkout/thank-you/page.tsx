@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { formatPrice } from "@/lib/utils";
+import { clientConfig } from "@/lib/client-env";
 
 type OrderSummary = {
   orderId?: string | number | null;
@@ -20,6 +21,7 @@ export default function CheckoutThankYouPage() {
   const orderId = params.get("order");
   const { user, isLoading } = useAuth();
   const [summary, setSummary] = React.useState<OrderSummary | null>(null);
+  const supportPhone = clientConfig.supportPhone;
 
   React.useEffect(() => {
     if (typeof window === "undefined") return;
@@ -116,6 +118,23 @@ export default function CheckoutThankYouPage() {
           </Link>
         ) : null}
       </div>
+      {!isLoggedIn ? (
+        <p className="mt-6 text-center text-sm text-gray-600">
+          Need to cancel or update your order? Call us within the next hour at{" "}
+          <a href={`tel:${supportPhone}`} className="font-semibold text-gray-900 underline-offset-2 hover:underline">
+            {supportPhone}
+          </a>
+          .
+        </p>
+      ) : (
+        <p className="mt-6 text-center text-sm text-gray-600">
+          You can cancel this order from your{" "}
+          <Link href="/orders" className="font-semibold text-gray-900 underline-offset-2 hover:underline">
+            orders page
+          </Link>{" "}
+          within one hour of placing it.
+        </p>
+      )}
     </section>
   );
 }

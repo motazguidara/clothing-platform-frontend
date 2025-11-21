@@ -78,6 +78,12 @@ export class OrdersService {
     });
   }
 
+  async cancelOrder(id: string): Promise<schemas.Order> {
+    return apiClient.post<schemas.Order>(`/orders/orders/${id}/cancel/`, undefined, {
+      responseSchema: schemas.OrderSchema,
+    });
+  }
+
   async createOrder(data: {
     items: Array<{
       product_id: number;

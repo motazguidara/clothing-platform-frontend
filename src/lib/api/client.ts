@@ -300,6 +300,7 @@ export class ApiClient {
     try {
       const response = await fetch(url, {
         ...options,
+        credentials: clientConfig.featureCookieJwt ? 'include' : options.credentials,
         signal: controller.signal,
       });
 

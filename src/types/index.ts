@@ -21,6 +21,7 @@ export interface Product {
   category: string;
   category_id?: number;
   gender?: string;
+  kids_fit?: "boys" | "girls" | "unisex" | null;
   short_description?: string;
   images?: string[];
   image?: string;

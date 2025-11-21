@@ -1,12 +1,13 @@
 "use client";
 
 import React from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { useProtectedRoute } from "@/hooks/useAuth";
 import { ordersService } from "@/lib/api/services/orders";
 import type { Order } from "@/lib/api/schemas";
 import { formatPrice } from "@/lib/utils";
+import { useToast } from "@/providers/toast-provider";
 
 type OrderDetailPageClientProps = {
   orderId: string;
@@ -15,14 +16,19 @@ type OrderDetailPageClientProps = {
 function StatusBadge({ status }: { status: Order["status"] }) {
   const map: Record<Order["status"], { label: string; className: string }> = {
     pending: { label: "Pending", className: "bg-amber-100 text-amber-800" },
+    awaiting_payment: { label: "Awaiting Payment", className: "bg-amber-100 text-amber-800" },
     confirmed: { label: "Confirmed", className: "bg-blue-100 text-blue-800" },
     processing: { label: "Processing", className: "bg-indigo-100 text-indigo-800" },
+    paid: { label: "Paid", className: "bg-emerald-100 text-emerald-800" },
+    fulfilled: { label: "Fulfilled", className: "bg-emerald-100 text-emerald-800" },
     shipped: { label: "Shipped", className: "bg-cyan-100 text-cyan-800" },
     delivered: { label: "Delivered", className: "bg-emerald-100 text-emerald-800" },
     cancelled: { label: "Cancelled", className: "bg-gray-200 text-gray-700" },
     refunded: { label: "Refunded", className: "bg-rose-100 text-rose-800" },
+    failed: { label: "Failed", className: "bg-rose-100 text-rose-800" },
   };
   const s = map[status];
+  if (!s) return null;
   return (
     <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${s.className}`}>
       {s.label}
@@ -32,11 +38,29 @@ function StatusBadge({ status }: { status: Order["status"] }) {
 
 export function OrderDetailPageClient({ orderId }: OrderDetailPageClientProps) {
   useProtectedRoute(`/login?next=/orders/${orderId}`);
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
 
   const { data, isLoading, isError } = useQuery({
     queryKey: ["orders", orderId],
     queryFn: async () => ordersService.getOrder(orderId),
     staleTime: 60_000,
+  });
+
+  const cancelMutation = useMutation({
+    mutationFn: () => ordersService.cancelOrder(orderId),
+    onSuccess: (updatedOrder) => {
+      queryClient.setQueryData(["orders", orderId], updatedOrder);
+      queryClient.invalidateQueries({ queryKey: ["orders"] });
+      toast({ title: "Order cancelled successfully", variant: "success" });
+    },
+    onError: (error: unknown) => {
+      const message =
+        typeof error === "object" && error !== null && "message" in error
+          ? String((error as { message?: unknown }).message || "Unable to cancel order.")
+          : "Unable to cancel order.";
+      toast({ title: message, variant: "destructive" });
+    },
   });
 
   return (
@@ -129,6 +153,31 @@ export function OrderDetailPageClient({ orderId }: OrderDetailPageClientProps) {
                   <div>{data.shipping_address.country}</div>
                 </div>
               </div>
+              {data.can_cancel && (
+                <div className="border rounded-lg p-4 space-y-3">
+                  <div className="text-sm text-gray-700">
+                    You can cancel this order while it is still processing.
+                    {data.can_cancel_until ? (
+                      <>
+                        {" "}
+                        This option is available until{" "}
+                        <span className="font-semibold">
+                          {new Date(data.can_cancel_until).toLocaleString()}
+                        </span>
+                        .
+                      </>
+                    ) : null}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => cancelMutation.mutate()}
+                    disabled={cancelMutation.isPending}
+                    className="w-full inline-flex items-center justify-center rounded-md bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-70 disabled:cursor-not-allowed"
+                  >
+                    {cancelMutation.isPending ? "Cancelling…" : "Cancel this order"}
+                  </button>
+                </div>
+              )}
             </div>
           </div>
 

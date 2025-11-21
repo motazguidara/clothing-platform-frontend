@@ -234,6 +234,7 @@ export function useCheckout() {
           client_reference_id: clientReferenceId,
           ...payload,
         },
+        credentials: 'include',
       });
       return response;
     },

@@ -8,26 +8,38 @@ import { ordersService } from "@/lib/api/services/orders";
 import type { Order } from "@/lib/api/schemas";
 import { formatPrice } from "@/lib/utils";
 
+const STATUS_MAP: Record<Order["status"], { label: string; className: string }> = {
+  pending: { label: "Pending", className: "bg-amber-100 text-amber-800" },
+  awaiting_payment: { label: "Awaiting Payment", className: "bg-amber-100 text-amber-800" },
+  confirmed: { label: "Confirmed", className: "bg-blue-100 text-blue-800" },
+  processing: { label: "Processing", className: "bg-indigo-100 text-indigo-800" },
+  paid: { label: "Paid", className: "bg-emerald-100 text-emerald-800" },
+  fulfilled: { label: "Fulfilled", className: "bg-emerald-100 text-emerald-800" },
+  shipped: { label: "Shipped", className: "bg-cyan-100 text-cyan-800" },
+  delivered: { label: "Delivered", className: "bg-emerald-100 text-emerald-800" },
+  cancelled: { label: "Cancelled", className: "bg-gray-200 text-gray-700" },
+  refunded: { label: "Refunded", className: "bg-rose-100 text-rose-800" },
+  failed: { label: "Failed", className: "bg-rose-100 text-rose-800" },
+};
+
 function StatusBadge({ status }: { status: Order["status"] }) {
-  const map: Record<Order["status"], { label: string; className: string }> = {
-    pending: { label: "Pending", className: "bg-amber-100 text-amber-800" },
-    confirmed: { label: "Confirmed", className: "bg-blue-100 text-blue-800" },
-    processing: { label: "Processing", className: "bg-indigo-100 text-indigo-800" },
-    shipped: { label: "Shipped", className: "bg-cyan-100 text-cyan-800" },
-    delivered: { label: "Delivered", className: "bg-emerald-100 text-emerald-800" },
-    cancelled: { label: "Cancelled", className: "bg-gray-200 text-gray-700" },
-    refunded: { label: "Refunded", className: "bg-rose-100 text-rose-800" },
-  };
-  const s = map[status];
-  return <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${s.className}`}>{s.label}</span>;
+  const s = STATUS_MAP[status];
+  if (!s) return null;
+  return (
+    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${s.className}`}>
+      {s.label}
+    </span>
+  );
 }
 
 export default function OrdersPage() {
-  useProtectedRoute("/login?next=/orders");
+  const { isLoading: authLoading, isAuthenticated } = useProtectedRoute("/login?next=/orders");
 
   const { data, isLoading, isError } = useQuery({
     queryKey: ["orders", { page: 1 }],
     queryFn: async () => ordersService.getOrders({ page: 1 }),
+    enabled: isAuthenticated && !authLoading,
+    retry: false,
     staleTime: 60_000,
   });
 

@@ -29,6 +29,15 @@ import type { User } from "@/hooks/useAuth";
 import type { CartItem } from "@/hooks/useCart";
 import type { NavigationMenu } from "@/types/navigation";
 
+const shouldHideMenuItem = (item: NavigationMenu["items"][number]) => {
+  const slug = (item.category_slug || "").toLowerCase();
+  const label = (item.label || "").toLowerCase();
+  return slug === "baby" || label.includes("baby");
+};
+
+const sanitizeMenuItems = (items: NavigationMenu["items"]) =>
+  items.filter((item) => !shouldHideMenuItem(item));
+
 const STATIC_NAVIGATION_MENUS: NavigationMenu[] = [
   {
     id: -1,
@@ -251,14 +260,6 @@ const STATIC_NAVIGATION_MENUS: NavigationMenu[] = [
         badge_variant: "default",
       },
       {
-        id: -305,
-        label: "Baby",
-        url: "/catalog?gender=kids&category=baby",
-        category_slug: "baby",
-        badge_text: null,
-        badge_variant: "default",
-      },
-      {
         id: -306,
         label: "Accessories",
         url: "/catalog?gender=kids&category=accessories",
@@ -361,9 +362,21 @@ export default function Header() {
   const { isAuthenticated, hasProfile, user, isLoading, logout } = useAuth();
   const accountTriggerRef = React.useRef<HTMLButtonElement | null>(null);
   const menusToRender = STATIC_NAVIGATION_MENUS;
+  const sanitizedMenus = React.useMemo(
+    () =>
+      menusToRender.map((menu) => ({
+        ...menu,
+        items: sanitizeMenuItems(menu.items),
+      })),
+    [menusToRender],
+  );
   const activeMegaMenu = React.useMemo(
-    () => menusToRender.find((menu) => menu.key === activeMegaMenuKey) ?? null,
-    [menusToRender, activeMegaMenuKey],
+    () => sanitizedMenus.find((menu) => menu.key === activeMegaMenuKey) ?? null,
+    [sanitizedMenus, activeMegaMenuKey],
+  );
+  const activeMegaMenuItems = React.useMemo(
+    () => sanitizeMenuItems(activeMegaMenu?.items ?? []),
+    [activeMegaMenu],
   );
   const isMegaMenuOpen = Boolean(activeMegaMenu);
   const headerHeight = scrolled ? 56 : 80;
@@ -540,7 +553,7 @@ export default function Header() {
               >
                 New
               </Link>
-              {menusToRender.map((menu) => {
+              {sanitizedMenus.map((menu) => {
                 const isActive = activeMegaMenu?.key === menu.key;
                 return (
                   <button
@@ -890,7 +903,7 @@ export default function Header() {
 
               <div className="px-6 mt-6 border-b border-gray-200">
                 <div className="flex items-center gap-6 overflow-x-auto pb-2 text-sm font-semibold">
-                  {STATIC_NAVIGATION_MENUS.map((menu) => {
+                  {sanitizedMenus.map((menu) => {
                     const isActive = activeMegaMenu?.key === menu.key;
                     return (
                       <button
@@ -909,8 +922,8 @@ export default function Header() {
 
               <div className="flex-1 overflow-y-auto px-6 pb-10">
                 <nav className="space-y-1 text-sm">
-                  {activeMegaMenu.items.length > 0 ? (
-                    activeMegaMenu.items.map((item) => (
+                  {activeMegaMenuItems.length > 0 ? (
+                    activeMegaMenuItems.map((item) => (
                       <Link
                         key={item.id}
                         href={item.url}
@@ -1040,8 +1053,10 @@ export default function Header() {
                 New
               </Link>
 
-              {menusToRender.map((menu) => (
-                <div key={menu.key} className="space-y-2">
+              {sanitizedMenus.map((menu) => {
+                const filteredItems = menu.items;
+                return (
+                  <div key={menu.key} className="space-y-2">
                   <Link
                     href={menu.entry_url}
                     className="block py-3 text-lg font-medium hover:underline underline-offset-4 decoration-2 transition-colors"
@@ -1049,22 +1064,26 @@ export default function Header() {
                   >
                     {menu.title}
                   </Link>
-                  {menu.items.length > 0 && (
+                  {filteredItems.length > 0 && (
                     <div className="space-y-1 pl-4 text-base">
-                      {menu.items.map((item) => (
-                        <Link
-                          key={item.id}
-                          href={item.url}
-                          className="block py-1 text-gray-600 hover:text-gray-900 transition-colors"
-                          onClick={closeMenu}
-                        >
-                          {item.label}
-                        </Link>
-                      ))}
+                      {filteredItems.map((item) => {
+                        const fallbackUrl = menu.entry_url || "/catalog";
+                        const href = item.url || fallbackUrl;
+                        return (
+                          <Link
+                            key={item.id}
+                            href={href}
+                            className="block py-1 text-gray-600 hover:text-gray-900 transition-colors"
+                            onClick={closeMenu}
+                          >
+                            {item.label}
+                          </Link>
+                        );
+                      })}
                     </div>
                   )}
                 </div>
-              ))}
+              )})}
 
               <Link
                 href="/catalog"
