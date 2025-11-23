@@ -253,13 +253,19 @@ export const OrderAddressSchema = z.object({
 });
 
 export const OrderItemSchema = z.object({
-  id: z.number(),
+  id: z.coerce.number(),
   product: CartProductSchema,
-  quantity: z.number(),
-  size: z.string().nullable(),
-  color: z.string().nullable(),
-  unit_price: z.number(),
-  total_price: z.number(),
+  quantity: z.coerce.number(),
+  size: z.string().nullish().default(null),
+  color: z.string().nullish().default(null),
+  unit_price: z.coerce.number(),
+  total_price: z.coerce.number(),
+  product_id: z.coerce.number().optional(),
+  variant_id: z.union([z.coerce.number(), z.string()]).nullable().optional(),
+  variant_name: z.string().nullable().optional(),
+  image_url: z.string().url().nullable().optional(),
+  sku: z.string().nullable().optional(),
+  barcode: z.string().nullable().optional(),
 });
 
 const OrderStatusEnum = z.enum([
@@ -297,7 +303,8 @@ export const OrderSchema = z.object({
   created_at: z.string().datetime(),
   updated_at: z.string().datetime(),
   can_cancel: z.boolean().default(false),
-  can_cancel_until: z.string().datetime().nullable(),
+  // Backend may return non-ISO formats; accept any string-ish value
+  can_cancel_until: z.string().nullable().optional(),
 });
 
 export const PaginatedOrderListSchema = PaginationSchema.extend({

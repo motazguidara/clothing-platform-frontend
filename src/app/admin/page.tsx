@@ -4,6 +4,8 @@ import React from "react";
 import Link from "next/link";
 
 export default function AdminDashboard() {
+  const [orderStatusFilter, setOrderStatusFilter] = React.useState<"all" | "Processing" | "Shipped" | "Delivered">("all");
+
   const stats = [
     { label: "Total Products", value: "1,234", change: "+12%", color: "text-green-600" },
     { label: "Total Orders", value: "856", change: "+8%", color: "text-green-600" },
@@ -17,6 +19,10 @@ export default function AdminDashboard() {
     { id: "ORD-003", customer: "Bob Johnson", amount: "$234.75", status: "Delivered", date: "2024-01-14" },
     { id: "ORD-004", customer: "Alice Brown", amount: "$67.25", status: "Processing", date: "2024-01-14" },
   ];
+
+  const filteredOrders = recentOrders.filter((order) =>
+    orderStatusFilter === "all" ? true : order.status === orderStatusFilter
+  );
 
   const lowStockProducts = [
     { name: "Classic T-Shirt", stock: 5, sku: "TSH-001" },
@@ -43,6 +49,17 @@ export default function AdminDashboard() {
       </div>
 
       <div className="max-w-7xl mx-auto px-6 py-8">
+        {/* Guidance */}
+        <div className="bg-blue-50 border border-blue-200 text-blue-900 rounded-lg p-4 mb-6">
+          <h2 className="text-sm font-semibold">How to use this dashboard</h2>
+          <ul className="mt-2 text-sm space-y-1 list-disc list-inside">
+            <li>Stats cards give today’s snapshot; click “View Orders/Products” below to drill into details.</li>
+            <li>Use the “Status filter” dropdown in Recent Orders to focus on deliveries in flight.</li>
+            <li>Low Stock shows what to restock first; click “Restock” to jump to edit.</li>
+            <li>Need a quick action? The tiles below take you directly to the right module.</li>
+          </ul>
+        </div>
+
         {/* Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           {stats.map((stat) => (
@@ -56,6 +73,7 @@ export default function AdminDashboard() {
                   {stat.change}
                 </div>
               </div>
+              <p className="text-xs text-gray-500 mt-2">Tip: These are daily rollups; dive into modules for full reports.</p>
             </div>
           ))}
         </div>
@@ -63,6 +81,7 @@ export default function AdminDashboard() {
         {/* Quick Actions */}
         <div className="bg-white rounded-lg shadow-sm border p-6 mb-8">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h2>
+          <p className="text-sm text-gray-600 mb-4">Use these shortcuts to jump into common workflows without searching through menus.</p>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <Link
               href="/admin/products"
@@ -117,14 +136,30 @@ export default function AdminDashboard() {
             <div className="p-6 border-b border-gray-200">
               <div className="flex items-center justify-between">
                 <h2 className="text-lg font-semibold text-gray-900">Recent Orders</h2>
-                <Link href="/admin/orders" className="text-sm text-blue-600 hover:text-blue-800">
-                  View all
-                </Link>
+                <div className="flex items-center gap-3">
+                  <label className="text-xs text-gray-600">
+                    Status filter
+                    <select
+                      value={orderStatusFilter}
+                      onChange={(e) => setOrderStatusFilter(e.target.value as typeof orderStatusFilter)}
+                      className="ml-2 text-xs border border-gray-300 rounded-md px-2 py-1 focus:outline-none focus:ring-2 focus:ring-black"
+                    >
+                      <option value="all">All</option>
+                      <option value="Processing">Processing</option>
+                      <option value="Shipped">Shipped</option>
+                      <option value="Delivered">Delivered</option>
+                    </select>
+                  </label>
+                  <Link href="/admin/orders" className="text-sm text-blue-600 hover:text-blue-800">
+                    View all
+                  </Link>
+                </div>
               </div>
+              <p className="text-sm text-gray-600 mt-2">Choose a status to focus on the orders that need your attention now.</p>
             </div>
             <div className="p-6">
               <div className="space-y-4">
-                {recentOrders.map((order) => (
+                {filteredOrders.map((order) => (
                   <div key={order.id} className="flex items-center justify-between py-3 border-b border-gray-100 last:border-b-0">
                     <div>
                       <div className="font-medium text-gray-900">{order.id}</div>

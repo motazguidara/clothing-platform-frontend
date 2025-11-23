@@ -13,7 +13,7 @@ type OrderDetailPageClientProps = {
   orderId: string;
 };
 
-function StatusBadge({ status }: { status: Order["status"] }) {
+function StatusBadge({ order }: { order: Order }) {
   const map: Record<Order["status"], { label: string; className: string }> = {
     pending: { label: "Pending", className: "bg-amber-100 text-amber-800" },
     awaiting_payment: { label: "Awaiting Payment", className: "bg-amber-100 text-amber-800" },
@@ -27,7 +27,17 @@ function StatusBadge({ status }: { status: Order["status"] }) {
     refunded: { label: "Refunded", className: "bg-rose-100 text-rose-800" },
     failed: { label: "Failed", className: "bg-rose-100 text-rose-800" },
   };
-  const s = map[status];
+
+  const isCOD = `${order.payment_method}`.toLowerCase() === "cash_on_delivery";
+  if (isCOD && ["processing", "shipped", "fulfilled"].includes(order.status)) {
+    return (
+      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-cyan-100 text-cyan-800">
+        Delivering (Pay on delivery)
+      </span>
+    );
+  }
+
+  const s = map[order.status];
   if (!s) return null;
   return (
     <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${s.className}`}>
@@ -40,10 +50,29 @@ export function OrderDetailPageClient({ orderId }: OrderDetailPageClientProps) {
   useProtectedRoute(`/login?next=/orders/${orderId}`);
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const [mounted, setMounted] = React.useState(false);
+
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const { data, isLoading, isError } = useQuery({
     queryKey: ["orders", orderId],
-    queryFn: async () => ordersService.getOrder(orderId),
+    queryFn: async () => {
+      try {
+        const res = await ordersService.getOrder(orderId);
+        console.debug("[orders] detail fetched", {
+          id: orderId,
+          status: res?.status,
+          items: res?.items?.length ?? 0,
+        });
+        return res;
+      } catch (error) {
+        console.error("[orders] detail failed", { id: orderId, error });
+        throw error;
+      }
+    },
+    enabled: mounted,
     staleTime: 60_000,
   });
 
@@ -65,7 +94,7 @@ export function OrderDetailPageClient({ orderId }: OrderDetailPageClientProps) {
 
   return (
     <section className="max-w-5xl mx-auto px-6 py-16">
-      {isLoading && (
+      {(!mounted || isLoading) && (
         <div className="space-y-3">
           <div className="h-8 w-1/3 bg-subtle animate-pulse rounded" />
           <div className="h-40 bg-subtle animate-pulse rounded" />
@@ -89,7 +118,14 @@ export function OrderDetailPageClient({ orderId }: OrderDetailPageClientProps) {
               <h1 className="text-3xl font-semibold tracking-tight uppercase">Order #{data.order_number}</h1>
               <p className="text-sm text-gray-600">Placed on {new Date(data.created_at).toLocaleString()}</p>
             </div>
-            <StatusBadge status={data.status} />
+            <div className="flex items-center gap-2">
+              <StatusBadge order={data} />
+              {`${data.payment_method}`.toLowerCase() === "cash_on_delivery" && (
+                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200">
+                  Pay on delivery
+                </span>
+              )}
+            </div>
           </div>
 
           <div className="grid md:grid-cols-3 gap-6">

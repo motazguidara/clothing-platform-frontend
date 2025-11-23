@@ -245,6 +245,12 @@ export class ApiClient {
         if (error instanceof ApiError && typeof error.status === 'number' && error.status >= 400 && error.status < 500) {
           // Handle 401 Unauthorized - try to refresh token (single guarded retry)
           if (error.status === 401 && !isRetry) {
+            // If we have no refresh path, fail fast to prevent auth hammering
+            const hasRefresh = clientConfig.featureCookieJwt || Boolean(tokenStore.getRefresh());
+            if (!hasRefresh) {
+              this.clearAuth();
+              throw new ApiError('Not authenticated', 401, 'SESSION_EXPIRED');
+            }
             try {
               // Try to refresh the token
               await this.refreshToken();

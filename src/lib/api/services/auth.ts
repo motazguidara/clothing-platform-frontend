@@ -30,18 +30,29 @@ export class AuthService {
     const token = this.getAccessToken();
     if (!token) return false;
     try {
-      const [, payloadB64] = token.split(".");
-      if (!payloadB64) return true; // non-JWT token; assume valid
+      const parts = token.split(".");
+      // If token is not a JWT shape, treat as invalid to avoid hammering auth endpoints
+      if (parts.length !== 3) {
+        this.clearAuth();
+        return false;
+      }
+      const [, payloadB64] = parts;
       const json = JSON.parse(
         atob(payloadB64.replace(/-/g, "+").replace(/_/g, "/")),
       );
       const exp = typeof json?.exp === "number" ? json.exp : null;
-      if (!exp) return true;
+      if (!exp) {
+        this.clearAuth();
+        return false;
+      }
       const nowSec = Math.floor(Date.now() / 1000);
       // Consider small clock skew (30s)
-      return exp > nowSec + 30;
+      const valid = exp > nowSec + 30;
+      if (!valid) this.clearAuth();
+      return valid;
     } catch {
-      // If decoding fails, assume token is present but unknown; treat as not authenticated to be safe
+      // If decoding fails, treat as unauthenticated and clear stale tokens
+      this.clearAuth();
       return false;
     }
   }

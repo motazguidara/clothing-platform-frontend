@@ -70,6 +70,29 @@ export function useAuth(options?: { fetchProfile?: boolean }) {
     error,
   } = useQuery(profileQueryOptions);
 
+  // Dev-time visibility to reduce auth debugging guesswork (log on change only)
+  useEffect(() => {
+    if (process.env.NODE_ENV !== "development") return;
+    // eslint-disable-next-line no-console
+    console.debug("[auth] state", {
+      tokenAuthenticated,
+      cookieSession,
+      shouldFetchProfile,
+      profileLoading,
+      hasUser: Boolean(user),
+      storedUser: Boolean(storedUser),
+      error: error ? (error as Error).message : null,
+    });
+  }, [
+    tokenAuthenticated,
+    cookieSession,
+    shouldFetchProfile,
+    profileLoading,
+    user,
+    storedUser,
+    error,
+  ]);
+
   useEffect(() => {
     if (user) {
       authService.storeUser(user);

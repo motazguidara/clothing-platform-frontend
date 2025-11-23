@@ -164,3 +164,12 @@ label { cursor: pointer; }
   /* Tailwind utility override: shrink xl:gap-12 from ~3rem */
   .xl\:gap-12 { gap: 2rem !important; }
 }
+
+/* Ensure hover background utility keeps the element border/radius intact */
+@media (hover: hover) {
+  .hover\:bg-gray-50:hover {
+    background-color: var(--color-gray-50, #f9fafb);
+    border-color: inherit;
+    border-radius: inherit;
+  }
+}
