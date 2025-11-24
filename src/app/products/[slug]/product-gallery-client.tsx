@@ -10,6 +10,8 @@ type Variant = {
   size?: string | null;
   color?: string | null;
   image?: string | null;
+  image_url?: string | null;
+  thumbnail?: string | null;
 };
 
 type Product = {
@@ -17,43 +19,58 @@ type Product = {
   name: string;
   images?: string[] | null;
   image?: string | null;
+  thumbnail?: string | null;
   variants?: Variant[] | null;
 };
 
-function pickMain(product: Product, color?: string | null) {
-  const c = (color || "").toLowerCase();
-  const variants = product.variants || [];
-  if (c) {
-    const match = variants.find((v) => (v.color || "").toLowerCase() === c && v.image);
-    if (match?.image) return match.image;
-  }
-  if (product.images && product.images.length > 0 && typeof product.images[0] === "string" && product.images[0].length > 0) {
-    return product.images[0];
-  }
-  if (product.image && product.image.length > 0) return product.image;
-  return null;
-}
+const isValidImage = (img?: string | null) => typeof img === "string" && img.trim().length > 0;
+const variantImage = (variant?: Variant | null) => {
+  if (!variant) return null;
+  return (
+    (variant.image && variant.image.trim()) ||
+    (variant.image_url && variant.image_url.trim()) ||
+    (variant.thumbnail && variant.thumbnail.trim()) ||
+    null
+  );
+};
 
 export default function ProductGalleryClient({ product }: { product: Product }) {
   const params = useSearchParams();
   const color = params.get("color");
-  const main = pickMain(product, color);
 
-  const thumbs: string[] = React.useMemo(() => {
-    const base: string[] = [];
-    // Include variant image for selected color first, if available and not equal to main
+  const galleryImages = React.useMemo(() => {
+    const ordered: string[] = [];
     const c = (color || "").toLowerCase();
     const variants = product.variants || [];
+
+    // 1) Selected color variant image
     if (c) {
-      const match = variants.find((v) => (v.color || "").toLowerCase() === c && v.image);
-      if (match?.image && match.image !== main) base.push(match.image);
+      const match = variants.find((v) => (v.color || "").toLowerCase() === c && isValidImage(variantImage(v)));
+      const img = variantImage(match);
+      if (img) ordered.push(img.trim());
     }
-    // Append remaining product images
+    // 2) Listing thumbnail (if provided)
+    if (isValidImage(product.thumbnail)) ordered.push(product.thumbnail!.trim());
+    // 3) Primary single image
+    if (isValidImage(product.image)) ordered.push(product.image!.trim());
+    // 4) Product images array
     for (const img of product.images || []) {
-      if (typeof img === "string" && img.length > 0 && img !== main) base.push(img);
+      if (isValidImage(img)) ordered.push((img as string).trim());
     }
-    return Array.from(new Set(base)).slice(0, 8);
-  }, [product.images, product.variants, color, main]);
+    // 5) Other variant images
+    for (const v of variants) {
+      const img = variantImage(v);
+      if (isValidImage(img)) ordered.push(img!.trim());
+    }
+    return Array.from(new Set(ordered));
+  }, [product.images, product.image, product.variants, color]);
+
+  const [index, setIndex] = React.useState(0);
+  React.useEffect(() => {
+    setIndex(0);
+  }, [galleryImages.join("|")]);
+
+  const main = galleryImages[index] ?? null;
 
   return (
     <div className="space-y-4">
@@ -73,11 +90,40 @@ export default function ProductGalleryClient({ product }: { product: Product }) 
             productName={product.name}
           />
         )}
+        {galleryImages.length > 1 && (
+          <>
+            <button
+              type="button"
+              aria-label="Previous image"
+              onClick={() => setIndex((prev) => (prev - 1 + galleryImages.length) % galleryImages.length)}
+              className="absolute left-2 top-1/2 -translate-y-1/2 h-9 w-9 rounded bg-white/90 border border-border shadow-sm flex items-center justify-center hover:bg-white transition"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" strokeWidth="1.5" className="stroke-black/80" aria-hidden="true">
+                <path d="M15 19l-7-7 7-7" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
+            <button
+              type="button"
+              aria-label="Next image"
+              onClick={() => setIndex((prev) => (prev + 1) % galleryImages.length)}
+              className="absolute right-2 top-1/2 -translate-y-1/2 h-9 w-9 rounded bg-white/90 border border-border shadow-sm flex items-center justify-center hover:bg-white transition"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" strokeWidth="1.5" className="stroke-black/80" aria-hidden="true">
+                <path d="M9 5l7 7-7 7" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
+          </>
+        )}
       </div>
-      {thumbs.length > 0 && (
+      {galleryImages.length > 1 && (
         <div className="grid grid-cols-4 gap-2">
-          {thumbs.map((image, idx) => (
-            <div key={image + idx} className="aspect-square relative overflow-hidden rounded-md bg-gray-100">
+          {galleryImages.map((image, idx) => (
+            <button
+              key={image + idx}
+              type="button"
+              onClick={() => setIndex(idx)}
+              className={`aspect-square relative overflow-hidden rounded-md bg-gray-100 border ${idx === index ? "border-black" : "border-transparent"} hover:border-black transition`}
+            >
               <Image
                 src={image}
                 alt={`${product.name} thumb ${idx + 1}`}
@@ -85,7 +131,7 @@ export default function ProductGalleryClient({ product }: { product: Product }) 
                 className="object-cover"
                 sizes="(max-width: 768px) 25vw, 12.5vw"
               />
-            </div>
+            </button>
           ))}
         </div>
       )}

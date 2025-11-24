@@ -95,10 +95,71 @@ export function ProductClient({ product, selectedVariant }: ProductClientProps) 
     });
   }, [router]);
 
-  const canAddToCart = product.in_stock && (!((product as any)?.variants?.length) || selectedSize);
+  const variantInventories = ((product as any)?.variants || []).map((v: any) => {
+    const qty = typeof v?.inventory?.quantity === "number" ? v.inventory.quantity : null;
+    const inStock = v?.inventory?.is_in_stock;
+    return { qty, inStock };
+  });
+  const anyVariantInStock = variantInventories.some((v) => v.inStock === true || (typeof v.qty === "number" && v.qty > 0));
+
+  const computeBadges = () => {
+    const list: Array<{ label: string; tone: "sale" | "neutral" | "warn" | "info" }> = [];
+    const basePrice = typeof (product as any).base_price === "number" ? (product as any).base_price : product.price;
+    const salePrice = typeof (product as any).sale_price === "number" ? (product as any).sale_price : product.price;
+    const onSale = (Boolean((product as any).is_on_sale) && salePrice < basePrice) || (basePrice > 0 && salePrice < basePrice);
+    if (onSale) list.push({ label: "Sale", tone: "sale" });
+    if (typeof (product as any).compare_at_price === "number" && (product as any).compare_at_price > (product as any).price) {
+      const diff = (product as any).compare_at_price - (product as any).price;
+      const pct = Math.round((diff / (product as any).compare_at_price) * 100);
+      if (pct > 0) list.push({ label: `${pct}% Off`, tone: "sale" });
+    }
+    if ((product as any).promotion) list.push({ label: (product as any).promotion, tone: "info" });
+    if ((product as any).is_featured) list.push({ label: "Bestseller", tone: "info" });
+
+    const productQty = typeof (product as any).stock_quantity === "number" ? (product as any).stock_quantity : null;
+    const inStock = productQty !== null ? productQty > 0 : (anyVariantInStock || product.in_stock !== false);
+    const lowStock =
+      inStock &&
+      ((productQty !== null && productQty > 0 && productQty <= 3) ||
+        variantInventories.some((v) => typeof v.qty === "number" && v.qty > 0 && v.qty <= 3));
+    if (!inStock) list.push({ label: "Out of Stock", tone: "warn" });
+    else if (lowStock) list.push({ label: "Low Stock", tone: "warn" });
+
+    if (product.created_at) {
+      try {
+        const days = (Date.now() - new Date(product.created_at).getTime()) / (1000 * 60 * 60 * 24);
+        if (days <= 30) list.push({ label: "New In", tone: "neutral" });
+      } catch {
+        /* noop */
+      }
+    }
+    return list;
+  };
+
+  const badges = computeBadges();
+
+  const canAddToCart = (product.in_stock || anyVariantInStock) && (!((product as any)?.variants?.length) || selectedSize);
 
   return (
     <div className="space-y-6">
+      {badges.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {badges.map((badge, idx) => {
+            const toneClasses =
+              badge.tone === "sale"
+                ? "bg-[#7a0f2f] text-white border-[#6a0d29]"
+                : "bg-black text-white border-black";
+            return (
+              <span
+                key={`${badge.label}-${idx}`}
+                className={`inline-flex items-center rounded border px-2 py-1 text-[12px] font-semibold ${toneClasses}`}
+              >
+                {badge.label}
+              </span>
+            );
+          })}
+        </div>
+      )}
       {/* Size Selection */}
       {product.available_sizes && product.available_sizes.length > 0 && (
         <div>
@@ -238,7 +299,7 @@ export function ProductClient({ product, selectedVariant }: ProductClientProps) 
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
           </svg>
-          <span>Free shipping on orders over $75</span>
+          <span>Free shipping on orders over 300 TND</span>
         </div>
         <div className="flex items-center space-x-2 text-sm text-gray-600">
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

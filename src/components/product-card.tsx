@@ -15,6 +15,7 @@ type ProductCardProduct = Product & {
   subtitle?: string;
   brand?: Product["brand"] | { name?: string | null };
   is_sustainable?: boolean;
+  promotion?: string | null;
 };
 
 interface Props {
@@ -258,6 +259,63 @@ export default function ProductCard({ product }: Props) {
   const swatchesToDisplay = filteredSwatches.slice(0, 6);
   const hiddenSwatchCount = Math.max(0, filteredSwatches.length - swatchesToDisplay.length);
 
+  const badges = React.useMemo(() => {
+    const list: Array<{ label: string; tone: "sale" | "neutral" | "warn" | "info" }> = [];
+    const variantQuantities = rawVariants
+      .map((v) => (v.inventory && typeof v.inventory.quantity === "number" ? v.inventory.quantity : null))
+      .filter((n): n is number => typeof n === "number");
+    const anyVariantInStock =
+      rawVariants.some(
+        (v) =>
+          (v.inventory && v.inventory.is_in_stock) ||
+          (v.inventory && typeof v.inventory.quantity === "number" && v.inventory.quantity > 0)
+      ) || variantQuantities.some((qty) => qty > 0);
+
+    let inStock = true;
+    if (typeof product.stock_quantity === "number") {
+      inStock = product.stock_quantity > 0;
+    } else if (rawVariants.length > 0) {
+      inStock = anyVariantInStock || product.in_stock !== false;
+    } else if (product.in_stock === false) {
+      inStock = false;
+    }
+
+    const lowStock =
+      inStock &&
+      ((typeof product.stock_quantity === "number" && product.stock_quantity > 0 && product.stock_quantity <= 3) ||
+        (variantQuantities.length > 0 &&
+          (() => {
+            const minQty = Math.min(...variantQuantities);
+            return minQty > 0 && minQty <= 3;
+          })()));
+
+    const basePrice = typeof product.base_price === "number" ? product.base_price : product.price;
+    const salePrice = typeof product.sale_price === "number" ? product.sale_price : product.price;
+    const onSale = (Boolean(product.is_on_sale) && salePrice < basePrice) || (basePrice > 0 && salePrice < basePrice);
+    if (onSale) list.push({ label: "Sale", tone: "sale" });
+    if (typeof product.compare_at_price === "number" && product.compare_at_price > (product.price || 0)) {
+      const diff = product.compare_at_price - (product.price || 0);
+      const pct = Math.round((diff / product.compare_at_price) * 100);
+      if (pct > 0) list.push({ label: `${pct}% Off`, tone: "sale" });
+    }
+    if (product.promotion) {
+      list.push({ label: product.promotion, tone: "info" });
+    }
+    if (product.is_featured) list.push({ label: "Bestseller", tone: "info" });
+    if (!inStock) list.push({ label: "Out of Stock", tone: "warn" });
+    else if (lowStock) list.push({ label: "Low Stock", tone: "warn" });
+    if (product.created_at) {
+      try {
+        const created = new Date(product.created_at);
+        const days = (Date.now() - created.getTime()) / (1000 * 60 * 60 * 24);
+        if (days <= 30) list.push({ label: "New In", tone: "neutral" });
+      } catch {
+        /* ignore */
+      }
+    }
+    return list;
+  }, [product]);
+
   React.useEffect(() => {
     if (selectedColorKey && !filteredSwatches.some((swatch) => swatch.key === selectedColorKey)) {
       setSelectedColorKey(null);
@@ -316,24 +374,30 @@ export default function ProductCard({ product }: Props) {
             );
           })()}
         </motion.div>
-        {/* Badges: Out of stock, Sale % */}
-        {(() => {
-          const inStock = Boolean(product.in_stock);
-          const basePrice = typeof product.base_price === "number" ? product.base_price : product.price;
-          const salePrice = typeof product.sale_price === "number" ? product.sale_price : product.price;
-          const onSale = (Boolean(product.is_on_sale) && salePrice < basePrice) || (basePrice > 0 && salePrice < basePrice);
-          const discountPct = onSale && basePrice > 0 ? Math.round(((basePrice - salePrice) / basePrice) * 100) : 0;
-          return (
-            <div className="absolute left-2 top-2 flex flex-col gap-2 z-10">
-              {!inStock && (
-                <span className="inline-flex items-center rounded bg-gray-900 text-white text-[10px] font-bold px-2 py-1 uppercase">Out of stock</span>
-              )}
-              {onSale && discountPct > 0 && (
-                <span className="inline-flex items-center rounded bg-red-600 text-white text-[10px] font-bold px-2 py-1">-{discountPct}%</span>
-              )}
-            </div>
-          );
-        })()}
+        {/* Badges */}
+        {badges.length > 0 && (
+          <div className="absolute left-2 right-2 bottom-2 flex flex-wrap items-center gap-2 z-10">
+            {badges.slice(0, 3).map((badge, idx) => {
+              const toneClasses =
+                badge.tone === "sale"
+                  ? "bg-[#7a0f2f] text-white border-[#6a0d29]"
+                  : "bg-black text-white border-black";
+              return (
+                <span
+                  key={`${badge.label}-${idx}`}
+                  className={`inline-flex items-center rounded border px-2 py-1 text-[11px] font-semibold ${toneClasses}`}
+                >
+                  {badge.label}
+                </span>
+              );
+            })}
+            {badges.length > 3 && (
+              <span className="inline-flex items-center rounded border border-black bg-black text-white px-2 py-1 text-[11px] font-semibold">
+                +{badges.length - 3}
+              </span>
+            )}
+          </div>
+        )}
         <button
           aria-label={isWished ? "Remove from wishlist" : "Add to wishlist"}
           onClick={(e) => {
