@@ -9,6 +9,12 @@ import { formatPrice } from "@/lib/utils";
 import PromoCodeForm from "@/components/PromoCodeForm";
 import CollectionRail from "@/components/CollectionRail";
 import { useCheckoutStore } from "@/store/checkout";
+import dynamic from "next/dynamic";
+
+const CartPromotionRecommendations = dynamic(
+  () => import("@/components/recommendations/CartPromotionRecommendations").then(mod => mod.CartPromotionRecommendations),
+  { ssr: false }
+);
 
 type TrustBadge = {
   label: string;
@@ -387,7 +393,10 @@ export default function CartPage() {
       </div>
 
       <div className="mt-16 border-t pt-8">
-        <CollectionRail title="You Might Also Like" params={{ ordering: "-bestseller" }} />
+        <CartPromotionRecommendations
+          excludeProductIds={items.map((it) => Number(it.product_id ?? it.id ?? 0)).filter(Boolean)}
+          limit={6}
+        />
       </div>
     </section>
   );

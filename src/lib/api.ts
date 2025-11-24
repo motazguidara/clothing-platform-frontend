@@ -1,5 +1,3 @@
-// DEPRECATED: This file is being migrated to use the new API client
-// Please use @/lib/api instead for new code
-
-// Re-export everything from the new API system for backward compatibility
-export * from '@/lib/api';
+// Compatibility re-export to avoid circular resolution issues.
+// Keep imports like `@/lib/api` working by forwarding to the folder index.
+export * from './api/index';

@@ -170,6 +170,5 @@ label { cursor: pointer; }
   .hover\:bg-gray-50:hover {
     background-color: var(--color-gray-50, #f9fafb);
     border-color: inherit;
-    border-radius: inherit;
   }
 }

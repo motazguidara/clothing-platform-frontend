@@ -928,7 +928,7 @@ export default function Header() {
                         key={item.id}
                         href={item.url}
                         onClick={closeMegaMenu}
-                        className="flex items-center justify-between rounded-lg border border-transparent px-3 py-2 text-gray-900 transition hover:border-gray-200 hover:bg-gray-50"
+                        className="flex items-center justify-between rounded-lg border border-transparent px-3 py-2 text-gray-900 transition hover:border-gray-200/70 hover:bg-gray-50 hover:shadow-sm"
                       >
                         <span className="flex items-center gap-2">
                           {item.label}
