@@ -128,9 +128,9 @@ export function SearchOverlay({ isOpen, onClose }: Props) {
       />
 
       {/* Bar container covering header (top-0) */}
-      <div className="absolute inset-x-0 top-0 bg-white/95 backdrop-blur border-b z-50 animate-fade-in shadow-sm">
+      <div className="absolute inset-x-0 top-0 bg-white/95 backdrop-blur border-b border-slate-200 z-50 animate-fade-in shadow-md">
         <div ref={barRef} className="max-w-7xl mx-auto px-6 py-5">
-          <div className="flex items-center gap-6">
+          <div className="flex items-center gap-5">
             <div className="relative flex-1">
               <input
                 value={query}
@@ -140,10 +140,10 @@ export function SearchOverlay({ isOpen, onClose }: Props) {
                 }}
                 onFocus={() => query.length > 1 && setShowSuggestions(true)}
                 placeholder="Search"
-                className="w-full px-5 py-3.5 pl-12 pr-12 rounded-full bg-gray-100 shadow-inner focus:outline-none focus:ring-2 ring-black text-base"
+                className="w-full rounded-full border border-slate-200 bg-white/90 px-5 py-3.5 pl-12 pr-12 text-base shadow-sm focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900"
               />
               <div className="absolute left-4 top-1/2 -translate-y-1/2">
-                <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <circle cx="11" cy="11" r="7" stroke="currentColor" />
                   <path d="M20 20l-3.5-3.5" stroke="currentColor" strokeLinecap="round" />
                 </svg>
@@ -151,7 +151,7 @@ export function SearchOverlay({ isOpen, onClose }: Props) {
               {query && (
                 <button
                   onClick={() => setQuery("")}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
                   aria-label="Clear search"
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -161,17 +161,17 @@ export function SearchOverlay({ isOpen, onClose }: Props) {
               )}
 
               {showSuggestions && suggestions.length > 0 && (
-                <div className="absolute left-0 right-0 mt-2 bg-white border border-gray-200 rounded-lg shadow-lg z-10">
+                <div className="absolute left-0 right-0 mt-2 bg-white/95 border border-slate-200 rounded-2xl shadow-xl z-10 backdrop-blur">
                   {suggestions.map((s) => (
                     <button
                       key={s}
                       onClick={() => submit(s)}
-                      className="w-full px-4 py-3 text-left hover:bg-gray-100 first:rounded-t-lg last:rounded-b-lg flex items-center gap-3"
+                      className="flex w-full items-center gap-3 px-4 py-3 text-left text-sm text-slate-800 hover:bg-slate-50 first:rounded-t-2xl last:rounded-b-2xl"
                     >
-                      <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                       </svg>
-                      <span className="text-sm">{s}</span>
+                      <span>{s}</span>
                     </button>
                   ))}
                 </div>
@@ -179,24 +179,24 @@ export function SearchOverlay({ isOpen, onClose }: Props) {
             </div>
             <button
               onClick={() => submit(query)}
-              className="px-5 py-3 rounded-full bg-black text-white text-sm hover:bg-gray-900 transition-soft"
+              className="rounded-full bg-slate-900 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-slate-800"
               aria-label="Submit search"
             >
               Search
             </button>
-            <button onClick={onClose} className="text-sm text-gray-600 hover:text-black" aria-label="Cancel">
+            <button onClick={onClose} className="text-sm text-slate-600 hover:text-slate-900" aria-label="Cancel">
               Cancel
             </button>
           </div>
 
           <div className="mt-5">
-            <div className="text-xs text-gray-500 mb-2">Popular Search Terms</div>
+            <div className="text-xs text-slate-500 mb-2">Popular Search Terms</div>
             <div className="flex flex-wrap gap-2">
               {popularTerms.map((term) => (
                 <button
                   key={term}
                   onClick={() => submit(term)}
-                  className="px-3 py-1 bg-gray-100 rounded-full text-sm hover:bg-gray-200 transition-colors"
+                  className="rounded-full bg-slate-100 px-3 py-1 text-sm text-slate-800 transition hover:bg-slate-200"
                 >
                   {term}
                 </button>

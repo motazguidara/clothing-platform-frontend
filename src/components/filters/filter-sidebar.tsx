@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
@@ -309,14 +309,19 @@ export function FilterSidebar({
   }, []);
 
   return (
-    <aside className={`${className}`}>
-      <div className="mb-4 flex items-center justify-between">
-        <h2 className="text-base font-semibold">Filters</h2>
+    <aside
+      className={`rounded-2xl border border-slate-200 bg-white/90 p-5 shadow-sm ${className}`}
+    >
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <div>
+          <h2 className="text-base font-semibold text-slate-900">Filters</h2>
+          <p className="text-xs text-slate-500">Refine products in one place</p>
+        </div>
         <button
           onClick={() => setShow((s) => !s)}
-          className="text-sm text-gray-600 hover:underline"
+          className="inline-flex items-center gap-2 rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-700 hover:border-slate-300 hover:bg-slate-50 transition"
         >
-          {show ? "Hide Filters" : "Show Filters"}
+          {show ? "Hide" : "Show"}
         </button>
       </div>
 
@@ -326,21 +331,21 @@ export function FilterSidebar({
             <div className="space-y-4 animate-pulse">
               <div>
                 <div className="font-medium mb-2">
-                  <div className="h-4 w-24 rounded bg-gray-200" />
+                  <div className="h-4 w-24 rounded bg-slate-200" />
                 </div>
                 <div className="space-y-2">
-                  <div className="h-3 w-20 rounded bg-gray-200" />
-                  <div className="h-3 w-28 rounded bg-gray-200" />
-                  <div className="h-3 w-16 rounded bg-gray-200" />
+                  <div className="h-3 w-20 rounded bg-slate-200" />
+                  <div className="h-3 w-28 rounded bg-slate-200" />
+                  <div className="h-3 w-16 rounded bg-slate-200" />
                 </div>
               </div>
               <div>
                 <div className="font-medium mb-2">
-                  <div className="h-4 w-28 rounded bg-gray-200" />
+                  <div className="h-4 w-28 rounded bg-slate-200" />
                 </div>
                 <div className="flex flex-wrap gap-2">
                   {Array.from({ length: 6 }).map((_, i) => (
-                    <div key={i} className="h-6 w-12 rounded bg-gray-200" />
+                    <div key={i} className="h-6 w-12 rounded bg-slate-200" />
                   ))}
                 </div>
               </div>
@@ -348,7 +353,7 @@ export function FilterSidebar({
           )}
 
           {!isLoading && filtersToRender.length === 0 && !error && (
-            <p className="text-sm text-gray-500">
+            <p className="text-sm text-slate-500">
               No filters available for this view.
             </p>
           )}
@@ -391,7 +396,7 @@ export function FilterSidebar({
                     return (
                       <label
                         key={value}
-                        className="flex items-center gap-2 text-sm"
+                        className="flex items-center gap-2 rounded-lg px-2 py-1 text-sm hover:bg-slate-50"
                       >
                         <input
                           type="radio"
@@ -399,6 +404,7 @@ export function FilterSidebar({
                           value={value}
                           checked={isChecked}
                           onChange={() => setParam(paramKey, value)}
+                          className="h-4 w-4 border-slate-300 text-slate-900 focus:ring-slate-900"
                         />
                         <span>
                           {option.count != null
@@ -410,7 +416,7 @@ export function FilterSidebar({
                   })}
                   {selectedSet.size > 0 && (
                     <button
-                      className="text-xs text-gray-600 hover:underline mt-1"
+                      className="text-xs text-slate-600 hover:underline mt-1"
                       onClick={() => setParam(paramKey, undefined)}
                     >
                       Clear
@@ -426,7 +432,7 @@ export function FilterSidebar({
                       key={option.value ?? option.label}
                       className={`block w-full text-left text-sm ${
                         isPresetActive(option.min, option.max)
-                          ? "font-semibold text-gray-900"
+                          ? "font-semibold text-slate-900"
                           : "hover:underline"
                       }`}
                       onClick={() => handlePresetClick(option.min, option.max)}
@@ -434,35 +440,35 @@ export function FilterSidebar({
                       {option.label}
                       {option.count != null ? ` (${option.count})` : ""}
                     </button>
-                  ))}
-                  <div className="mt-2 flex items-center gap-2">
-                    <input
-                      placeholder="Min"
-                      defaultValue={activePriceMin}
-                      className="w-20 px-2 py-1 border rounded"
-                      onBlur={(e) =>
-                        setParam(
-                          "price_min",
-                          e.target.value ? e.target.value : undefined,
-                        )
-                      }
-                    />
-                    <span className="text-gray-500">-</span>
-                    <input
-                      placeholder="Max"
-                      defaultValue={activePriceMax}
-                      className="w-20 px-2 py-1 border rounded"
-                      onBlur={(e) =>
-                        setParam(
-                          "price_max",
-                          e.target.value ? e.target.value : undefined,
-                        )
+                ))}
+                <div className="mt-2 flex items-center gap-2">
+                  <input
+                    placeholder="Min"
+                    defaultValue={activePriceMin}
+                    className="w-20 rounded-lg border border-slate-200 px-3 py-2 text-sm shadow-inner focus:border-slate-400 focus:outline-none"
+                    onBlur={(e) =>
+                      setParam(
+                        "price_min",
+                        e.target.value ? e.target.value : undefined,
+                      )
+                    }
+                  />
+                  <span className="text-slate-500">-</span>
+                  <input
+                    placeholder="Max"
+                    defaultValue={activePriceMax}
+                    className="w-20 rounded-lg border border-slate-200 px-3 py-2 text-sm shadow-inner focus:border-slate-400 focus:outline-none"
+                    onBlur={(e) =>
+                      setParam(
+                        "price_max",
+                        e.target.value ? e.target.value : undefined,
+                      )
                       }
                     />
                   </div>
                   {(activePriceMin || activePriceMax) && (
                     <button
-                      className="text-xs text-gray-600 hover:underline mt-1"
+                      className="text-xs text-slate-600 hover:underline mt-1"
                       onClick={() =>
                         setParams([
                           { key: "price_min", value: undefined },
@@ -530,10 +536,10 @@ export function FilterSidebar({
                         <button
                           key={value}
                           type="button"
-                          className={`px-3 py-1.5 border rounded-md text-sm transition ${
+                          className={`rounded-full px-3 py-1 text-xs font-semibold transition ${
                             isActive
-                              ? "bg-black text-white border-black shadow-sm"
-                              : "border-gray-200 hover:bg-gray-100"
+                              ? "bg-slate-900 text-white shadow-sm"
+                              : "border border-slate-200 text-slate-700 hover:bg-slate-50"
                           }`}
                           onClick={() => {
                             const nextValues = isActive
@@ -554,7 +560,7 @@ export function FilterSidebar({
                   </div>
                   {selectedSet.size > 0 && (
                     <button
-                      className="text-xs text-gray-600 hover:underline mt-1"
+                      className="text-xs text-slate-600 hover:underline mt-1"
                       onClick={() => setParam(paramKey, undefined)}
                     >
                       Clear
@@ -588,7 +594,7 @@ export function FilterSidebar({
                           className={`flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black ${
                             isActive
                               ? "border-black bg-gray-50 shadow-sm"
-                              : "border-gray-200 hover:border-gray-300"
+                              : "border-slate-200 hover:border-slate-300"
                           }`}
                           onClick={() => {
                             const nextValues = isActive
@@ -612,7 +618,7 @@ export function FilterSidebar({
                                 : undefined
                             }
                           />
-                          <span className="text-xs font-medium text-gray-700">
+                          <span className="text-xs font-medium text-slate-700">
                             {option.label}
                           </span>
                         </button>
@@ -621,7 +627,7 @@ export function FilterSidebar({
                   </div>
                   {selectedSet.size > 0 && (
                     <button
-                      className="text-xs text-gray-600 hover:underline mt-2"
+                      className="text-xs text-slate-600 hover:underline mt-2"
                       onClick={() => setParam(paramKey, undefined)}
                     >
                       Clear
@@ -646,12 +652,12 @@ export function FilterSidebar({
                       return (
                         <label
                           key={value}
-                          className="flex items-center justify-between gap-3 rounded-md px-2 py-1 hover:bg-gray-50"
+                          className="flex items-center justify-between gap-3 rounded-md px-2 py-1 hover:bg-slate-50"
                         >
                           <span className="flex items-center gap-2">
                             <input
                               type="checkbox"
-                              className="h-4 w-4 rounded border-gray-300 text-black focus:ring-black"
+                              className="h-4 w-4 rounded border-slate-300 text-black focus:ring-black"
                               checked={isActive}
                               onChange={(e) => {
                                 const nextValues = e.target.checked
@@ -670,13 +676,13 @@ export function FilterSidebar({
                               }}
                             />
                             <span
-                              className={`text-sm ${isActive ? "font-semibold text-gray-900" : "text-gray-700"}`}
+                              className={`text-sm ${isActive ? "font-semibold text-slate-900" : "text-slate-700"}`}
                             >
                               {option.label}
                             </span>
                           </span>
                           {option.count != null && (
-                            <span className="text-xs text-gray-500">
+                            <span className="text-xs text-slate-500">
                               {option.count}
                             </span>
                           )}
@@ -686,7 +692,7 @@ export function FilterSidebar({
                   </div>
                   {selectedSet.size > 0 && (
                     <button
-                      className="text-xs text-gray-600 hover:underline mt-1"
+                      className="text-xs text-slate-600 hover:underline mt-1"
                       onClick={() => setParam(paramKey, undefined)}
                     >
                       Clear
@@ -706,20 +712,20 @@ export function FilterSidebar({
                         return null;
                       }
                       const isActive = selectedSet.has(value);
-                      return (
-                        <button
-                          key={value}
-                          type="button"
-                          className={`px-2 py-1 border rounded text-xs transition ${
-                            isActive
-                              ? "bg-black text-white border-black"
-                              : "border-gray-200 hover:bg-gray-100"
-                          }`}
-                          onClick={() => {
-                            const nextValues = isActive
-                              ? selectedValues.filter(
-                                  (entry) => entry !== value,
-                                )
+                    return (
+                      <button
+                        key={value}
+                        type="button"
+                        className={`rounded-full px-3 py-1 text-xs font-semibold transition ${
+                          isActive
+                            ? "bg-slate-900 text-white shadow-sm"
+                            : "border border-slate-200 text-slate-700 hover:bg-slate-50"
+                        }`}
+                        onClick={() => {
+                          const nextValues = isActive
+                            ? selectedValues.filter(
+                                (entry) => entry !== value,
+                              )
                               : [...selectedValues, value];
                             setParam(
                               paramKey,
@@ -734,7 +740,7 @@ export function FilterSidebar({
                   </div>
                   {selectedSet.size > 0 && (
                     <button
-                      className="text-xs text-gray-600 hover:underline mt-1"
+                      className="text-xs text-slate-600 hover:underline mt-1"
                       onClick={() => setParam(paramKey, undefined)}
                     >
                       Clear
@@ -753,20 +759,20 @@ export function FilterSidebar({
                       return null;
                     }
                     const isActive = selectedSet.has(value);
-                    return (
-                      <button
-                        key={value}
-                        type="button"
-                        className={`px-2 py-1 border rounded text-xs transition ${
-                          isActive
-                            ? "bg-black text-white border-black"
-                            : "border-gray-200 hover:bg-gray-100"
-                        }`}
-                        onClick={() =>
-                          setParam(paramKey, isActive ? undefined : value)
-                        }
-                      >
-                        {option.label}
+                  return (
+                    <button
+                      key={value}
+                      type="button"
+                      className={`rounded-full px-3 py-1 text-xs font-semibold transition ${
+                        isActive
+                          ? "bg-slate-900 text-white shadow-sm"
+                          : "border border-slate-200 text-slate-700 hover:bg-slate-50"
+                      }`}
+                      onClick={() =>
+                        setParam(paramKey, isActive ? undefined : value)
+                      }
+                    >
+                      {option.label}
                       </button>
                     );
                   })}
@@ -777,7 +783,7 @@ export function FilterSidebar({
             return (
               <div
                 key={group.id}
-                className={`border-t border-gray-200 ${groupIndex === 0 ? "pt-0 border-t-0" : "pt-4"}`}
+                className={`border-t border-slate-200 ${groupIndex === 0 ? "pt-0 border-t-0" : "pt-4"}`}
               >
                 <button
                   type="button"
@@ -786,7 +792,7 @@ export function FilterSidebar({
                 >
                   <span className="font-medium">{label}</span>
                   <svg
-                    className={`h-4 w-4 text-gray-600 transition-transform ${
+                    className={`h-4 w-4 text-slate-600 transition-transform ${
                       isOpen ? "rotate-180" : ""
                     }`}
                     viewBox="0 0 20 20"
@@ -817,7 +823,7 @@ export function SortSelect() {
   const current = sp.get("ordering") || "-created_at";
   return (
     <select
-      className="px-3 py-2 border rounded-md text-sm"
+      className="rounded-full border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 shadow-sm focus:border-slate-400 focus:outline-none"
       defaultValue={current}
       onChange={(e) => setParam("ordering", e.target.value || undefined)}
       aria-label="Sort by"
@@ -831,3 +837,4 @@ export function SortSelect() {
     </select>
   );
 }
+

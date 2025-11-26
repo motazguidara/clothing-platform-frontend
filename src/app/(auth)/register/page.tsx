@@ -140,13 +140,13 @@ export default function RegisterPage() {
   }
   
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="w-full max-w-md space-y-8 bg-white p-8 rounded-lg shadow-sm border border-gray-100">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-white to-slate-100 py-12 px-4 sm:px-6 lg:px-8">
+      <div className="w-full max-w-md space-y-8 bg-white/90 p-8 rounded-2xl shadow-lg border border-slate-200 backdrop-blur">
         <div className="text-center">
-          <h1 className="text-2xl font-bold tracking-tight text-gray-900 sm:text-3xl">
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
             Create your account
           </h1>
-          <p className="mt-2 text-sm text-gray-600">
+          <p className="mt-2 text-sm text-slate-600">
             Join us to shop faster and track orders.
           </p>
         </div>
@@ -154,7 +154,7 @@ export default function RegisterPage() {
         <form onSubmit={onSubmit} className="mt-8 space-y-6" noValidate>
           <div className="space-y-4">
           <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+            <label htmlFor="email" className="block text-sm font-semibold text-slate-900">
               Email address <span className="text-red-500">*</span>
             </label>
             <div className="mt-1">
@@ -167,7 +167,7 @@ export default function RegisterPage() {
                 value={formData.email}
                 onChange={handleChange}
                 required
-                className={`appearance-none block w-full px-3 py-2 border ${errors['email'] ? 'border-red-300' : 'border-gray-300'} rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm`}
+                className={`appearance-none block w-full px-3 py-2 border ${errors['email'] ? 'border-red-300' : 'border-slate-300'} rounded-lg shadow-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-slate-400 sm:text-sm`}
                 aria-invalid={!!errors['email']}
                 aria-describedby={errors['email'] ? 'email-error' : undefined}
               />
@@ -181,7 +181,7 @@ export default function RegisterPage() {
         
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
-              <label htmlFor="firstName" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="firstName" className="block text-sm font-semibold text-slate-900">
                 First name
               </label>
               <div className="mt-1">
@@ -192,12 +192,12 @@ export default function RegisterPage() {
                   autoComplete="given-name"
                   value={formData.firstName}
                   onChange={handleChange}
-                  className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                  className="appearance-none block w-full px-3 py-2 border border-slate-300 rounded-lg shadow-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-slate-400 sm:text-sm"
                 />
               </div>
             </div>
             <div>
-              <label htmlFor="lastName" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="lastName" className="block text-sm font-semibold text-slate-900">
                 Last name
               </label>
               <div className="mt-1">
@@ -208,7 +208,7 @@ export default function RegisterPage() {
                   autoComplete="family-name"
                   value={formData.lastName}
                   onChange={handleChange}
-                  className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm"
+                  className="appearance-none block w-full px-3 py-2 border border-slate-300 rounded-lg shadow-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-slate-400 sm:text-sm"
                 />
               </div>
             </div>
@@ -226,7 +226,7 @@ export default function RegisterPage() {
               error={errors['password'] ?? null}
             />
             {!errors['password'] && (
-              <p className="mt-1 text-xs text-gray-500">Must be at least 8 characters long and include uppercase, lowercase, number, and symbol.</p>
+              <p className="mt-1 text-xs text-slate-500">Must be at least 8 characters long and include uppercase, lowercase, number, and symbol.</p>
             )}
           </div>
         
@@ -245,7 +245,7 @@ export default function RegisterPage() {
           </div>
         
           <div className="space-y-4 pt-2">
-            <div className="flex items-start">
+            <div className="flex items-start rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5">
               <div className="flex items-center h-5">
                 <input
                   id="termsConsent"
@@ -253,18 +253,18 @@ export default function RegisterPage() {
                   type="checkbox"
                   checked={formData.termsConsent}
                   onChange={handleChange}
-                  className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                  className="h-4 w-4 rounded border-slate-300 text-slate-900 focus:ring-slate-900"
                   required
                 />
               </div>
               <div className="ml-3 text-sm">
-                <label htmlFor="termsConsent" className="font-medium text-gray-700">
+                <label htmlFor="termsConsent" className="font-semibold text-slate-900">
                   I agree to the{' '}
-                  <Link href="/terms" className="text-primary-600 hover:text-primary-500 hover:underline">
+                  <Link href="/terms" className="text-slate-800 underline underline-offset-4">
                     Terms and Conditions
                   </Link>{' '}
                   and{' '}
-                  <Link href="/privacy" className="text-primary-600 hover:text-primary-500 hover:underline">
+                  <Link href="/privacy" className="text-slate-800 underline underline-offset-4">
                     Privacy Policy
                   </Link>{' '}
                   <span className="text-red-500">*</span>
@@ -277,7 +277,7 @@ export default function RegisterPage() {
               </div>
             </div>
             
-            <div className="flex items-start">
+            <div className="flex items-start rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5">
               <div className="flex items-center h-5">
                 <input
                   id="marketingConsent"
@@ -285,11 +285,11 @@ export default function RegisterPage() {
                   type="checkbox"
                   checked={formData.marketingConsent}
                   onChange={handleChange}
-                  className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                  className="h-4 w-4 rounded border-slate-300 text-slate-900 focus:ring-slate-900"
                 />
               </div>
               <div className="ml-3 text-sm">
-                <label htmlFor="marketingConsent" className="font-medium text-gray-500">
+                <label htmlFor="marketingConsent" className="font-semibold text-slate-700">
                   I want to receive marketing promotions and updates via email.
                 </label>
               </div>
@@ -300,7 +300,7 @@ export default function RegisterPage() {
               <button
                 type="submit"
                 disabled={auth.isLoading}
-                className="group relative w-full flex justify-center py-2 px-4 border border-black text-sm font-medium rounded-md text-black bg-white hover:bg-black hover:text-white transition focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-black disabled:opacity-50 disabled:cursor-not-allowed"
+                className="group relative w-full flex justify-center py-3 px-4 rounded-full text-sm font-semibold text-white bg-slate-900 border border-slate-900 shadow-sm transition hover:-translate-y-0.5 hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-900 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {auth.isLoading ? (
                   <>
@@ -319,10 +319,10 @@ export default function RegisterPage() {
         <div className="mt-6">
           <div className="relative">
             <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-gray-300"></div>
+              <div className="w-full border-t border-slate-300"></div>
             </div>
             <div className="relative flex justify-center text-sm">
-              <span className="px-2 bg-white text-gray-500">
+              <span className="px-2 bg-white text-slate-500">
                 Already have an account?
               </span>
             </div>
@@ -331,7 +331,7 @@ export default function RegisterPage() {
           <div className="mt-6">
             <Link
               href={`/login${redirectTo ? `?redirectTo=${encodeURIComponent(redirectTo)}` : ''}`}
-              className="w-full flex items-center justify-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+              className="w-full flex items-center justify-center px-4 py-2 border border-slate-200 rounded-full shadow-sm text-sm font-semibold text-slate-800 bg-white hover:bg-slate-50"
             >
               Sign in to your account
             </Link>
@@ -341,6 +341,8 @@ export default function RegisterPage() {
     </div>
   );
 }
+
+
 
 
 
