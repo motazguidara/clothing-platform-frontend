@@ -128,12 +128,36 @@ class MonitoringService {
 
     // Monitor resource loading errors
     window.addEventListener('error', (event) => {
-      if (event.target && event.target !== window) {
-        this.reportError(new Error(`Resource loading failed: ${(event.target as any).src || (event.target as any).href}`), {
+      try {
+        const target = event.target as any;
+        const isWindowTarget = target === window;
+        const isElement =
+          target &&
+          (target instanceof HTMLImageElement ||
+            target instanceof HTMLScriptElement ||
+            target instanceof HTMLLinkElement ||
+            target instanceof HTMLVideoElement ||
+            target instanceof HTMLSourceElement);
+
+        if (!target || isWindowTarget || !isElement) {
+          return;
+        }
+
+        const source = target.src || target.href || target.currentSrc || '';
+        if (!source) return;
+
+        // Ignore known missing media placeholders to avoid noisy reports during local dev
+        if (source.includes('/media/products/')) {
+          return;
+        }
+
+        this.reportError(new Error(`Resource loading failed: ${source}`), {
           type: 'resource_error',
-          element: (event.target as any).tagName,
-          source: (event.target as any).src || (event.target as any).href,
+          element: target.tagName,
+          source,
         });
+      } catch (err) {
+        // Swallow to avoid secondary errors during error handling
       }
     }, true);
   }

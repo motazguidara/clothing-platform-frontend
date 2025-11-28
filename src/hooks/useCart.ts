@@ -15,6 +15,7 @@ export interface CartItem {
   quantity: number;
   price: number; // unit price from server
   product_title?: string;
+  product_image?: string | null;
   sku?: string | null;
   currency?: string;
 }
@@ -38,6 +39,7 @@ const CartItemSchema = z.object({
   quantity: z.coerce.number(),
   price: z.coerce.number(),
   product_title: z.string().optional(),
+  product_image: z.string().optional().nullable(),
   product_name: z.string().optional(), // backend alias
   sku: z.string().nullable().optional(),
   currency: z.string().optional(),

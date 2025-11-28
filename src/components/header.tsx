@@ -541,7 +541,7 @@ export default function Header() {
               href="/"
               className="text-xl font-bold tracking-tight uppercase"
             >
-              Clothing
+              CP
             </Link>
             <nav
               className="hidden md:flex items-center gap-6 text-sm"

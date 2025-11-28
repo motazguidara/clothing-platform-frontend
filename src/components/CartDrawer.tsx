@@ -44,7 +44,8 @@ export function CartDrawer() {
       const product_name = (raw as any).product_name || (raw as any).product_title || 'Item';
       const variant = (raw as any).variant;
       const variant_name = variant?.name || (raw as any).variant_name;
-      return { id, product_id, quantity, price, product_name, variant, variant_name } as CartItemWithVariant;
+      const product_image = (raw as any).product_image || (raw as any).image || null;
+      return { id, product_id, quantity, price, product_name, product_image, variant, variant_name } as CartItemWithVariant;
     });
   }, [items]);
 
@@ -166,7 +167,18 @@ export function CartDrawer() {
               <ul className="divide-y divide-border" role="list">
                 {normalizedItems.map((it: CartItemWithVariant) => (
                   <li key={it.id} className="py-5 flex gap-4 items-start">
-                    <div className="h-20 w-20 bg-subtle rounded" />
+                    <div className="h-20 w-20 rounded overflow-hidden bg-subtle flex items-center justify-center">
+                      {it.product_image ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={it.product_image}
+                          alt={it.product_name}
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        <div className="text-xs text-muted">No image</div>
+                      )}
+                    </div>
                     <div className="flex-1">
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">

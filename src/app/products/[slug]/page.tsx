@@ -7,6 +7,7 @@ import ProductGalleryClient from "./product-gallery-client";
 import { ProductClient } from "./product-client";
 import { ProductSkeleton } from "./product-skeleton";
 import { ProductImagePlaceholder } from "@/components/product-image-placeholder";
+import { ProductReviews } from "./product-reviews.client";
 
 /** ---------------- Types ---------------- */
 type Brand = string | { name?: string | null };
@@ -26,6 +27,14 @@ type Product = {
   in_stock?: boolean | null;
   avg_rating?: number | null;
   review_count?: number | null;
+  reviews?: Array<{
+    id: number;
+    rating: number;
+    title?: string | null;
+    comment?: string | null;
+    user_name?: string | null;
+    created_at?: string | null;
+  }> | null;
   care_instructions?: string | null;
   available_sizes?: string[] | null;
   available_colors?: string[] | null;
@@ -353,6 +362,13 @@ export default async function ProductPage({ params, searchParams }: ProductPageP
             </div>
           </div>
         )}
+
+        <ProductReviews
+          productSlug={(product.slug as string) || slug}
+          reviews={product.reviews}
+          reviewCount={product.review_count}
+          avgRating={typeof product.avg_rating === "number" ? product.avg_rating : null}
+        />
       </div>
     </>
   );

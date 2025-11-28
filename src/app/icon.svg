@@ -1,0 +1,14 @@
+<svg width="96" height="96" viewBox="0 0 96 96" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">Clothing Platform</title>
+  <desc id="desc">Interlocking C and P monogram for the Clothing Platform brand.</desc>
+  <defs>
+    <linearGradient id="grad" x1="14%" y1="0%" x2="86%" y2="100%">
+      <stop offset="0%" stop-color="#111827"/>
+      <stop offset="50%" stop-color="#1f2937"/>
+      <stop offset="100%" stop-color="#0ea5e9"/>
+    </linearGradient>
+  </defs>
+  <rect width="96" height="96" rx="18" fill="url(#grad)"/>
+  <path fill="#f9fafb" d="M30 26h18c10.5 0 18 7.4 18 17.4S58.5 61 47.4 61H36v9.5c0 2.6-2 4.5-4.8 4.5-2.7 0-4.7-1.9-4.7-4.5V30.5c0-2.7 2-4.5 4.7-4.5Zm6.4 22.7h10.8c4.9 0 8.2-3 8.2-7.3s-3.3-7.3-8.2-7.3H36.4Z"/>
+  <path fill="#67e8f9" d="M66.3 34.5c2.6 0 4.7 1.9 4.7 4.5v22c0 7.9-6.6 13.8-16.5 13.8H43.6c-2.7 0-4.7-1.9-4.7-4.5 0-2.6 2-4.5 4.7-4.5h10.9c5 0 8.1-2.7 8.1-7.3V39c0-2.6 2-4.5 3.7-4.5Z"/>
+</svg>

@@ -21,6 +21,7 @@ interface CatalogSearchParams {
   page?: SearchParamValue;
   sale?: SearchParamValue;
   in_stock?: SearchParamValue;
+  page_size?: SearchParamValue;
 }
 
 const normalizeParamArray = (value: SearchParamValue): string[] => {
@@ -240,6 +241,19 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
     return `/catalog${query ? `?${query}` : ""}`;
   };
 
+  const currentPage = Math.max(
+    1,
+    Number.parseInt(firstParamValue(sp.page) ?? "1", 10) || 1,
+  );
+  const pageSizeParam = Number.parseInt(
+    firstParamValue(sp.page_size) ?? "",
+    10,
+  );
+  const pageSize = pageSizeParam > 0 ? pageSizeParam : products.length || 1;
+  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
+  const hasPrev = currentPage > 1;
+  const hasNext = currentPage < totalPages;
+
   // Generate structured data for SEO
   return (
     <>
@@ -376,12 +390,29 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
             )}
 
             {/* Pagination summary */}
-            {totalCount > products.length && (
-              <div className="flex justify-center mt-12">
-                <div className="flex items-center space-x-2">
-                  <span className="text-sm text-gray-600">
-                    Showing {products.length} of {totalCount} products
+            {totalPages > 1 && (
+              <div className="flex flex-col items-center gap-4 mt-12">
+                <div className="flex items-center space-x-3">
+                  <Link
+                    href={hasPrev ? createHref({ page: String(currentPage - 1) }) : "#"}
+                    aria-disabled={!hasPrev}
+                    className={`px-3 py-2 rounded-md border text-sm ${hasPrev ? "hover:bg-gray-100" : "cursor-not-allowed text-gray-400 border-gray-200"}`}
+                  >
+                    Previous
+                  </Link>
+                  <span className="text-sm text-gray-700">
+                    Page {currentPage} of {totalPages}
                   </span>
+                  <Link
+                    href={hasNext ? createHref({ page: String(currentPage + 1) }) : "#"}
+                    aria-disabled={!hasNext}
+                    className={`px-3 py-2 rounded-md border text-sm ${hasNext ? "hover:bg-gray-100" : "cursor-not-allowed text-gray-400 border-gray-200"}`}
+                  >
+                    Next
+                  </Link>
+                </div>
+                <div className="text-sm text-gray-600">
+                  Showing {products.length} of {totalCount} products
                 </div>
               </div>
             )}
