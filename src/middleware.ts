@@ -22,7 +22,7 @@ const getCSP = (pathname: string) => {
     "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com https://www.google-analytics.com https://js.stripe.com",
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     "font-src 'self' https://fonts.gstatic.com",
-    "img-src 'self' data: https: blob:",
+    "img-src 'self' data: https: blob: http://127.0.0.1:8000 https://127.0.0.1:8000 http://localhost:8000 https://localhost:8000",
     // Allow local dev APIs and HMR in development
     isProd
       ? "connect-src 'self' https://api.stripe.com https://checkout.stripe.com https://www.google-analytics.com"

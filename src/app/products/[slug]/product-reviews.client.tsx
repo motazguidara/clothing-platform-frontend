@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import Link from 'next/link';
 import { apiClient, ApiError, ValidationError } from '@/lib/api/client';
 import { useAuth } from '@/hooks/useAuth';

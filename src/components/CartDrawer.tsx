@@ -10,6 +10,7 @@ import { useCart, useRemoveFromCart, useUpdateCartItem } from "@/hooks/useCart";
 import { formatPrice } from "@/lib/utils";
 import { useWishlist } from "@/lib/wishlist";
 import { useToast } from "@/providers/toast-provider";
+import { ProductImagePlaceholder } from "@/components/product-image-placeholder";
 
 type CartItemWithVariant = {
   id: number;
@@ -26,6 +27,12 @@ type CartItemWithVariant = {
   };
 };
 
+const sanitizeImageSource = (value: string | null | undefined): string | undefined => {
+  if (typeof value !== "string") return undefined;
+  const trimmed = value.trim();
+  return trimmed || undefined;
+};
+
 export function CartDrawer() {
   const isOpen = useUIStore((s) => s.isCartOpen);
   const close = useUIStore((s) => s.closeCart);
@@ -35,6 +42,10 @@ export function CartDrawer() {
   const { toast } = useToast();
   const { mutate: updateQuantity } = useUpdateCartItem();
   const items = React.useMemo(() => data?.items ?? [], [data?.items]);
+  const [brokenImages, setBrokenImages] = React.useState<Record<number, boolean>>({});
+  const handleImageError = React.useCallback((id: number) => {
+    setBrokenImages((prev) => ({ ...prev, [id]: true }));
+  }, []);
   const normalizedItems = React.useMemo(() => {
     return (items as any[]).map((raw, idx) => {
       const id = Number((raw as any).id ?? idx + 1);
@@ -44,7 +55,7 @@ export function CartDrawer() {
       const product_name = (raw as any).product_name || (raw as any).product_title || 'Item';
       const variant = (raw as any).variant;
       const variant_name = variant?.name || (raw as any).variant_name;
-      const product_image = (raw as any).product_image || (raw as any).image || null;
+      const product_image = sanitizeImageSource((raw as any).product_image || (raw as any).image || null);
       return { id, product_id, quantity, price, product_name, product_image, variant, variant_name } as CartItemWithVariant;
     });
   }, [items]);
@@ -168,15 +179,22 @@ export function CartDrawer() {
                 {normalizedItems.map((it: CartItemWithVariant) => (
                   <li key={it.id} className="py-5 flex gap-4 items-start">
                     <div className="h-20 w-20 rounded overflow-hidden bg-subtle flex items-center justify-center">
-                      {it.product_image ? (
+                      {sanitizeImageSource(it.product_image) && !brokenImages[it.id] ? (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img
-                          src={it.product_image}
+                          src={sanitizeImageSource(it.product_image)}
                           alt={it.product_name}
                           className="h-full w-full object-cover"
+                          referrerPolicy="no-referrer"
+                          loading="lazy"
+                          crossOrigin="anonymous"
+                          onError={() => {
+                            console.warn('[CartDrawer] image failed to load', sanitizeImageSource(it.product_image));
+                            handleImageError(it.id);
+                          }}
                         />
                       ) : (
-                        <div className="text-xs text-muted">No image</div>
+                        <ProductImagePlaceholder className="h-full w-full flex items-center justify-center text-gray-500 bg-gray-100" productName={it.product_name} />
                       )}
                     </div>
                     <div className="flex-1">

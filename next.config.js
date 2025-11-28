@@ -67,7 +67,7 @@ const nextConfig = {
               "default-src 'self'",
               "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://www.googletagmanager.com https://www.google-analytics.com",
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-              "img-src 'self' blob: data: https://images.unsplash.com https://via.placeholder.com http://127.0.0.1:8000",
+              "img-src 'self' data: blob: https://images.unsplash.com https://via.placeholder.com http://127.0.0.1:8000 https://127.0.0.1:8000 http://localhost:8000 https://localhost:8000",
               "font-src 'self' https://fonts.gstatic.com",
               "object-src 'none'",
               "base-uri 'self'",
@@ -175,6 +175,21 @@ const nextConfig = {
           {
             key: 'Permissions-Policy',
             value: 'camera=(), microphone=(), geolocation=()',
+          },
+          {
+            key: 'Content-Security-Policy',
+            value: [
+              "default-src 'self'",
+              "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://www.googletagmanager.com https://www.google-analytics.com",
+              "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+              "img-src 'self' data: blob: https://images.unsplash.com https://via.placeholder.com http://127.0.0.1:8000 https://127.0.0.1:8000 http://localhost:8000 https://localhost:8000",
+              "font-src 'self' https://fonts.gstatic.com",
+              "object-src 'none'",
+              "base-uri 'self'",
+              "form-action 'self'",
+              "frame-ancestors 'none'",
+              "upgrade-insecure-requests"
+            ].join('; ')
           },
         ],
       },
