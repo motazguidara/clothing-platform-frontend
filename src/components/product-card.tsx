@@ -289,11 +289,20 @@ export default function ProductCard({ product }: Props) {
             return minQty > 0 && minQty <= 3;
           })()));
 
-    const basePrice = typeof product.base_price === "number" ? product.base_price : product.price;
+    const basePrice =
+      typeof product.base_price === "number"
+        ? product.base_price
+        : typeof product.compare_at_price === "number"
+          ? product.compare_at_price
+          : product.price;
     const salePrice = typeof product.sale_price === "number" ? product.sale_price : product.price;
-    const onSale = (Boolean(product.is_on_sale) && salePrice < basePrice) || (basePrice > 0 && salePrice < basePrice);
-    if (onSale) list.push({ label: "Sale", tone: "sale" });
-    if (typeof product.compare_at_price === "number" && product.compare_at_price > (product.price || 0)) {
+    const onSale = Number(basePrice) > 0 && Number(salePrice) < Number(basePrice);
+    if (onSale || product.is_on_sale) list.push({ label: "Sale", tone: "sale" });
+    if (onSale) {
+      const pct = Math.round(((Number(basePrice) - Number(salePrice)) / Number(basePrice)) * 100);
+      if (pct > 0) list.push({ label: `${pct}% Off`, tone: "sale" });
+    }
+    if (!onSale && typeof product.compare_at_price === "number" && product.compare_at_price > (product.price || 0)) {
       const diff = product.compare_at_price - (product.price || 0);
       const pct = Math.round((diff / product.compare_at_price) * 100);
       if (pct > 0) list.push({ label: `${pct}% Off`, tone: "sale" });
@@ -530,9 +539,14 @@ export default function ProductCard({ product }: Props) {
       {/* Brand and name */}
       {(() => {
         const brandText = extractBrandName(product.brand);
-        return brandText ? (
-          <p className="mt-1 text-xs text-gray-500 uppercase tracking-wide">{brandText}</p>
-        ) : null;
+        const categoryText = typeof product.category === "string" && product.category.trim().length > 0 ? product.category : null;
+        if (!brandText && !categoryText) return null;
+        return (
+          <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-gray-500 uppercase tracking-wide">
+            {brandText ? <span>{brandText}</span> : null}
+            {categoryText ? <span className="inline-flex items-center rounded-full bg-gray-100 px-2 py-[2px] text-[10px] font-semibold text-gray-700">{categoryText}</span> : null}
+          </div>
+        );
       })()}
       <h3 className="mt-1 text-sm font-semibold tracking-tight uppercase line-clamp-1">{displayTitle}</h3>
       {typeof product.subtitle === "string" && product.subtitle.length > 0 && (
@@ -549,8 +563,13 @@ export default function ProductCard({ product }: Props) {
       <div className="mt-2 text-sm flex items-center gap-2">
         {(() => {
           const saleDisplay = typeof product.sale_price === "number" ? product.sale_price : product.price;
-          const basePrice = typeof product.base_price === "number" ? product.base_price : undefined;
-          const onSale = Boolean(product.is_on_sale) && basePrice != null && basePrice > saleDisplay;
+          const basePrice =
+            typeof product.base_price === "number"
+              ? product.base_price
+              : typeof product.compare_at_price === "number"
+                ? product.compare_at_price
+                : product.price;
+          const onSale = Number(basePrice) > 0 && Number(saleDisplay) < Number(basePrice);
           return (
             <>
               <span className="font-semibold">{formatPrice(saleDisplay)}</span>
@@ -558,9 +577,7 @@ export default function ProductCard({ product }: Props) {
                 <>
                   <span className="line-through text-muted">{formatPrice(basePrice ?? saleDisplay)}</span>
                   {(() => {
-                    const pct = basePrice
-                      ? Math.round(((basePrice - saleDisplay) / basePrice) * 100)
-                      : 0;
+                    const pct = basePrice ? Math.round(((Number(basePrice) - Number(saleDisplay)) / Number(basePrice)) * 100) : 0;
                     return (
                       <span className="inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-bold bg-red-600 text-white">-{pct}%</span>
                     );

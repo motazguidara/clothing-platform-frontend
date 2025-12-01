@@ -23,7 +23,10 @@ type Product = {
   brand?: Brand | null;
   category?: string | { name?: string | null } | null;
   price: number | string;
+  current_price?: number | string | null;
   compare_at_price?: number | string | null;
+  sale_price?: number | string | null;
+  is_on_sale?: boolean | null;
   in_stock?: boolean | null;
   avg_rating?: number | null;
   review_count?: number | null;
@@ -56,6 +59,15 @@ const toMoney = (v: number | string | null | undefined, currency = "TND") => {
   const n = toNum(v);
   if (n === null) return "";
   return new Intl.NumberFormat("en-US", { style: "currency", currency }).format(n);
+};
+
+const priceSummary = (p: Product) => {
+  const base = toNum(p.compare_at_price) ?? toNum(p.price);
+  const sale = toNum(p.current_price ?? p.sale_price ?? p.price);
+  const hasSale = base !== null && sale !== null && sale < base;
+  const savings = hasSale ? Number((base - sale).toFixed(2)) : 0;
+  const pct = hasSale && base ? Math.round(((base - sale) / base) * 100) : 0;
+  return { base, sale, hasSale, savings, pct };
 };
 
 const getBrandName = (brand: Brand | null | undefined): string | null => {
@@ -198,9 +210,7 @@ export default async function ProductPage({ params, searchParams }: ProductPageP
   // Derived fields
   const mainImage = getMainImage(product);
   const brandName = getBrandName(product.brand);
-  const price = toNum(product.price);
-  const compareAt = toNum(product.compare_at_price);
-  const hasDiscount = compareAt !== null && price !== null && compareAt > price;
+  const { base, sale, hasSale, savings, pct } = priceSummary(product);
 
   // Structured data
   const siteUrl = process.env["NEXT_PUBLIC_SITE_URL"] || "";
@@ -216,10 +226,10 @@ export default async function ProductPage({ params, searchParams }: ProductPageP
       name: brandName || "Your Store",
     },
     offers:
-      price !== null
+      sale !== null
         ? {
             "@type": "Offer",
-            price,
+            price: sale,
             priceCurrency: "TND",
             availability: product.in_stock
               ? "https://schema.org/InStock"
@@ -261,18 +271,18 @@ export default async function ProductPage({ params, searchParams }: ProductPageP
             </div>
 
             {/* Price */}
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center flex-wrap gap-3">
               <span className="text-3xl font-bold text-gray-900">
-                {toMoney(price)}
+                {toMoney(sale)}
               </span>
 
-              {hasDiscount && (
+              {hasSale && (
                 <>
                   <span className="text-xl text-gray-500 line-through">
-                    {toMoney(compareAt)}
+                    {toMoney(base)}
                   </span>
-                  <span className="rounded bg-red-100 px-2.5 py-0.5 text-sm font-medium text-red-800">
-                    Save {toMoney(Number(compareAt! - price! || 0).toFixed(2))}
+                  <span className="rounded bg-red-100 px-2.5 py-0.5 text-sm font-semibold text-red-800">
+                    Save {toMoney(savings)}{pct > 0 ? ` (${pct}% off)` : ""}
                   </span>
                 </>
               )}
