@@ -5,6 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useCart, useRemoveFromCart, useUpdateCartItem } from "@/hooks/useCart";
 import type { CartItem } from "@/hooks/useCart";
+import type { Coupon } from "@/hooks/useCatalog";
 import { formatPrice } from "@/lib/utils";
 import PromoCodeForm from "@/components/PromoCodeForm";
 import CollectionRail from "@/components/CollectionRail";
@@ -98,8 +99,16 @@ export default function CartPage() {
     return sum + item.price * quantity;
   }, 0);
 
-  const [coupon, setCoupon] = React.useState<{ code: string; discount: number } | null>(null);
-  const discountAmount = coupon ? (subtotal * coupon.discount) / 100 : 0;
+  const [coupon, setCoupon] = React.useState<Coupon | null>(null);
+  const [couponFeedback, setCouponFeedback] = React.useState<string | null>(null);
+  const discountAmount = React.useMemo(() => {
+    if (!coupon) return 0;
+    const value = typeof coupon.discount_value === "number" ? coupon.discount_value : Number(coupon.discount_value) || 0;
+    if (coupon.discount_type === "fixed_amount") {
+      return value;
+    }
+    return (subtotal * value) / 100;
+  }, [coupon, subtotal]);
   const FREE_THRESHOLD = 300;
   const BASE_SHIP = 7;
   const withDiscount = Math.max(0, subtotal - discountAmount);
@@ -320,11 +329,31 @@ export default function CartPage() {
             </div>
             <div className="flex items-center justify-between">
               <span className="text-sm text-muted">Discount</span>
-              <span className="text-sm font-semibold">
-                {coupon ? `- ${coupon.discount}%` : formatPrice(0, "TND")}
+              <span className="text-sm font-semibold text-green-700">
+                {coupon ? `- ${formatPrice(discountAmount, "TND")}` : formatPrice(0, "TND")}
               </span>
             </div>
-            <PromoCodeForm onApplied={(code, discount) => setCoupon({ code, discount })} />
+            <PromoCodeForm
+              onApplied={(applied) => {
+                setCoupon(applied);
+                const value = typeof applied.discount_value === "number" ? applied.discount_value : Number(applied.discount_value) || 0;
+                const saved =
+                  applied.discount_type === "fixed_amount"
+                    ? formatPrice(value, "TND")
+                    : `${value}%`;
+                setCouponFeedback(`Nice! Coupon ${applied.code} applied, saving ${saved}.`);
+              }}
+            />
+            {coupon ? (
+              <div className="text-xs text-green-700">
+                Applied {coupon.code} ({coupon.discount_type === "fixed_amount" ? formatPrice(coupon.discount_value, "TND") : `${coupon.discount_value}%`} off)
+              </div>
+            ) : null}
+            {couponFeedback && (
+              <div className="text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-md px-3 py-2">
+                {couponFeedback} 🎉
+              </div>
+            )}
             <div className="flex items-center justify-between">
               <span className="text-sm text-muted">Delivery</span>
               <span className="text-sm font-semibold">{shipping === 0 ? "Free" : formatPrice(shipping, "TND")}</span>

@@ -134,15 +134,16 @@ export class CatalogService {
   async getCoupon(code: string): Promise<{
     id: number;
     code: string;
-    discount_type: 'percentage' | 'fixed_amount';
-    discount_value: number;
-    minimum_amount: number | null;
-    maximum_discount: number | null;
-    valid_from: string;
-    valid_until: string;
-    is_active: boolean;
-    usage_limit: number | null;
-    used_count: number;
+    discount_type?: 'percentage' | 'fixed_amount';
+    discount_value?: number | string | null;
+    discount?: number | string | null;
+    minimum_amount?: number | null;
+    maximum_discount?: number | null;
+    valid_from?: string | null;
+    valid_until?: string | null;
+    is_active?: boolean;
+    usage_limit?: number | null;
+    used_count?: number | null;
   }> {
     return apiClient.get(`/catalog/coupons/${code}/`);
   }

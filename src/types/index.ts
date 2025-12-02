@@ -167,6 +167,13 @@ export interface CatalogFacetsResponse {
   filters: CatalogFilterGroup[];
 }
 
+export interface LoyaltySummary {
+  points_balance: number;
+  lifetime_points: number;
+  tier: string;
+  next_tier_at: number | null;
+}
+
 export interface User {
   id: string;
   username: string;

@@ -13,8 +13,10 @@ import type {
 
 export interface Coupon {
   code: string;
-  discount: number;
+  discount_value: number;
+  discount_type: "percentage" | "fixed_amount";
   valid_until?: string;
+  is_active?: boolean;
 }
 
 const ApiCategorySchema = z.object({
@@ -28,6 +30,7 @@ const ApiCouponSchema = z.object({
   discount_value: z.union([z.number(), z.string()]).nullable().optional(),
   discount: z.union([z.number(), z.string()]).nullable().optional(),
   valid_until: z.string().nullable().optional(),
+  discount_type: z.string().nullable().optional(),
 });
 
 export function useCategories() {
@@ -123,7 +126,9 @@ export function useCoupon(code?: string) {
       const data = parsed.data;
       const coupon: Coupon = {
         code: data.code,
-        discount: toNumber(data.discount_value) ?? toNumber(data.discount) ?? 0,
+        discount_value: toNumber(data.discount_value) ?? toNumber(data.discount) ?? 0,
+        discount_type: (data as any).discount_type === "fixed_amount" ? "fixed_amount" : "percentage",
+        is_active: true,
       };
 
       const normalizedValidUntil =

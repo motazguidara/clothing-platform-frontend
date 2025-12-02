@@ -262,6 +262,16 @@ export class AuthService {
     );
   }
 
+  // Loyalty
+  async getLoyaltySummary(): Promise<{
+    points_balance: number;
+    lifetime_points: number;
+    tier: string;
+    next_tier_at: number | null;
+  }> {
+    return apiClient.get("/accounts/loyalty/");
+  }
+
   // User data management
   getStoredUser(): schemas.User | null {
     if (typeof window === "undefined") {

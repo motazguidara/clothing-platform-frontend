@@ -1,13 +1,13 @@
 "use client";
 
 import React from "react";
-import { useCoupon } from "@/hooks/useCatalog";
+import { useCoupon, type Coupon } from "@/hooks/useCatalog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { FormField } from "@/components/ui";
 
 type Props = {
-  onApplied: (code: string, discountPercent: number) => void;
+  onApplied: (coupon: Coupon) => void;
 };
 
 export default function PromoCodeForm({ onApplied }: Props) {
@@ -23,7 +23,7 @@ export default function PromoCodeForm({ onApplied }: Props) {
       if (r.error) throw r.error as any;
       const data: any = r.data;
       if (!data) throw new Error("Invalid coupon");
-      onApplied(code, data.discount);
+      onApplied(data as Coupon);
     } catch (err: any) {
       setError(err?.message || "Invalid coupon");
     }
@@ -40,7 +40,7 @@ export default function PromoCodeForm({ onApplied }: Props) {
         />
       </FormField>
       <Button type="submit" disabled={!code || isFetching}>Apply</Button>
-      {error && <span className="sr-only" role="alert">{error}</span>}
+      {error && <span className="text-sm text-red-600" role="alert">{error}</span>}
     </form>
   );
 }
