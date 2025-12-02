@@ -366,25 +366,25 @@ export default function CartPage() {
                   <input
                     type="radio"
                     name="payment"
-                    checked={payment === "card"}
-                    onChange={() => setPayment("card")}
-                  />
-                  Pay with card
-                </label>
-                <label className="flex items-center gap-2 text-sm cursor-pointer">
-                  <input
-                    type="radio"
-                    name="payment"
                     checked={payment === "cod"}
                     onChange={() => setPayment("cod")}
                   />
                   Pay on delivery
                 </label>
+                <label className="flex items-center gap-2 text-sm cursor-pointer">
+                  <input
+                    type="radio"
+                    name="payment"
+                    checked={payment === "card"}
+                    onChange={() => setPayment("card")}
+                  />
+                  Pay with card
+                </label>
               </div>
               <div className="mt-2 text-[11px] text-muted">
                 {payment === "card"
                   ? "Visa, MasterCard and PayPal payments are fully encrypted."
-                  : "Pay with cash or card when your parcel arrives. No extra fees."}
+                  : "Pay with cash when your parcel arrives. No extra fees."}
               </div>
             </div>
             <div className="pt-2 border-t border-border flex items-center justify-between">

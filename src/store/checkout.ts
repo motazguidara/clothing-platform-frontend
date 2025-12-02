@@ -10,6 +10,6 @@ type CheckoutState = {
 };
 
 export const useCheckoutStore = create<CheckoutState>((set) => ({
-  payment: "card",
+  payment: "cod",
   setPayment: (p) => set({ payment: p }),
 }));
