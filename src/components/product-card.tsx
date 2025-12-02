@@ -353,7 +353,7 @@ export default function ProductCard({ product }: Props) {
   return (
     <article className="w-full p-2 select-none card-hover rounded">
       <div
-        className="relative h-80 rounded overflow-hidden group hover-shine"
+        className="relative aspect-[3/4] rounded overflow-hidden group hover-shine bg-white"
         onMouseEnter={() => {
           setCurrentImageIndex(0);
         }}
@@ -373,7 +373,7 @@ export default function ProductCard({ product }: Props) {
                 alt={displayTitle}
                 fill
                 sizes="(max-width: 768px) 100vw, 33vw"
-                className="object-cover img-zoom"
+                className="object-contain p-2"
               />
             ) : (
               <ProductImagePlaceholder

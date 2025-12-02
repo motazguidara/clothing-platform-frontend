@@ -205,9 +205,11 @@ export default function CartPage() {
                   const skuDisplay =
                     typeof item.sku === "string" && item.sku.trim().length > 0 ? item.sku.trim() : "";
 
+                  const productHref = `/products/${item.product_slug ?? item.product_id}`;
+
                   return (
                     <li key={key} className="py-4 flex gap-4 items-start">
-                      <div className="relative h-20 w-20 rounded border bg-subtle overflow-hidden">
+                      <Link href={productHref} className="relative h-20 w-20 rounded border bg-subtle overflow-hidden flex-shrink-0">
                         {coverImage ? (
                           <Image
                             src={coverImage}
@@ -221,34 +223,36 @@ export default function CartPage() {
                             No image
                           </div>
                         )}
-                      </div>
-                        <div className="flex-1">
-                          <div className="flex items-start justify-between gap-4">
-                            <div>
-                              <div className="text-sm font-semibold">{item.product_title ?? "Item"}</div>
-                              {variantName && (
-                                <div className="text-xs text-muted">{variantName}</div>
-                              )}
-                              <div className="mt-2 flex items-center gap-2">
-                                <button
-                                  className="h-8 w-8 border rounded-md flex items-center justify-center text-sm"
-                                  onClick={() => {
+                      </Link>
+                      <div className="flex-1">
+                        <div className="flex items-start justify-between gap-4">
+                          <div>
+                            <Link href={productHref} className="text-sm font-semibold hover:underline">
+                              {item.product_title ?? "Item"}
+                            </Link>
+                            {variantName && (
+                              <div className="text-xs text-muted">{variantName}</div>
+                            )}
+                            <div className="mt-2 flex items-center gap-2">
+                              <button
+                                className="h-8 w-8 border rounded-md flex items-center justify-center text-sm"
+                                onClick={() => {
                                   handleQuantityChange(item, -1);
                                 }}
-                                  aria-label="Decrease quantity"
-                                >
-                                  -
-                                </button>
+                                aria-label="Decrease quantity"
+                              >
+                                -
+                              </button>
                               <span className="w-10 text-center text-sm">{quantity}</span>
-                                <button
-                                  className="h-8 w-8 border rounded-md flex items-center justify-center text-sm"
-                                  onClick={() => {
+                              <button
+                                className="h-8 w-8 border rounded-md flex items-center justify-center text-sm"
+                                onClick={() => {
                                   handleQuantityChange(item, 1);
                                 }}
-                                  aria-label="Increase quantity"
-                                >
-                                  +
-                                </button>
+                                aria-label="Increase quantity"
+                              >
+                                +
+                              </button>
                             </div>
                           </div>
                           <div className="text-right space-y-1">

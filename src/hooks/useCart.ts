@@ -11,6 +11,7 @@ import { useRouter } from "next/navigation";
 export interface CartItem {
   id?: number;
   product_id: number;
+  product_slug?: string | null;
   variant_id?: number;
   quantity: number;
   price: number; // unit price from server
@@ -35,6 +36,7 @@ export interface Cart {
 const CartItemSchema = z.object({
   id: z.coerce.number().optional(),
   product_id: z.coerce.number(),
+  product_slug: z.string().nullable().optional(),
   variant_id: z.coerce.number().nullable().optional(),
   quantity: z.coerce.number(),
   price: z.coerce.number(),
