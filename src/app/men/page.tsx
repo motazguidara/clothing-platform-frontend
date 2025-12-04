@@ -22,6 +22,7 @@ const ALLOWED_KEYS = [
   "page",
   "sale",
   "in_stock",
+  "free_shipping",
 ] as const;
 
 const SKELETON_CARD_KEYS = Array.from(
@@ -75,6 +76,22 @@ export default function MenPage() {
   const serializedParams = searchParams.toString();
   const products: Product[] = data?.results ?? [];
   const productCount = data?.count ?? 0;
+
+  const filtersWithFree = React.useMemo(() => {
+    const base = facets?.filters ?? [];
+    const hasFree = base.some((f) => f?.param === "free_shipping");
+    if (hasFree) return base;
+    return [
+      ...base,
+      {
+        id: "free_shipping",
+        label: "Free Shipping",
+        param: "free_shipping",
+        selection: "toggle",
+        options: [{ label: "Free Shipping", value: "true" }],
+      },
+    ];
+  }, [facets?.filters]);
 
   const fallbackFilters = React.useMemo(() => {
     const sp = new URLSearchParams(serializedParams);
@@ -223,7 +240,7 @@ export default function MenPage() {
         <div className="lg:col-span-3 lg:sticky lg:top-24 lg:self-start max-lg:order-2">
           <div className="lg:max-h-[calc(100vh-7rem)] lg:overflow-y-auto pr-1">
             <FilterSidebar
-              filters={facets?.filters ?? []}
+              filters={filtersWithFree}
               isLoading={facetsLoading}
               error={facetsError ?? false}
               fallbackFilters={fallbackFilters}

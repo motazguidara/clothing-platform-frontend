@@ -21,7 +21,8 @@ type AllowedKey =
   | "ordering"
   | "page"
   | "sale"
-  | "in_stock";
+  | "in_stock"
+  | "free_shipping";
 
 type KidsPageClientProps = {
   initialSearchParams?: Record<string, string | string[] | undefined>;
@@ -38,6 +39,7 @@ const allowedKeys: AllowedKey[] = [
   "page",
   "sale",
   "in_stock",
+  "free_shipping",
 ];
 
 const SKELETON_CARD_KEYS = Array.from(
@@ -251,7 +253,21 @@ export function KidsPageClient({ initialSearchParams }: KidsPageClientProps) {
         <div className="lg:col-span-3 lg:sticky lg:top-24 lg:self-start max-lg:order-2">
           <div className="lg:max-h-[calc(100vh-7rem)] lg:overflow-y-auto pr-1">
             <FilterSidebar
-              filters={facets?.filters ?? []}
+              filters={React.useMemo(() => {
+                const base = facets?.filters ?? [];
+                const hasFree = base.some((f) => f?.param === "free_shipping");
+                if (hasFree) return base;
+                return [
+                  ...base,
+                  {
+                    id: "free_shipping",
+                    label: "Free Shipping",
+                    param: "free_shipping",
+                    selection: "toggle",
+                    options: [{ label: "Free Shipping", value: "true" }],
+                  },
+                ];
+              }, [facets?.filters])}
               isLoading={facetsLoading}
               error={facetsError ?? false}
               fallbackFilters={fallbackFilters}

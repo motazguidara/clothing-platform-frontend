@@ -21,6 +21,7 @@ const ALLOWED_KEYS = [
   "page",
   "sale",
   "in_stock",
+  "free_shipping",
 ] as const;
 
 export default function WomenPage() {
@@ -195,7 +196,21 @@ export default function WomenPage() {
         <div className="lg:col-span-3 lg:sticky lg:top-24 lg:self-start max-lg:order-2">
           <div className="lg:max-h-[calc(100vh-7rem)] lg:overflow-y-auto pr-1">
             <FilterSidebar
-              filters={facets?.filters ?? []}
+              filters={React.useMemo(() => {
+                const base = facets?.filters ?? [];
+                const hasFree = base.some((f) => f?.param === "free_shipping");
+                if (hasFree) return base;
+                return [
+                  ...base,
+                  {
+                    id: "free_shipping",
+                    label: "Free Shipping",
+                    param: "free_shipping",
+                    selection: "toggle",
+                    options: [{ label: "Free Shipping", value: "true" }],
+                  },
+                ];
+              }, [facets?.filters])}
               isLoading={facetsLoading}
               error={facetsError ?? false}
               fallbackFilters={fallbackFilters}
