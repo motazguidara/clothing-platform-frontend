@@ -1,6 +1,7 @@
 ﻿'use client';
 
 import { useState, useCallback, useTransition, useEffect } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { OptimizedButton } from '@/components/ui/optimized-button';
 import { useUIStore } from '@/store/ui';
@@ -94,6 +95,15 @@ export function ProductClient({ product, selectedVariant }: ProductClientProps) 
       router.replace(newUrl, { scroll: false });
     });
   }, [router]);
+
+  const sizeGuideHref =
+    product.gender === 'kids'
+      ? '/size-guide#kids'
+      : product.gender === 'men'
+      ? '/size-guide#men'
+      : product.gender === 'women'
+      ? '/size-guide#women'
+      : '/size-guide#adults';
 
   const variantInventories = ((product as any)?.variants || []).map((v: any) => {
     const qty = typeof v?.inventory?.quantity === "number" ? v.inventory.quantity : null;
@@ -287,9 +297,9 @@ export function ProductClient({ product, selectedVariant }: ProductClientProps) 
       {/* Size Guide */}
       {product.available_sizes && product.available_sizes.length > 0 && (
         <div className="border-t border-gray-200 pt-6">
-          <button className="text-sm text-gray-600 hover:text-gray-900 underline">
+          <Link href={sizeGuideHref} className="text-sm text-gray-600 hover:text-gray-900 underline">
             Size Guide
-          </button>
+          </Link>
         </div>
       )}
 

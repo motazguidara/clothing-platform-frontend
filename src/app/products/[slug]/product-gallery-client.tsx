@@ -24,6 +24,15 @@ type Product = {
 };
 
 const isValidImage = (img?: string | null) => typeof img === "string" && img.trim().length > 0;
+const extractImageValue = (value: unknown): string | null => {
+  if (!value) return null;
+  if (typeof value === "string") return value;
+  if (typeof value === "object") {
+    const maybe = (value as any).image || (value as any).url || (value as any).src;
+    if (typeof maybe === "string") return maybe;
+  }
+  return null;
+};
 const variantImage = (variant?: Variant | null) => {
   if (!variant) return null;
   return (
@@ -37,6 +46,22 @@ const variantImage = (variant?: Variant | null) => {
 export default function ProductGalleryClient({ product }: { product: Product }) {
   const params = useSearchParams();
   const color = params.get("color");
+  const apiBase = (process.env["NEXT_PUBLIC_API_URL"] || "").replace(/\/$/, "");
+
+  const normalizeImage = React.useCallback(
+    (img?: string | null) => {
+      if (!isValidImage(img)) return null;
+      const trimmed = (img as string).trim();
+      if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
+        return trimmed;
+      }
+      if (trimmed.startsWith("/") && apiBase) {
+        return `${apiBase}${trimmed}`;
+      }
+      return trimmed;
+    },
+    [apiBase]
+  );
 
   const galleryImages = React.useMemo(() => {
     const ordered: string[] = [];
@@ -46,24 +71,28 @@ export default function ProductGalleryClient({ product }: { product: Product }) 
     // 1) Selected color variant image
     if (c) {
       const match = variants.find((v) => (v.color || "").toLowerCase() === c && isValidImage(variantImage(v)));
-      const img = variantImage(match);
+      const img = normalizeImage(variantImage(match));
       if (img) ordered.push(img.trim());
     }
     // 2) Listing thumbnail (if provided)
-    if (isValidImage(product.thumbnail)) ordered.push(product.thumbnail!.trim());
+    const normalizedThumb = normalizeImage(product.thumbnail);
+    if (normalizedThumb) ordered.push(normalizedThumb.trim());
     // 3) Primary single image
-    if (isValidImage(product.image)) ordered.push(product.image!.trim());
+    const normalizedPrimary = normalizeImage(product.image);
+    if (normalizedPrimary) ordered.push(normalizedPrimary.trim());
     // 4) Product images array
     for (const img of product.images || []) {
-      if (isValidImage(img)) ordered.push((img as string).trim());
+      const raw = extractImageValue(img);
+      const normalized = normalizeImage(raw ?? undefined);
+      if (normalized) ordered.push(normalized.trim());
     }
     // 5) Other variant images
     for (const v of variants) {
-      const img = variantImage(v);
-      if (isValidImage(img)) ordered.push(img!.trim());
+      const img = normalizeImage(variantImage(v));
+      if (img) ordered.push(img.trim());
     }
     return Array.from(new Set(ordered));
-  }, [product.images, product.image, product.variants, color]);
+  }, [product.images, product.image, product.variants, product.thumbnail, color, normalizeImage]);
 
   const [index, setIndex] = React.useState(0);
   React.useEffect(() => {
@@ -74,13 +103,28 @@ export default function ProductGalleryClient({ product }: { product: Product }) 
 
   return (
     <div className="space-y-4">
-      <div className="aspect-square relative overflow-hidden rounded-lg bg-gray-100">
+      <div
+        className="aspect-square relative overflow-hidden rounded-lg bg-gray-100"
+        tabIndex={0}
+        onKeyDown={(e) => {
+          if (galleryImages.length <= 1) return;
+          if (e.key === "ArrowRight") {
+            e.preventDefault();
+            setIndex((prev) => (prev + 1) % galleryImages.length);
+          } else if (e.key === "ArrowLeft") {
+            e.preventDefault();
+            setIndex((prev) => (prev - 1 + galleryImages.length) % galleryImages.length);
+          }
+        }}
+        aria-roledescription="carousel"
+        aria-label="Product images"
+      >
         {main ? (
           <Image
             src={main}
             alt={product.name || "Product"}
             fill
-            className="object-cover"
+            className="object-contain p-2"
             priority
             sizes="(max-width: 768px) 100vw, 50vw"
           />
@@ -114,6 +158,19 @@ export default function ProductGalleryClient({ product }: { product: Product }) 
             </button>
           </>
         )}
+        {galleryImages.length > 1 && (
+          <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex items-center gap-2 bg-white/70 px-3 py-1 rounded-full">
+            {galleryImages.map((_, dotIdx) => (
+              <button
+                key={`dot-${dotIdx}`}
+                type="button"
+                className={`h-2 w-2 rounded-full transition ${dotIdx === index ? "bg-black" : "bg-black/30"}`}
+                aria-label={`Show image ${dotIdx + 1}`}
+                onClick={() => setIndex(dotIdx)}
+              />
+            ))}
+          </div>
+        )}
       </div>
       {galleryImages.length > 1 && (
         <div className="grid grid-cols-4 gap-2">
@@ -128,7 +185,7 @@ export default function ProductGalleryClient({ product }: { product: Product }) 
                 src={image}
                 alt={`${product.name} thumb ${idx + 1}`}
                 fill
-                className="object-cover"
+                className="object-contain p-1"
                 sizes="(max-width: 768px) 25vw, 12.5vw"
               />
             </button>

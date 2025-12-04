@@ -216,7 +216,7 @@ export default function CartPage() {
                             alt={item.product_title ?? "Product image"}
                             fill
                             sizes="80px"
-                            className="object-cover"
+                            className="object-contain p-1"
                           />
                         ) : (
                           <div className="h-full w-full grid place-content-center text-[11px] text-muted">
