@@ -272,6 +272,14 @@ export class AuthService {
     return apiClient.get("/accounts/loyalty/");
   }
 
+  async redeemLoyalty(points: number): Promise<{
+    points_used: number;
+    discount_amount: number | string;
+    remaining_points: number;
+  }> {
+    return apiClient.post("/accounts/loyalty/redeem/", { points });
+  }
+
   // User data management
   getStoredUser(): schemas.User | null {
     if (typeof window === "undefined") {

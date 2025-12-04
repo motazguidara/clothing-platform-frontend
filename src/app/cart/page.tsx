@@ -6,6 +6,8 @@ import Image from "next/image";
 import { useCart, useRemoveFromCart, useUpdateCartItem } from "@/hooks/useCart";
 import type { CartItem } from "@/hooks/useCart";
 import type { Coupon } from "@/hooks/useCatalog";
+import { useAuth } from "@/hooks/useAuth";
+import { useLoyalty, redeemLoyalty } from "@/hooks/useLoyalty";
 import { formatPrice } from "@/lib/utils";
 import PromoCodeForm from "@/components/PromoCodeForm";
 import CollectionRail from "@/components/CollectionRail";
@@ -68,6 +70,8 @@ export default function CartPage() {
   const { data, isLoading } = useCart();
   const remove = useRemoveFromCart();
   const updateQty = useUpdateCartItem();
+  const { isAuthenticated } = useAuth({ fetchProfile: false });
+  const { data: loyalty, isLoading: loyaltyLoading } = useLoyalty({ enabled: isAuthenticated });
   const items: CartItemWithDetails[] = React.useMemo(() => {
     if (!Array.isArray(data?.items)) {
       return [];
@@ -101,6 +105,10 @@ export default function CartPage() {
 
   const [coupon, setCoupon] = React.useState<Coupon | null>(null);
   const [couponFeedback, setCouponFeedback] = React.useState<string | null>(null);
+  const [loyaltyDiscount, setLoyaltyDiscount] = React.useState(0);
+  const [loyaltyApplied, setLoyaltyApplied] = React.useState(false);
+  const [loyaltyError, setLoyaltyError] = React.useState<string | null>(null);
+  const [pointsToRedeem, setPointsToRedeem] = React.useState(0);
   const discountAmount = React.useMemo(() => {
     if (!coupon) return 0;
     const value = typeof coupon.discount_value === "number" ? coupon.discount_value : Number(coupon.discount_value) || 0;
@@ -109,12 +117,13 @@ export default function CartPage() {
     }
     return (subtotal * value) / 100;
   }, [coupon, subtotal]);
-  const FREE_THRESHOLD = 300;
-  const BASE_SHIP = 7;
-  const withDiscount = Math.max(0, subtotal - discountAmount);
-  const shipping = withDiscount >= FREE_THRESHOLD ? 0 : BASE_SHIP;
-  const total = withDiscount + shipping;
-  const remainingForFree = Math.max(0, FREE_THRESHOLD - withDiscount);
+const FREE_THRESHOLD = 300;
+const BASE_SHIP = 7;
+const withDiscount = Math.max(0, subtotal - discountAmount - loyaltyDiscount);
+const shipping = withDiscount >= FREE_THRESHOLD ? 0 : BASE_SHIP;
+const total = withDiscount + shipping;
+const remainingForFree = Math.max(0, FREE_THRESHOLD - withDiscount);
+const estimatedPointsEarned = Math.floor(withDiscount / 5);
 
   const payment = useCheckoutStore((s) => s.payment);
   const setPayment = useCheckoutStore((s) => s.setPayment);
@@ -130,6 +139,32 @@ export default function CartPage() {
   }, 0);
   const totalSavings = itemSavings + discountAmount;
   const hasDiscounts = totalSavings > 0;
+  const loyaltyBalance = loyalty?.points_balance ?? 0;
+
+  const handleApplyPoints = async () => {
+    if (!isAuthenticated) {
+      setLoyaltyError("Sign in to use loyalty points.");
+      return;
+    }
+    if (pointsToRedeem <= 0) {
+      setLoyaltyError("Enter points to redeem.");
+      return;
+    }
+    if (pointsToRedeem > loyaltyBalance) {
+      setLoyaltyError("Not enough points.");
+      return;
+    }
+    setLoyaltyError(null);
+    try {
+      const res = await redeemLoyalty(pointsToRedeem);
+      setLoyaltyDiscount(res.discount_amount || 0);
+      setLoyaltyApplied(true);
+    } catch (err: any) {
+      setLoyaltyError(err?.message || "Unable to apply points.");
+      setLoyaltyDiscount(0);
+      setLoyaltyApplied(false);
+    }
+  };
 
   const handleQuantityChange = (item: CartItemWithDetails, delta: number) => {
     const key = resolveItemKey(item);
@@ -162,6 +197,11 @@ export default function CartPage() {
             <div className="font-semibold">Smart shopping!</div>
             <div>You are saving {formatPrice(totalSavings, "TND")} with current offers.</div>
           </>
+        )}
+        {isAuthenticated && (
+          <div className="text-xs text-gray-700">
+            This order will earn approximately {estimatedPointsEarned} loyalty points.
+          </div>
         )}
       </div>
 
@@ -334,7 +374,9 @@ export default function CartPage() {
             <div className="flex items-center justify-between">
               <span className="text-sm text-muted">Discount</span>
               <span className="text-sm font-semibold text-green-700">
-                {coupon ? `- ${formatPrice(discountAmount, "TND")}` : formatPrice(0, "TND")}
+                {coupon || loyaltyApplied
+                  ? `- ${formatPrice(discountAmount + loyaltyDiscount, "TND")}`
+                  : formatPrice(0, "TND")}
               </span>
             </div>
             <PromoCodeForm
@@ -353,6 +395,42 @@ export default function CartPage() {
                 Applied {coupon.code} ({coupon.discount_type === "fixed_amount" ? formatPrice(coupon.discount_value, "TND") : `${coupon.discount_value}%`} off)
               </div>
             ) : null}
+            <div className="border rounded-md p-3 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-semibold">Loyalty points</span>
+                <span className="text-xs text-gray-600">
+                  {loyaltyLoading ? "Loading..." : `${loyaltyBalance} pts`}
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  min={0}
+                  max={loyaltyBalance}
+                  value={pointsToRedeem}
+                  onChange={(e) => setPointsToRedeem(Number(e.target.value) || 0)}
+                  className="w-28 rounded border border-gray-300 px-2 py-1 text-sm focus:outline-none focus:border-black"
+                  disabled={!isAuthenticated || loyaltyLoading}
+                />
+                <button
+                  type="button"
+                  onClick={handleApplyPoints}
+                  disabled={!isAuthenticated || loyaltyLoading}
+                  className="text-xs font-semibold px-3 py-2 rounded bg-black text-white hover:bg-black/85 disabled:opacity-50"
+                >
+                  Apply
+                </button>
+              </div>
+              {loyaltyApplied && loyaltyDiscount > 0 && (
+                <div className="text-xs text-green-700">
+                  Applied points worth {formatPrice(loyaltyDiscount, "TND")}.
+                </div>
+              )}
+              {loyaltyError && <div className="text-xs text-red-600">{loyaltyError}</div>}
+              {!isAuthenticated && (
+                <div className="text-xs text-gray-600">Sign in to redeem points.</div>
+              )}
+            </div>
             {couponFeedback && (
               <div className="text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-md px-3 py-2">
                 {couponFeedback} 🎉

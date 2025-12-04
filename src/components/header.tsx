@@ -681,11 +681,11 @@ export default function Header() {
                       className="p-0 focus:bg-transparent data-[highlighted]:bg-transparent data-[highlighted]:text-gray-900"
                     >
                       <Link
-                        href="/wishlist"
+                        href="/loyalty"
                         className="group block w-full px-4 py-2 text-sm font-medium  cursor-pointer"
                       >
                         <span className="inline-block w-fit underline-link transition-soft">
-                          Favourites
+                          Loyalty
                         </span>
                       </Link>
                     </DropdownMenuItem>
@@ -694,11 +694,11 @@ export default function Header() {
                       className="p-0 focus:bg-transparent data-[highlighted]:bg-transparent data-[highlighted]:text-gray-900"
                     >
                       <Link
-                        href="/profile"
+                        href="/wishlist"
                         className="group block w-full px-4 py-2 text-sm font-medium  cursor-pointer"
                       >
                         <span className="inline-block w-fit underline-link transition-soft">
-                          Account Settings
+                          Favourites
                         </span>
                       </Link>
                     </DropdownMenuItem>

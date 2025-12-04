@@ -39,7 +39,7 @@ export default function CheckoutThankYouPage() {
   const effectiveOrderId = orderId || summary?.orderId;
   const isLoggedIn = Boolean(user);
   const showTrackingButton = Boolean(!isLoading && isLoggedIn && effectiveOrderId);
-  const continueLink = isLoggedIn ? "/catalog" : "/";
+  const continueLink = "/catalog";
 
   return (
     <section className="max-w-4xl mx-auto px-6 py-20">

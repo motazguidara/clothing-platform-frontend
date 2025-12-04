@@ -32,7 +32,7 @@ export default function LoyaltyPage() {
                 <p className="text-xs uppercase tracking-[0.2em] text-amber-500">Loyalty</p>
                 <h1 className="text-3xl font-extrabold text-gray-900">Your Points Wallet</h1>
                 <p className="text-sm text-gray-600">
-                  Earn 1 point for every 5 TND you spend. Redeem points for exclusive rewards and early access.
+                  Earn 1 point for every 5 TND you spend. Each point is worth 0.20 TND at checkout.
                 </p>
               </div>
               <div className="flex flex-col items-start sm:items-end">
