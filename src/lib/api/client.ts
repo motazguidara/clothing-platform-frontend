@@ -185,8 +185,8 @@ export class ApiClient {
       }
     }
 
-    // Include credentials for orders/cart-related endpoints to support session carts
-    const needsCookies = endpoint.startsWith('/orders/');
+    // Include credentials for protected/session endpoints (orders, accounts) and cookie-JWT mode
+    const needsCookies = endpoint.startsWith('/orders/') || endpoint.startsWith('/accounts/');
     const requestOptions: RequestInit = {
       method,
       headers: requestHeaders,

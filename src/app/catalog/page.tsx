@@ -164,7 +164,20 @@ export default async function CatalogPage({ searchParams }: CatalogPageProps) {
   const fallbackCount =
     typeof data?.count === "number" ? data.count : products.length;
   const summary = facetsData?.summary;
-  const filters = facetsData?.filters ?? [];
+  const filterBase = facetsData?.filters ?? [];
+  const hasFree = filterBase.some((f) => f?.param === "free_shipping");
+  const filters = hasFree
+    ? filterBase
+    : [
+        ...filterBase,
+        {
+          id: "free_shipping",
+          label: "Free Shipping",
+          param: "free_shipping",
+          selection: "toggle",
+          options: [{ label: "Free Shipping", value: "true" }],
+        },
+      ];
   const totalCount =
     typeof summary?.count === "number" ? summary.count : fallbackCount;
   const titleText =

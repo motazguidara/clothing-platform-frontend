@@ -19,6 +19,7 @@ export interface CartItem {
   product_image?: string | null;
   sku?: string | null;
   currency?: string;
+  in_stock?: boolean;
 }
 
 export interface Cart {
@@ -45,6 +46,7 @@ const CartItemSchema = z.object({
   product_name: z.string().optional(), // backend alias
   sku: z.string().nullable().optional(),
   currency: z.string().optional(),
+  in_stock: z.boolean().optional(),
 });
 
 const TotalsSchema = z.object({

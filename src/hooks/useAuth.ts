@@ -105,9 +105,9 @@ export function useAuth(options?: { fetchProfile?: boolean }) {
     if (error instanceof ApiError && error.status === 401) {
       authService.clearAuth();
       qc.removeQueries({ queryKey: AUTH_PROFILE_QUERY_KEY, exact: true });
+      authService.clearStoredUser();
+      setStoredUser(undefined);
     }
-    authService.clearStoredUser();
-    setStoredUser(undefined);
   }, [error, qc]);
 
   const login = useMutation({

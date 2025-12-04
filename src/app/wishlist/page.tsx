@@ -37,26 +37,7 @@ function WishlistEntry({ item }: { item: WishlistItem }) {
   return (
     <div className="relative">
       {product ? <ProductCard product={product as any} /> : null}
-      <div className="mt-2 grid grid-cols-2 gap-2">
-        <button
-          className="px-3 py-2 border rounded-md text-sm hover:bg-gray-100 transition-colors"
-          onClick={() => {
-            add.mutate(
-              { product_id: productId, delta_qty: 1 },
-              {
-                onSuccess: () => {
-                  toast({ title: "Added to bag", variant: "success" });
-                  openCart();
-                },
-                onError: () => {
-                  toast({ title: "Failed to add to bag", variant: "destructive" });
-                },
-              }
-            );
-          }}
-        >
-          Add to Bag
-        </button>
+      <div className="mt-2 grid grid-cols-1 gap-2">
         <button
           type="button"
           className="px-3 py-2 border rounded-md text-sm text-red-600 hover:bg-red-50 transition-colors"

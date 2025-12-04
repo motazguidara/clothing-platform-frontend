@@ -54,6 +54,7 @@ export default function CheckoutPage() {
     paymentMethod: paymentPreference,
   }));
   const [deliveryMethod, setDeliveryMethod] = React.useState<"standard" | "express">("standard");
+  const [fieldErrors, setFieldErrors] = React.useState<Record<string, string>>({});
   const currentStepIndex = React.useMemo(
     () => CHECKOUT_STEPS.findIndex((item) => item.key === step),
     [step]
@@ -76,6 +77,10 @@ export default function CheckoutPage() {
     }
     return cart.items as CheckoutCartItem[];
   }, [cart?.items]);
+  const outOfStock = React.useMemo(
+    () => items.filter((item) => item.in_stock === false),
+    [items]
+  );
   const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const qualifiesForFreeShipping = subtotal >= 300;
   const shipping =
@@ -88,22 +93,65 @@ export default function CheckoutPage() {
       setPaymentPreference(updates.paymentMethod);
     }
     setForm((prev) => ({ ...prev, ...updates }));
+    // Clear errors on change for the updated fields
+    const cleared = { ...fieldErrors };
+    Object.keys(updates).forEach((k) => delete cleared[k as keyof CheckoutForm]);
+    setFieldErrors(cleared);
   };
 
   const validateShipping = () => {
-    const required = ["email", "firstName", "lastName", "address", "city", "postalCode", "phone"];
-    return required.every(field => form[field as keyof CheckoutForm]?.toString().trim());
+    const errors: Record<string, string> = {};
+    if (!form.email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(form.email.trim())) {
+      errors.email = "Enter a valid email";
+    }
+    if (!form.firstName || form.firstName.trim().length < 2) {
+      errors.firstName = "Enter a valid first name";
+    }
+    if (!form.lastName || form.lastName.trim().length < 2) {
+      errors.lastName = "Enter a valid last name";
+    }
+    if (!form.address || form.address.trim().length < 5) {
+      errors.address = "Enter a full address";
+    }
+    if (!form.city || form.city.trim().length < 2) {
+      errors.city = "Enter a city";
+    }
+    if (!form.postalCode || !/^\d{3,}$/.test(form.postalCode.trim())) {
+      errors.postalCode = "Enter a numeric postal code";
+    }
+    if (!form.phone || !/^\+?\d{8,15}$/.test(form.phone.trim())) {
+      errors.phone = "Enter a valid phone number";
+    }
+    setFieldErrors(errors);
+    return Object.keys(errors).length === 0;
   };
 
   const validatePayment = () => {
     if (form.paymentMethod === "cod") return true;
-    const required = ["cardNumber", "expiryDate", "cvv", "cardName"];
-    return required.every(field => form[field as keyof CheckoutForm]?.toString().trim());
+    const errors: Record<string, string> = { ...fieldErrors };
+    const card = (form.cardNumber || "").replace(/\s+/g, "");
+    const cvv = (form.cvv || "").trim();
+    const expiry = (form.expiryDate || "").trim();
+    const cardNameOk = (form.cardName || "").trim().length >= 2;
+    const cardOk = /^\d{12,19}$/.test(card);
+    const cvvOk = /^\d{3,4}$/.test(cvv);
+    const expiryOk = /^(0[1-9]|1[0-2])\/\d{2}$/.test(expiry);
+    if (!cardOk) errors.cardNumber = "Enter a valid card number";
+    if (!cvvOk) errors.cvv = "Enter a valid CVV";
+    if (!expiryOk) errors.expiryDate = "Use MM/YY";
+    if (!cardNameOk) errors.cardName = "Enter cardholder name";
+    setFieldErrors(errors);
+    return Boolean(cardOk && cvvOk && expiryOk && cardNameOk);
   };
 
   const handleContinueToNextStep = () => {
-    if (!validateShipping()) {
-      toast({ title: "Please fill in all shipping fields", variant: "destructive" });
+    const ok = validateShipping();
+    if (!ok) {
+      toast({ title: "Please correct highlighted shipping fields", variant: "destructive" });
+      return;
+    }
+    if (outOfStock.length > 0) {
+      toast({ title: "Remove out-of-stock items before continuing", variant: "destructive" });
       return;
     }
     if (form.paymentMethod === "cod") {
@@ -114,8 +162,14 @@ export default function CheckoutPage() {
   };
 
   const handleSubmit = async () => {
-    if (!validateShipping() || !validatePayment()) {
-      toast({ title: "Please fill in all required fields", variant: "destructive" });
+    const okShip = validateShipping();
+    const okPay = validatePayment();
+    if (outOfStock.length > 0) {
+      toast({ title: "Remove out-of-stock items before placing the order", variant: "destructive" });
+      return;
+    }
+    if (!okShip || !okPay) {
+      toast({ title: "Please correct highlighted fields", variant: "destructive" });
       return;
     }
 
@@ -244,10 +298,11 @@ export default function CheckoutPage() {
                     type="email" id="checkout_email" name="email"
                     value={form.email}
                     onChange={(e) => updateForm({ email: e.target.value })}
-                    className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-black"
+                    className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-black ${fieldErrors.email ? "border-red-500" : ""}`}
                     placeholder="your@email.com"
                     required
                   />
+                  {fieldErrors.email && <p className="text-xs text-red-600 mt-1">{fieldErrors.email}</p>}
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
@@ -256,9 +311,10 @@ export default function CheckoutPage() {
                       type="text"
                       id="checkout_first_name" name="firstName" value={form.firstName}
                       onChange={(e) => updateForm({ firstName: e.target.value })}
-                      className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-black"
+                      className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-black ${fieldErrors.firstName ? "border-red-500" : ""}`}
                       required
                     />
+                    {fieldErrors.firstName && <p className="text-xs text-red-600 mt-1">{fieldErrors.firstName}</p>}
                   </div>
                   <div>
                     <label className="block text-sm font-medium mb-1">Last Name</label>
@@ -266,9 +322,10 @@ export default function CheckoutPage() {
                       type="text"
                       id="checkout_last_name" name="lastName" value={form.lastName}
                       onChange={(e) => updateForm({ lastName: e.target.value })}
-                      className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-black"
+                      className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-black ${fieldErrors.lastName ? "border-red-500" : ""}`}
                       required
                     />
+                    {fieldErrors.lastName && <p className="text-xs text-red-600 mt-1">{fieldErrors.lastName}</p>}
                   </div>
                 </div>
                 <div>
@@ -277,10 +334,11 @@ export default function CheckoutPage() {
                     type="text"
                     value={form.address}
                     onChange={(e) => updateForm({ address: e.target.value })}
-                    className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-black"
+                    className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-black ${fieldErrors.address ? "border-red-500" : ""}`}
                     placeholder="123 Main Street"
                     required
                   />
+                  {fieldErrors.address && <p className="text-xs text-red-600 mt-1">{fieldErrors.address}</p>}
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
@@ -289,9 +347,10 @@ export default function CheckoutPage() {
                       type="text"
                       id="checkout_city" name="city" value={form.city}
                       onChange={(e) => updateForm({ city: e.target.value })}
-                      className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-black"
+                      className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-black ${fieldErrors.city ? "border-red-500" : ""}`}
                       required
                     />
+                    {fieldErrors.city && <p className="text-xs text-red-600 mt-1">{fieldErrors.city}</p>}
                   </div>
                   <div>
                     <label className="block text-sm font-medium mb-1">Postal Code</label>
@@ -299,9 +358,10 @@ export default function CheckoutPage() {
                       type="text"
                       id="checkout_postal" name="postalCode" value={form.postalCode}
                       onChange={(e) => updateForm({ postalCode: e.target.value })}
-                      className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-black"
+                      className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-black ${fieldErrors.postalCode ? "border-red-500" : ""}`}
                       required
                     />
+                    {fieldErrors.postalCode && <p className="text-xs text-red-600 mt-1">{fieldErrors.postalCode}</p>}
                   </div>
                 </div>
                 <div>
@@ -310,10 +370,11 @@ export default function CheckoutPage() {
                     type="tel" id="checkout_phone" name="phone"
                     value={form.phone}
                     onChange={(e) => updateForm({ phone: e.target.value })}
-                    className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-black"
+                    className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-black ${fieldErrors.phone ? "border-red-500" : ""}`}
                     placeholder="+1 (555) 123-4567"
                     required
                   />
+                  {fieldErrors.phone && <p className="text-xs text-red-600 mt-1">{fieldErrors.phone}</p>}
                 </div>
               </div>
               <div className="mt-4 rounded-md border border-border bg-gray-50 p-4">
@@ -367,34 +428,34 @@ export default function CheckoutPage() {
             <div className="border rounded-lg p-6">
               <h2 className="text-lg font-semibold mb-4">Payment Method</h2>
               <div className="space-y-4">
-                <div className="flex flex-wrap gap-4">
-                  <label className="flex items-center gap-2 cursor-pointer text-sm">
-                    <input
-                      type="radio"
-                      name="paymentMethod"
-                      value="card"
-                      checked={form.paymentMethod === "card"}
-                      onChange={(e) => updateForm({ paymentMethod: e.target.value as "card" | "cod" })}
-                    />
-                    <span className="font-medium">Pay with card</span>
-                  </label>
-                  <label className="flex items-center gap-2 cursor-pointer text-sm">
-                    <input
-                      type="radio"
-                      name="paymentMethod"
-                      value="cod"
-                      checked={form.paymentMethod === "cod"}
-                      onChange={(e) => updateForm({ paymentMethod: e.target.value as "card" | "cod" })}
-                    />
-                    <span className="font-medium">Pay on delivery</span>
-                  </label>
-                  <div className="flex items-center gap-2 text-xs text-muted">
-                    <span>Accepted:</span>
-                    <span className="inline-flex items-center gap-1 font-semibold text-foreground">
-                      Visa | MasterCard | PayPal
-                    </span>
+                  <div className="flex flex-wrap gap-4">
+                    <label className="flex items-center gap-2 cursor-pointer text-sm">
+                      <input
+                        type="radio"
+                        name="paymentMethod"
+                        value="card"
+                        checked={form.paymentMethod === "card"}
+                        onChange={(e) => updateForm({ paymentMethod: e.target.value as "card" | "cod" })}
+                      />
+                      <span className="font-medium">Pay with card</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer text-sm">
+                      <input
+                        type="radio"
+                        name="paymentMethod"
+                        value="cod"
+                        checked={form.paymentMethod === "cod"}
+                        onChange={(e) => updateForm({ paymentMethod: e.target.value as "card" | "cod" })}
+                      />
+                      <span className="font-medium">Pay on delivery</span>
+                    </label>
+                    <div className="flex items-center gap-2 text-xs text-muted">
+                      <span>Accepted:</span>
+                      <span className="inline-flex items-center gap-1 font-semibold text-foreground">
+                        Visa | MasterCard | PayPal
+                      </span>
+                    </div>
                   </div>
-                </div>
 
                 {form.paymentMethod === "card" && (
                   <div className="space-y-4 pt-4 border-t">
@@ -404,10 +465,11 @@ export default function CheckoutPage() {
                         type="text"
                         id="checkout_card_name" name="cardName" value={form.cardName ?? ""}
                         onChange={(e) => updateForm({ cardName: e.target.value })}
-                        className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-black"
+                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-black ${fieldErrors.cardName ? "border-red-500" : ""}`}
                         placeholder="John Doe"
                         required
                       />
+                      {fieldErrors.cardName && <p className="text-xs text-red-600 mt-1">{fieldErrors.cardName}</p>}
                     </div>
                     <div>
                       <label className="block text-sm font-medium mb-1">Card Number</label>
@@ -415,10 +477,11 @@ export default function CheckoutPage() {
                         type="text"
                         id="checkout_card_number" name="cardNumber" value={form.cardNumber ?? ""}
                         onChange={(e) => updateForm({ cardNumber: e.target.value })}
-                        className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-black"
+                        className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-black ${fieldErrors.cardNumber ? "border-red-500" : ""}`}
                         placeholder="1234 5678 9012 3456"
                         required
                       />
+                      {fieldErrors.cardNumber && <p className="text-xs text-red-600 mt-1">{fieldErrors.cardNumber}</p>}
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                       <div>
@@ -427,10 +490,11 @@ export default function CheckoutPage() {
                           type="text"
                           id="checkout_expiry" name="expiryDate" value={form.expiryDate ?? ""}
                           onChange={(e) => updateForm({ expiryDate: e.target.value })}
-                          className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-black"
+                          className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-black ${fieldErrors.expiryDate ? "border-red-500" : ""}`}
                           placeholder="MM/YY"
                           required
                         />
+                        {fieldErrors.expiryDate && <p className="text-xs text-red-600 mt-1">{fieldErrors.expiryDate}</p>}
                       </div>
                       <div>
                         <label className="block text-sm font-medium mb-1">CVV</label>
@@ -438,10 +502,11 @@ export default function CheckoutPage() {
                           type="text"
                           id="checkout_cvv" name="cvv" value={form.cvv ?? ""}
                           onChange={(e) => updateForm({ cvv: e.target.value })}
-                          className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-black"
+                          className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-black ${fieldErrors.cvv ? "border-red-500" : ""}`}
                           placeholder="123"
                           required
                         />
+                        {fieldErrors.cvv && <p className="text-xs text-red-600 mt-1">{fieldErrors.cvv}</p>}
                       </div>
                     </div>
                     <div className="rounded-md border border-dashed border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-600">
