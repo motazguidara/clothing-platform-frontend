@@ -8,11 +8,18 @@ import type { HomeHero as THero } from "@/types/home";
 export default function HomeHero({ hero }: { hero: THero }) {
   const bg = hero.bg_image || "/globe.svg";
   return (
-    <section className="relative overflow-hidden">
+    <section className="relative overflow-hidden pt-24 sm:pt-28">
       <div className="absolute inset-0 -z-10">
         {bg && (
           // Decorative background image
-          <Image src={bg} alt="" fill priority className="object-cover" />
+          <Image
+            src={bg}
+            alt=""
+            fill
+            priority
+            className="object-cover md:object-center object-[center_20%]"
+            sizes="100vw"
+          />
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-white/60 via-white/20 to-white/60" />
       </div>
