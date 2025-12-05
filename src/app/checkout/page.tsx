@@ -9,6 +9,7 @@ import type { CartItem } from "@/hooks/useCart";
 import { useToast } from "@/providers/toast-provider";
 import { formatPrice } from "@/lib/utils";
 import { useCheckoutStore } from "@/store/checkout";
+import { useAuth } from "@/hooks/useAuth";
 
 interface CheckoutForm {
   email: string;
@@ -40,6 +41,7 @@ export default function CheckoutPage() {
   const checkout = useCheckout();
   const { data: cart, isLoading: cartLoading } = useCart();
   const { toast } = useToast();
+  const auth = useAuth({ fetchProfile: true });
   const paymentPreference = useCheckoutStore((s) => s.payment);
   const setPaymentPreference = useCheckoutStore((s) => s.setPayment);
   const [step, setStep] = React.useState<"shipping" | "payment" | "review">("shipping");
@@ -60,6 +62,23 @@ export default function CheckoutPage() {
     [step]
   );
 
+  // Prefill with logged-in user profile when available (non-destructive: only fill empty fields)
+  React.useEffect(() => {
+    if (!auth.user) return;
+    setForm((prev) => {
+      const addr = Array.isArray((auth.user as any)?.addresses) ? (auth.user as any).addresses[0] : undefined;
+      return {
+        ...prev,
+        email: prev.email || auth.user.email || "",
+        firstName: prev.firstName || auth.user.first_name || "",
+        lastName: prev.lastName || auth.user.last_name || "",
+        phone: prev.phone || (addr?.phone ?? (auth.user as any)?.phone ?? ""),
+        address: prev.address || addr?.address_line_1 || "",
+        city: prev.city || addr?.city || "",
+        postalCode: prev.postalCode || addr?.postal_code || "",
+      };
+    });
+  }, [auth.user]);
   React.useEffect(() => {
     setForm((prev) =>
       prev.paymentMethod === paymentPreference
