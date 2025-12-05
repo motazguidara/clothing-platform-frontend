@@ -25,6 +25,8 @@ export default function ProfilePage() {
     retry: 1,
   });
 
+  const initialUser = React.useMemo(() => authService.getStoredUser?.() ?? null, []);
+
   const updateMutation = useMutation({
     mutationFn: async (
       payload: Partial<{
@@ -47,8 +49,8 @@ export default function ProfilePage() {
     },
   });
 
-  const [firstName, setFirstName] = React.useState("");
-  const [lastName, setLastName] = React.useState("");
+  const [firstName, setFirstName] = React.useState(initialUser?.first_name ?? "");
+  const [lastName, setLastName] = React.useState(initialUser?.last_name ?? "");
   const [phone, setPhone] = React.useState("");
   const [marketingConsent, setMarketingConsent] = React.useState(false);
 
@@ -60,6 +62,9 @@ export default function ProfilePage() {
   const [isUpdatingEmail, setIsUpdatingEmail] = React.useState(false);
   const [isUpdatingPassword, setIsUpdatingPassword] = React.useState(false);
   const [activeSection, setActiveSection] = React.useState(PROFILE_SECTIONS[0].id);
+  const sectionIds = React.useMemo(() => PROFILE_SECTIONS.map((s) => s.id), []);
+  const phonePattern = React.useMemo(() => /^\+[1-9]\d{7,14}$/, []);
+  const emailPattern = React.useMemo(() => /^[^\s@]+@[^\s@]+\.[^\s@]+$/, []);
 
   const handleSectionClick = React.useCallback((id: string) => {
     const el = document.getElementById(id);
@@ -72,7 +77,7 @@ export default function ProfilePage() {
   React.useEffect(() => {
     if (typeof window === "undefined") return;
 
-    const sections = PROFILE_SECTIONS.map((section) => document.getElementById(section.id)).filter(
+    const sections = sectionIds.map((sectionId) => document.getElementById(sectionId)).filter(
       (node): node is HTMLElement => Boolean(node),
     );
 
@@ -102,13 +107,33 @@ export default function ProfilePage() {
           setActiveSection(closest[0].id);
         }
       },
-      { threshold: 0.4, rootMargin: "-25% 0px -45% 0px" },
+      { threshold: [0.25, 0.5], rootMargin: "-20% 0px -55% 0px" },
     );
 
     sections.forEach((section) => observer.observe(section));
 
-    return () => observer.disconnect();
-  }, []);
+    let raf: number | null = null;
+    const handleScroll = () => {
+      if (raf) return;
+      raf = window.requestAnimationFrame(() => {
+        raf = null;
+        const distances = sections.map((node) => ({
+          id: node.id,
+          distance: Math.abs(node.getBoundingClientRect().top - 120),
+        }));
+        distances.sort((a, b) => a.distance - b.distance);
+        if (distances[0]) setActiveSection(distances[0].id);
+      });
+    };
+
+    window.addEventListener("scroll", handleScroll, { passive: true });
+
+    return () => {
+      observer.disconnect();
+      if (raf) cancelAnimationFrame(raf);
+      window.removeEventListener("scroll", handleScroll);
+    };
+  }, [sectionIds]);
 
   React.useEffect(() => {
     if (!data) return;
@@ -134,36 +159,64 @@ export default function ProfilePage() {
 
   const emailVerified = Boolean((data as any)?.is_email_confirmed ?? data?.is_verified);
   const isSavingProfile = updateMutation.isPending;
+  const isProfileReady = Boolean(data);
+  const isProfileValid =
+    firstName.trim().length > 0 &&
+    lastName.trim().length > 0 &&
+    (!phone || phonePattern.test(phone.trim()));
+  const isEmailChangeValid =
+    newEmail.trim().length > 0 &&
+    emailPattern.test(newEmail.trim()) &&
+    emailPassword.length > 0;
 
   async function onSave(e: React.FormEvent) {
     e.preventDefault();
-    await updateMutation.mutateAsync({
-      first_name: firstName.trim(),
-      last_name: lastName.trim(),
-      phone: phone.trim() ? phone.trim() : null,
-      marketing_consent: marketingConsent,
-    });
+    if (!isProfileReady) {
+      toast.error("Profile not loaded yet");
+      return;
+    }
+    if (!isProfileValid) {
+      toast.error("Please complete your name and provide a valid phone number (e.g., +15551234567).");
+      return;
+    }
+    const toastId = toast.loading("Saving changes...");
+    try {
+      await updateMutation.mutateAsync({
+        first_name: firstName.trim(),
+        last_name: lastName.trim(),
+        phone: phone.trim() ? phone.trim() : null,
+        marketing_consent: marketingConsent,
+      });
+      toast.success("Profile updated.");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to update profile";
+      toast.error(message);
+    } finally {
+      toast.dismiss(toastId);
+    }
   }
 
   async function onChangeEmail(e: React.FormEvent) {
     e.preventDefault();
-    if (!newEmail || !emailPassword) {
-      toast.error("Email and current password are required");
+    if (!newEmail || !emailPassword || !emailPattern.test(newEmail.trim())) {
+      toast.error("Enter a valid email and your current password.");
       return;
     }
+    const toastId = toast.loading("Updating email...");
     setIsUpdatingEmail(true);
     try {
       const updated = await authService.updateProfile({ email: newEmail, password: emailPassword } as any);
       qc.setQueryData(["profile"], updated as any);
       await qc.invalidateQueries({ queryKey: ["auth"] });
       await qc.invalidateQueries({ queryKey: ["profile"] });
-      toast.success("Email updated. Please verify your new email.");
+      toast.success("Email updated. Please verify your new email, then sign in with the new address.");
       setEmailPassword("");
     } catch (err: unknown) {
       const error = err as { response?: { data?: { detail?: string } } };
       const msg = error?.response?.data?.detail || "Failed to update email";
       toast.error(msg);
     } finally {
+      toast.dismiss(toastId);
       setIsUpdatingEmail(false);
     }
   }
@@ -183,11 +236,16 @@ export default function ProfilePage() {
       toast.error("Password must be at least 8 characters long and include uppercase, lowercase, number, and symbol.");
       return;
     }
+    const toastId = toast.loading("Updating password...");
     setIsUpdatingPassword(true);
     try {
-      await authService.updateProfile({ old_password: oldPassword, new_password: newPassword } as any);
+      await authService.changePassword({
+        old_password: oldPassword,
+        new_password: newPassword,
+        new_password_confirm: confirmPassword,
+      });
+      toast.success("Password updated - please log in again.");
       await authService.logout();
-      toast.success("Password updated — please log in again.");
       setOldPassword("");
       setNewPassword("");
       setConfirmPassword("");
@@ -197,12 +255,13 @@ export default function ProfilePage() {
       const msg = error?.response?.data?.detail || "Failed to update password";
       toast.error(msg);
     } finally {
+      toast.dismiss(toastId);
       setIsUpdatingPassword(false);
     }
   }
 
   return (
-    <section className="mx-auto max-w-4xl px-6 py-16">
+    <section className="mx-auto max-w-5xl px-6 py-16">
       <div className="mb-10 space-y-2">
         <h1 className="text-3xl font-semibold tracking-tight">Account Settings</h1>
         <p className="text-sm text-gray-500">
@@ -217,42 +276,18 @@ export default function ProfilePage() {
           ))}
         </div>
       ) : (
-        <div className="lg:grid lg:grid-cols-[220px_1fr] lg:gap-10">
-          <nav className="mb-6 lg:mb-0 lg:sticky lg:top-24 lg:self-start">
-            <div className="flex gap-3 overflow-x-auto rounded-2xl border border-gray-200 bg-white p-3 text-sm shadow-sm lg:flex-col lg:overflow-visible">
-              {PROFILE_SECTIONS.map((section) => {
-                const isActive = activeSection === section.id;
-                return (
-                  <button
-                    key={section.id}
-                    type="button"
-                    onClick={() => handleSectionClick(section.id)}
-                    className={`flex-1 whitespace-nowrap rounded-xl px-4 py-2 text-left font-medium transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black lg:flex-none ${
-                      isActive
-                        ? "bg-black text-white shadow-sm"
-                        : "bg-gray-50 text-gray-600 hover:bg-gray-100"
-                    }`}
-                    aria-current={isActive ? "true" : undefined}
-                  >
-                    {section.label}
-                  </button>
-                );
-              })}
-            </div>
-          </nav>
-
-          <div className="space-y-10">
+        <div className="space-y-10">
             <div
               id="profile-identity"
-              className="rounded-2xl border border-gray-200 bg-white shadow-sm scroll-mt-24"
+              className="rounded-2xl border border-gray-200 bg-white shadow-sm scroll-mt-24 px-4 sm:px-6"
             >
-              <div className="border-b border-gray-200 px-6 py-5">
+              <div className="border-b border-gray-200 px-2 sm:px-4 lg:px-6 py-5">
                 <h2 className="text-xl font-semibold">Identity &amp; Contact</h2>
                 <p className="text-sm text-gray-500">
                   Update how we reach you and how your name appears on orders.
                 </p>
               </div>
-              <form onSubmit={onSave} className="px-6 py-6 space-y-6">
+              <form onSubmit={onSave} className="py-6 space-y-6 max-w-4xl mx-auto">
                 <div className="grid gap-4 sm:grid-cols-2">
                   <label className="flex flex-col gap-1 text-sm">
                     <span className="font-medium text-gray-700">First name</span>
@@ -262,6 +297,7 @@ export default function ProfilePage() {
                       className="rounded-lg border border-gray-200 px-3 py-2 focus:border-black focus:outline-none"
                       placeholder="First name"
                       autoComplete="given-name"
+                      required
                     />
                   </label>
                   <label className="flex flex-col gap-1 text-sm">
@@ -272,6 +308,7 @@ export default function ProfilePage() {
                       className="rounded-lg border border-gray-200 px-3 py-2 focus:border-black focus:outline-none"
                       placeholder="Last name"
                       autoComplete="family-name"
+                      required
                     />
                   </label>
                 </div>
@@ -303,8 +340,8 @@ export default function ProfilePage() {
                       className="rounded-lg border border-gray-200 px-3 py-2 focus:border-black focus:outline-none"
                       placeholder="e.g., +15551234567"
                       type="tel"
-                      pattern="^\+[1-9]\d{7,14}$"
                       autoComplete="tel"
+                      aria-invalid={Boolean(phone) && !phonePattern.test(phone)}
                     />
                   </label>
                 </div>
@@ -337,13 +374,13 @@ export default function ProfilePage() {
             </div>
             <div
               id="profile-security"
-              className="rounded-2xl border border-gray-200 bg-white shadow-sm scroll-mt-24"
+              className="rounded-2xl border border-gray-200 bg-white shadow-sm scroll-mt-24 px-4 sm:px-6"
             >
-              <div className="border-b border-gray-200 px-6 py-5">
+              <div className="border-b border-gray-200 px-2 sm:px-4 lg:px-6 py-5">
                 <h2 className="text-xl font-semibold">Security</h2>
                 <p className="text-sm text-gray-500">Keep your account protected with up-to-date credentials.</p>
               </div>
-              <div className="space-y-8 px-6 py-6">
+              <div className="space-y-8 py-6 max-w-4xl mx-auto">
                 <form onSubmit={onChangeEmail} className="space-y-4">
                   <div className="space-y-1 text-sm">
                     <span className="font-medium text-gray-700">Change email</span>
@@ -360,6 +397,7 @@ export default function ProfilePage() {
                       className="rounded-lg border border-gray-200 px-3 py-2 focus:border-black focus:outline-none"
                       placeholder="you@example.com"
                       autoComplete="email"
+                      required
                     />
                   </label>
                   <div>
@@ -432,8 +470,7 @@ export default function ProfilePage() {
               </div>
             </div>
           </div>
-        </div>
-      )}
-    </section>
-  );
-}
+        )}
+      </section>
+    );
+  }

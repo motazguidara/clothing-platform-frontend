@@ -249,7 +249,7 @@ export class ApiClient {
             const hasRefresh = clientConfig.featureCookieJwt || Boolean(tokenStore.getRefresh());
             if (!hasRefresh) {
               this.clearAuth();
-              throw new ApiError('Not authenticated', 401, 'SESSION_EXPIRED');
+              throw new ApiError('Not authenticated', 401, 'SESSION_EXPIRED', { request: url.toString() });
             }
             try {
               // Try to refresh the token
@@ -266,16 +266,16 @@ export class ApiClient {
                   }
                 }
               }
-              // Retry the original request with new token
+              // Retry the original request with new token (single retry guard)
               return this.executeWithRetry(url, options, config, true);
-            } catch {
+            } catch (refreshErr) {
               // If refresh fails, clear auth and rethrow
               this.clearAuth();
               throw new ApiError(
                 'Session expired. Please log in again.',
                 401,
                 'SESSION_EXPIRED',
-                { originalError: error }
+                { originalError: error, refreshError: refreshErr, request: url.toString() }
               );
             }
           }

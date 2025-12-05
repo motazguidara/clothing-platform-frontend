@@ -200,6 +200,15 @@ class MonitoringService {
   }
 
   reportError(error: Error, additionalContext: Record<string, any> = {}) {
+    // Ignore noisy browser ResizeObserver loop warnings that are not actionable
+    const msg = error?.message || "";
+    if (
+      msg.includes("ResizeObserver loop") ||
+      msg.includes("ResizeObserver loop limit exceeded")
+    ) {
+      return;
+    }
+
     const errorContext: ErrorContext = {
       ...this.context,
       ...additionalContext,

@@ -6,6 +6,7 @@ import { useAuth } from "@/hooks/useAuth";
 import Link from "next/link";
 import { toast } from "sonner";
 import { PasswordField } from "@/components/ui";
+import { ApiError } from "@/lib/api/client";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -54,7 +55,9 @@ export default function LoginPage() {
     } catch (err: unknown) {
       console.error("Login error:", err);
       let errorMessage = "Failed to log in. Please check your credentials and try again.";
-      if (typeof err === "object" && err !== null) {
+      if (err instanceof ApiError && err.status === 401) {
+        errorMessage = "No account found with those credentials. Check your email/password or register for a new account.";
+      } else if (typeof err === "object" && err !== null) {
         const responseDetail = (err as { response?: { data?: { detail?: unknown } } }).response?.data?.detail;
         if (typeof responseDetail === "string") {
           errorMessage = responseDetail;
