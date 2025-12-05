@@ -68,29 +68,35 @@ export default function ProductGalleryClient({ product }: { product: Product }) 
     const c = (color || "").toLowerCase();
     const variants = product.variants || [];
 
-    // 1) Selected color variant image
+    // 1) Selected color variant images (and its own image list)
     if (c) {
-      const match = variants.find((v) => (v.color || "").toLowerCase() === c && isValidImage(variantImage(v)));
+      const match = variants.find((v) => (v.color || "").toLowerCase() === c);
       const img = normalizeImage(variantImage(match));
       if (img) ordered.push(img.trim());
+      if (match && Array.isArray((match as any).images)) {
+        for (const entry of (match as any).images as string[]) {
+          const norm = normalizeImage(entry);
+          if (norm) ordered.push(norm.trim());
+        }
+      }
+      // Only use images from the selected variant; don't mix other variants
+      if (ordered.length === 0 && match) {
+        // fallback to product images below
+      }
     }
-    // 2) Listing thumbnail (if provided)
-    const normalizedThumb = normalizeImage(product.thumbnail);
-    if (normalizedThumb) ordered.push(normalizedThumb.trim());
-    // 3) Primary single image
-    const normalizedPrimary = normalizeImage(product.image);
-    if (normalizedPrimary) ordered.push(normalizedPrimary.trim());
-    // 4) Product images array
-    for (const img of product.images || []) {
-      const raw = extractImageValue(img);
-      const normalized = normalizeImage(raw ?? undefined);
-      if (normalized) ordered.push(normalized.trim());
+    // 2) If no variant images (or no color chosen), fall back to product-level images only
+    if (ordered.length === 0) {
+      const normalizedThumb = normalizeImage(product.thumbnail);
+      if (normalizedThumb) ordered.push(normalizedThumb.trim());
+      const normalizedPrimary = normalizeImage(product.image);
+      if (normalizedPrimary) ordered.push(normalizedPrimary.trim());
+      for (const img of product.images || []) {
+        const raw = extractImageValue(img);
+        const normalized = normalizeImage(raw ?? undefined);
+        if (normalized) ordered.push(normalized.trim());
+      }
     }
-    // 5) Other variant images
-    for (const v of variants) {
-      const img = normalizeImage(variantImage(v));
-      if (img) ordered.push(img.trim());
-    }
+
     return Array.from(new Set(ordered));
   }, [product.images, product.image, product.variants, product.thumbnail, color, normalizeImage]);
 
