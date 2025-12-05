@@ -114,8 +114,6 @@ export default function RegisterPage() {
       toast.success('Account created successfully!');
       router.push(redirectTo);
     } catch (err: unknown) {
-      console.error('Registration error:', err);
-      
       let errorMessage = 'Registration failed. Please try again.';
       if (typeof err === "object" && err !== null) {
         const responseData = (err as { response?: { data?: { email?: unknown; detail?: unknown } } }).response?.data;
@@ -133,6 +131,7 @@ export default function RegisterPage() {
       if (/already exists/i.test(errorMessage)) {
         errorMessage = "An account with this email already exists. Please sign in instead.";
         setErrors((prev) => ({ ...prev, email: "A user with this email already exists." }));
+        setServerError(errorMessage);
       } else {
         // Replace unhelpful "Bad Request" with a clearer message
         if (errorMessage.toLowerCase() === "bad request") {
@@ -364,8 +363,6 @@ export default function RegisterPage() {
     </div>
   );
 }
-
-
 
 
 

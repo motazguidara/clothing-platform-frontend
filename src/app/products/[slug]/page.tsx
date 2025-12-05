@@ -216,6 +216,8 @@ export default async function ProductPage({ params, searchParams }: ProductPageP
   const mainImage = getMainImage(product);
   const brandName = getBrandName(product.brand);
   const { base, sale, hasSale, savings, pct } = priceSummary(product);
+  const promoPrice = toNum(product.promotion_price);
+  const promoApplied = promoPrice !== null && sale !== null && promoPrice <= sale;
 
   // Structured data
   const siteUrl = process.env["NEXT_PUBLIC_SITE_URL"] || "";
@@ -277,9 +279,16 @@ export default async function ProductPage({ params, searchParams }: ProductPageP
 
             {/* Price */}
             <div className="flex items-center flex-wrap gap-3">
-              <span className="text-3xl font-bold text-gray-900">
-                {toMoney(sale)}
-              </span>
+              <div className="flex items-center gap-2">
+                <span className="text-3xl font-bold text-gray-900">
+                  {toMoney(sale)}
+                </span>
+                {promoApplied && (
+                  <span className="text-xs font-semibold text-rose-700 bg-rose-50 border border-rose-200 px-2 py-1 rounded">
+                    Promotion price
+                  </span>
+                )}
+              </div>
 
               {hasSale && (
                 <>
