@@ -16,6 +16,11 @@ type ProductCardProduct = Product & {
   brand?: Product["brand"] | { name?: string | null };
   is_sustainable?: boolean;
   promotion?: string | null;
+  bestseller_score?: number | null;
+  tags?: string[] | null;
+  is_bestseller?: boolean | null;
+  promotion_price?: number | null;
+  promotion_savings?: number | null;
 };
 
 interface Props {
@@ -308,9 +313,14 @@ export default function ProductCard({ product }: Props) {
       if (pct > 0) list.push({ label: `${pct}% Off`, tone: "sale" });
     }
     if (product.promotion) {
-      list.push({ label: product.promotion, tone: "info" });
+      list.push({ label: product.promotion, tone: "sale" });
     }
-    if (product.is_featured) list.push({ label: "Bestseller", tone: "info" });
+    const tags = Array.isArray(product.tags) ? product.tags.map((t) => String(t).toLowerCase()) : [];
+    const isBestsellerFlag = product.is_bestseller === true;
+    const isBestsellerScore = typeof product.bestseller_score === "number" && product.bestseller_score > 0;
+    const isBestsellerTag = tags.includes("bestseller");
+    const isBestseller = isBestsellerFlag || isBestsellerScore || isBestsellerTag;
+    if (isBestseller) list.push({ label: "Bestseller", tone: "info" });
     if (!inStock) list.push({ label: "Out of Stock", tone: "warn" });
     else if (lowStock) list.push({ label: "Low Stock", tone: "warn" });
     if (product.created_at) {
@@ -562,22 +572,24 @@ export default function ProductCard({ product }: Props) {
 
       <div className="mt-2 text-sm flex items-center gap-2">
         {(() => {
+          const promoPrice = typeof product.promotion_price === "number" ? product.promotion_price : null;
           const saleDisplay = typeof product.sale_price === "number" ? product.sale_price : product.price;
+          const effectivePrice = promoPrice !== null && promoPrice > 0 ? Math.min(saleDisplay, promoPrice) : saleDisplay;
           const basePrice =
             typeof product.base_price === "number"
               ? product.base_price
               : typeof product.compare_at_price === "number"
                 ? product.compare_at_price
                 : product.price;
-          const onSale = Number(basePrice) > 0 && Number(saleDisplay) < Number(basePrice);
+          const onSale = Number(basePrice) > 0 && Number(effectivePrice) < Number(basePrice);
           return (
             <>
-              <span className="font-semibold">{formatPrice(saleDisplay)}</span>
+              <span className="font-semibold">{formatPrice(effectivePrice)}</span>
               {onSale && (
                 <>
-                  <span className="line-through text-muted">{formatPrice(basePrice ?? saleDisplay)}</span>
+                  <span className="line-through text-muted">{formatPrice(basePrice ?? effectivePrice)}</span>
                   {(() => {
-                    const pct = basePrice ? Math.round(((Number(basePrice) - Number(saleDisplay)) / Number(basePrice)) * 100) : 0;
+                    const pct = basePrice ? Math.round(((Number(basePrice) - Number(effectivePrice)) / Number(basePrice)) * 100) : 0;
                     return (
                       <span className="inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-bold bg-red-600 text-white">-{pct}%</span>
                     );

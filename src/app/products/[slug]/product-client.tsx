@@ -123,8 +123,12 @@ export function ProductClient({ product, selectedVariant }: ProductClientProps) 
       const pct = Math.round((diff / (product as any).compare_at_price) * 100);
       if (pct > 0) list.push({ label: `${pct}% Off`, tone: "sale" });
     }
-    if ((product as any).promotion) list.push({ label: (product as any).promotion, tone: "info" });
-    if ((product as any).is_featured) list.push({ label: "Bestseller", tone: "info" });
+    if ((product as any).promotion) list.push({ label: (product as any).promotion, tone: "sale" });
+    const tags = Array.isArray((product as any).tags) ? (product as any).tags.map((t: any) => String(t).toLowerCase()) : [];
+    const bestsellerScore = typeof (product as any).bestseller_score === "number" ? (product as any).bestseller_score : null;
+    const isBestsellerFlag = (product as any).is_bestseller === true;
+    const isBestseller = isBestsellerFlag || (bestsellerScore !== null && bestsellerScore > 0) || tags.includes("bestseller");
+    if (isBestseller) list.push({ label: "Bestseller", tone: "info" });
 
     const productQty = typeof (product as any).stock_quantity === "number" ? (product as any).stock_quantity : null;
     const inStock = productQty !== null ? productQty > 0 : (anyVariantInStock || product.in_stock !== false);

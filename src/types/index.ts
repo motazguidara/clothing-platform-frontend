@@ -10,6 +10,9 @@ export interface Product {
   base_price?: number | null;
   sale_price?: number | null;
   is_on_sale?: boolean;
+  promotion?: string | null;
+  promotion_price?: number | null;
+  promotion_savings?: number | null;
   is_featured?: boolean;
   status?: string | null;
   is_active?: boolean;

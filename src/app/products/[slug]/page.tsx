@@ -27,6 +27,9 @@ type Product = {
   compare_at_price?: number | string | null;
   sale_price?: number | string | null;
   is_on_sale?: boolean | null;
+  promotion?: string | null;
+  promotion_price?: number | string | null;
+  promotion_savings?: number | string | null;
   in_stock?: boolean | null;
   avg_rating?: number | null;
   review_count?: number | null;
@@ -63,7 +66,9 @@ const toMoney = (v: number | string | null | undefined, currency = "TND") => {
 
 const priceSummary = (p: Product) => {
   const base = toNum(p.compare_at_price) ?? toNum(p.price);
-  const sale = toNum(p.current_price ?? p.sale_price ?? p.price);
+  const listedSale = toNum(p.current_price ?? p.sale_price ?? p.price);
+  const promoPrice = toNum(p.promotion_price);
+  const sale = promoPrice !== null && (listedSale === null || promoPrice < listedSale) ? promoPrice : listedSale;
   const hasSale = base !== null && sale !== null && sale < base;
   const savings = hasSale ? Number((base - sale).toFixed(2)) : 0;
   const pct = hasSale && base ? Math.round(((base - sale) / base) * 100) : 0;
@@ -287,6 +292,18 @@ export default async function ProductPage({ params, searchParams }: ProductPageP
                 </>
               )}
             </div>
+
+            {product.promotion && (
+              <div className="text-sm text-rose-700 font-semibold flex flex-wrap items-center gap-2">
+                <span className="rounded border border-rose-200 bg-rose-50 px-2 py-1 uppercase tracking-wide text-xs">
+                  Promotion
+                </span>
+                <span>{product.promotion}</span>
+                {hasSale && savings > 0 && (
+                  <span className="text-rose-800">You save {toMoney(savings)}{pct > 0 ? ` (${pct}% off)` : ""} with this offer.</span>
+                )}
+              </div>
+            )}
 
             {/* Rating */}
             {product.avg_rating != null && (

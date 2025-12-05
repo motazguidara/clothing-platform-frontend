@@ -111,6 +111,9 @@ const ApiProductSchema = z
     updated_at: z.string().optional().nullable(),
     seo_title: z.string().optional().nullable(),
     seo_description: z.string().optional().nullable(),
+    promotion: z.string().optional().nullable(),
+    promotion_price: z.union([z.number(), z.string()]).optional().nullable(),
+    promotion_savings: z.union([z.number(), z.string()]).optional().nullable(),
     weight: z.union([z.number(), z.string()]).optional().nullable(),
     dimensions: z.unknown().optional(),
     rating: z.union([z.number(), z.string()]).optional().nullable(),
@@ -211,6 +214,8 @@ export function mapApiProductToProduct(rawProduct: unknown): Product {
   const compareAtPrice = toNumberOrUndefined(product.compare_at_price);
   const salePrice = toNumberOrUndefined(product.sale_price);
   const basePrice = toNumberOrUndefined(product.base_price);
+  const promotionPrice = toNumberOrUndefined(product.promotion_price);
+  const promotionSavings = toNumberOrUndefined(product.promotion_savings);
   const sku =
     typeof product.sku === "string" && product.sku.length > 0
       ? product.sku
@@ -253,6 +258,9 @@ export function mapApiProductToProduct(rawProduct: unknown): Product {
       : {}),
     ...(salePrice !== undefined ? { sale_price: salePrice } : {}),
     ...(basePrice !== undefined ? { base_price: basePrice } : {}),
+    ...(product.promotion ? { promotion: product.promotion } : {}),
+    ...(promotionPrice !== undefined ? { promotion_price: promotionPrice } : {}),
+    ...(promotionSavings !== undefined ? { promotion_savings: promotionSavings } : {}),
     ...(sku ? { sku } : {}),
     ...(brandName ? { brand: brandName } : {}),
     ...(description ? { description } : {}),
