@@ -25,6 +25,7 @@ export default function RegisterPage() {
   });
   
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [serverError, setServerError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const emailRef = useRef<HTMLInputElement>(null);
 
@@ -81,6 +82,7 @@ export default function RegisterPage() {
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setErrors({});
+    setServerError(null);
     
     if (!validateForm()) {
       return;
@@ -117,12 +119,28 @@ export default function RegisterPage() {
       let errorMessage = 'Registration failed. Please try again.';
       if (typeof err === "object" && err !== null) {
         const responseData = (err as { response?: { data?: { email?: unknown; detail?: unknown } } }).response?.data;
+        const apiDetail = typeof responseData?.detail === "string" ? responseData.detail : null;
         if (Array.isArray(responseData?.email) && typeof responseData.email[0] === "string") {
           errorMessage = responseData.email[0];
-        } else if (typeof responseData?.detail === "string") {
-          errorMessage = responseData.detail;
+          setErrors((prev) => ({ ...prev, email: "A user with this email already exists." }));
+        } else if (apiDetail) {
+          errorMessage = apiDetail;
         } else if ("message" in err && typeof (err as { message?: unknown }).message === "string") {
           errorMessage = (err as { message: string }).message;
+        }
+      }
+
+      if (/already exists/i.test(errorMessage)) {
+        errorMessage = "An account with this email already exists. Please sign in instead.";
+        setErrors((prev) => ({ ...prev, email: "A user with this email already exists." }));
+      } else {
+        // Replace unhelpful "Bad Request" with a clearer message
+        if (errorMessage.toLowerCase() === "bad request") {
+          errorMessage = "We couldn't create your account. Please check the fields above or try a different email.";
+        }
+        // Surface any other server-side validation on the email field if provided
+        if (errorMessage.toLowerCase().includes("email")) {
+          setErrors((prev) => ({ ...prev, email: errorMessage }));
         }
       }
       
@@ -149,6 +167,11 @@ export default function RegisterPage() {
           <p className="mt-2 text-sm text-slate-600">
             Join us to shop faster and track orders.
           </p>
+          {serverError && (
+            <p className="mt-3 text-sm text-red-600" role="alert">
+              {serverError}
+            </p>
+          )}
         </div>
 
         <form onSubmit={onSubmit} className="mt-8 space-y-6" noValidate>
@@ -341,7 +364,6 @@ export default function RegisterPage() {
     </div>
   );
 }
-
 
 
 

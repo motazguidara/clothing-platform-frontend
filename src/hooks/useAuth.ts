@@ -14,6 +14,7 @@ import { authService } from "@/lib/api/services/auth";
 import type { User } from "@/lib/api/schemas";
 import { clientConfig } from "@/lib/client-env";
 import { ApiError } from "@/lib/api/client";
+import { useWishlistAuth } from "@/lib/wishlist";
 
 export type { User } from "@/lib/api/schemas";
 
@@ -33,6 +34,7 @@ const AUTH_PROFILE_QUERY_KEY = ["auth", "profile"] as const;
 export function useAuth(options?: { fetchProfile?: boolean }) {
   const qc = useQueryClient();
   const router = useRouter();
+  const wishlistAuth = useWishlistAuth();
 
   const tokenAuthenticated = authService.isAuthenticated();
   const cookieSession = clientConfig.featureCookieJwt;
@@ -123,6 +125,9 @@ export function useAuth(options?: { fetchProfile?: boolean }) {
       }
       qc.invalidateQueries({ queryKey: AUTH_PROFILE_QUERY_KEY });
       qc.invalidateQueries({ queryKey: ["cart"] });
+      // Sync wishlist after login
+      wishlistAuth.handleLogin();
+      wishlistAuth.syncWithServer().catch(() => {});
     },
     onError: (err: unknown) => {
       const apiError = err as ApiError & {
@@ -178,6 +183,8 @@ export function useAuth(options?: { fetchProfile?: boolean }) {
         authService.storeUser(newUser);
         setStoredUser(newUser);
         qc.setQueryData(AUTH_PROFILE_QUERY_KEY, newUser);
+        wishlistAuth.handleLogin();
+        wishlistAuth.syncWithServer().catch(() => {});
       }
       qc.invalidateQueries({ queryKey: AUTH_PROFILE_QUERY_KEY });
     },
@@ -202,6 +209,7 @@ export function useAuth(options?: { fetchProfile?: boolean }) {
       qc.invalidateQueries({ queryKey: ["cart"] });
       qc.invalidateQueries({ queryKey: ["orders"] });
       qc.invalidateQueries({ queryKey: ["wishlist"] });
+      wishlistAuth.handleLogout();
       router.push("/");
     },
   });
