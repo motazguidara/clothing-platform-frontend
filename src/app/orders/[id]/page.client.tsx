@@ -189,31 +189,12 @@ export function OrderDetailPageClient({ orderId }: OrderDetailPageClientProps) {
                   <div>{data.shipping_address.country}</div>
                 </div>
               </div>
-              {data.can_cancel && (
-                <div className="border rounded-lg p-4 space-y-3">
-                  <div className="text-sm text-gray-700">
-                    You can cancel this order while it is still processing.
-                    {data.can_cancel_until ? (
-                      <>
-                        {" "}
-                        This option is available until{" "}
-                        <span className="font-semibold">
-                          {new Date(data.can_cancel_until).toLocaleString()}
-                        </span>
-                        .
-                      </>
-                    ) : null}
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => cancelMutation.mutate()}
-                    disabled={cancelMutation.isPending}
-                    className="w-full inline-flex items-center justify-center rounded-md bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-70 disabled:cursor-not-allowed"
-                  >
-                    {cancelMutation.isPending ? "Cancelling…" : "Cancel this order"}
-                  </button>
+              <div className="border rounded-lg p-4 space-y-2">
+                <div className="text-sm text-gray-700">
+                  Need to cancel? Call us within 1 hour of placing your order and we’ll help you cancel it.
                 </div>
-              )}
+                <div className="text-base font-semibold text-gray-900">Call +216 20 000 000</div>
+              </div>
             </div>
           </div>
 
