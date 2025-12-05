@@ -49,6 +49,9 @@ export default function WomenPage() {
         params[key] = trimmed;
       }
     });
+    if (!("category" in params)) {
+      params.category = "women";
+    }
     return params;
   }, [searchParams]);
 

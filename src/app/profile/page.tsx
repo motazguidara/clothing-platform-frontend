@@ -40,12 +40,6 @@ export default function ProfilePage() {
       qc.setQueryData(["profile"], updated);
       await qc.invalidateQueries({ queryKey: ["auth"] });
       await qc.invalidateQueries({ queryKey: ["profile"] });
-      toast.success("Profile updated");
-    },
-    onError: (err: unknown) => {
-      const error = err as { response?: { data?: { detail?: string } }; message?: string };
-      const msg = error?.response?.data?.detail || error?.message || "Failed to update profile";
-      toast.error(msg);
     },
   });
 

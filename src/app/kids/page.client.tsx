@@ -95,6 +95,9 @@ export function KidsPageClient({ initialSearchParams }: KidsPageClientProps) {
         params[key] = trimmed;
       }
     });
+    if (!("category" in params)) {
+      params.category = "kids";
+    }
     return params;
   }, [effectiveSearchParams]);
 

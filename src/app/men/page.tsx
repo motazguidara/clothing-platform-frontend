@@ -63,6 +63,9 @@ export default function MenPage() {
         params[key] = trimmed;
       }
     });
+    if (!("category" in params)) {
+      params.category = "men";
+    }
     return params;
   }, [searchParams]);
 
