@@ -71,6 +71,8 @@ export default function CartPage() {
   const remove = useRemoveFromCart();
   const updateQty = useUpdateCartItem();
   const { isAuthenticated } = useAuth({ fetchProfile: false });
+  const [mounted, setMounted] = React.useState(false);
+  React.useEffect(() => setMounted(true), []);
   const { data: loyalty, isLoading: loyaltyLoading } = useLoyalty({ enabled: isAuthenticated });
   const items: CartItemWithDetails[] = React.useMemo(() => {
     if (!Array.isArray(data?.items)) {
@@ -198,7 +200,7 @@ const estimatedPointsEarned = Math.floor(withDiscount / 5);
             <div>You are saving {formatPrice(totalSavings, "TND")} with current offers.</div>
           </>
         )}
-        {isAuthenticated && (
+        {mounted && isAuthenticated && (
           <div className="text-xs text-gray-700">
             This order will earn approximately {estimatedPointsEarned} loyalty points.
           </div>
