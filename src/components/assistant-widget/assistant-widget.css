@@ -1,0 +1,249 @@
+@import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600&display=swap");
+
+.awp-root {
+  --awp-primary: #4f46e5;
+  --awp-radius: 16px;
+  --awp-bg: #f8f7f4;
+  --awp-surface: #ffffff;
+  --awp-text: #111827;
+  --awp-muted: #6b7280;
+  font-family: "Space Grotesk", "Segoe UI", sans-serif;
+}
+
+.awp-floating {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 9999;
+}
+
+.awp-inline {
+  position: relative;
+}
+
+.awp-launcher {
+  border: none;
+  background: var(--awp-primary);
+  color: #fff;
+  padding: 12px 18px;
+  border-radius: 999px;
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.12);
+  cursor: pointer;
+}
+
+.awp-panel {
+  width: 400px;
+  max-height: 80vh;
+  background: linear-gradient(180deg, #ffffff 0%, #fafaf7 100%);
+  border-radius: var(--awp-radius);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.12);
+  display: none;
+  flex-direction: column;
+  overflow: hidden;
+  color: var(--awp-text);
+}
+
+.awp-panel-open {
+  display: flex;
+}
+
+.awp-header {
+  padding: 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #f1f1ed;
+  background: var(--awp-surface);
+}
+
+.awp-header h3 {
+  margin: 0;
+}
+
+.awp-header p {
+  margin: 4px 0 0;
+  color: var(--awp-muted);
+  font-size: 12px;
+}
+
+.awp-close {
+  background: transparent;
+  border: none;
+  font-size: 18px;
+  cursor: pointer;
+}
+
+.awp-thread {
+  padding: 16px;
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: var(--awp-bg);
+}
+
+.awp-bubble {
+  padding: 10px 12px;
+  border-radius: 12px;
+  max-width: 80%;
+  font-size: 14px;
+}
+
+.awp-assistant {
+  background: #f1f1ed;
+}
+
+.awp-user {
+  align-self: flex-end;
+  background: var(--awp-primary);
+  color: white;
+}
+
+.awp-chips {
+  display: flex;
+  gap: 8px;
+  padding: 0 16px 16px;
+  flex-wrap: wrap;
+}
+
+.awp-chips button {
+  border-radius: 999px;
+  border: 1px solid #e8e3dc;
+  background: #fff;
+  padding: 6px 12px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.awp-results {
+  padding: 0 16px 16px;
+  display: grid;
+  gap: 12px;
+}
+
+.awp-card {
+  border: 1px solid #ece7df;
+  border-radius: 14px;
+  padding: 12px;
+  display: flex;
+  gap: 12px;
+  cursor: pointer;
+  background: #fff;
+  transition: box-shadow 0.15s ease, transform 0.15s ease;
+}
+
+.awp-card:hover {
+  box-shadow: 0 14px 28px rgba(15, 23, 42, 0.12);
+  transform: translateY(-1px);
+}
+
+.awp-card img {
+  width: 64px;
+  height: 64px;
+  border-radius: 10px;
+  object-fit: cover;
+}
+
+.awp-card-body h4 {
+  margin: 0 0 4px;
+  font-size: 14px;
+}
+
+.awp-card-body p {
+  margin: 0 0 6px;
+  color: var(--awp-muted);
+  font-size: 12px;
+}
+
+.awp-attrs {
+  font-size: 12px;
+  color: #4b5563;
+}
+
+.awp-value {
+  font-weight: 600;
+  margin-top: 6px;
+}
+
+.awp-reason {
+  font-size: 12px;
+  color: var(--awp-muted);
+}
+
+.awp-card-actions {
+  margin-top: 8px;
+  display: flex;
+  gap: 8px;
+}
+
+.awp-card-actions button {
+  border-radius: 8px;
+  border: none;
+  background: var(--awp-primary);
+  color: #fff;
+  padding: 6px 10px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.awp-input {
+  display: flex;
+  padding: 16px;
+  border-top: 1px solid #f1f1ed;
+  gap: 8px;
+  background: var(--awp-surface);
+}
+
+.awp-input input {
+  flex: 1;
+  border-radius: 10px;
+  border: 1px solid #e8e3dc;
+  padding: 8px 12px;
+  background: #fff;
+}
+
+.awp-input button {
+  border-radius: 10px;
+  border: none;
+  background: var(--awp-primary);
+  color: #fff;
+  padding: 8px 12px;
+  cursor: pointer;
+}
+
+.awp-input button:disabled,
+.awp-input input:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.awp-credits-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 16px 0;
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.awp-credits-banner button {
+  border-radius: 10px;
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  padding: 6px 10px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+@media (max-width: 768px) {
+  .awp-panel {
+    width: 100%;
+    height: 85vh;
+    border-radius: var(--awp-radius) var(--awp-radius) 0 0;
+    position: fixed;
+    bottom: 0;
+    right: 0;
+  }
+}

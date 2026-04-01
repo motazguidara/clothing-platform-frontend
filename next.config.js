@@ -271,7 +271,12 @@ const nextConfig = {
 
   // Rewrites for clean URLs
   async rewrites() {
+    const widgetBase = process.env.WIDGET_API_URL || 'http://127.0.0.1:8001';
     return [
+      {
+        source: '/api/widget/:path*',
+        destination: `${widgetBase}/api/widget/:path*`,
+      },
       {
         source: '/sitemap.xml',
         destination: '/api/sitemap',

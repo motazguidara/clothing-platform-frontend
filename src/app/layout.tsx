@@ -13,6 +13,7 @@ import { ToastProvider } from "@/providers/toast-provider";
 import SearchOverlay from "@/components/SearchOverlay";
 import ErrorBoundary from "@/components/error-boundary";
 import { WishlistProvider } from "@/components/wishlist/wishlist-provider";
+import AssistantWidgetProvider from "@/components/assistant-widget/AssistantWidget";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -173,6 +174,7 @@ export default function RootLayout({
                 <CartDrawer />
                 <FilterDrawer />
                 <SearchOverlay />
+                <AssistantWidgetProvider />
               </Suspense>
               </WishlistProvider>
             </ToastProvider>
